@@ -1,0 +1,1386 @@
+
+
+===== Page 1 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic
+Heuristic Design
+Kezhao Lai∗1 Yutao Lai∗1 Hai-Lin Liu 1
+Abstract
+While Monte Carlo Tree Search (MCTS) shows
+promise in Large Language Model (LLM) based
+Automatic Heuristic Design (AHD), it suffers
+from a critical over-exploitation tendency un-
+der the limited computational budgets required
+for heuristic evaluation. To address this lim-
+itation, we propose Clade-AHD, an efficient
+framework that replaces node-level point esti-
+mates with clade-level Bayesian beliefs. By ag-
+gregating descendant evaluations into Beta dis-
+tributions and performing Thompson Sampling
+over these beliefs, Clade-AHD explicitly mod-
+els uncertainty to guide exploration, enabling
+more reliable decision-making under sparse and
+noisy evaluations. Extensive experiments on
+complex combinatorial optimization problems
+demonstrate that Clade-AHD consistently out-
+performs state-of-the-art methods while signifi-
+cantly reducing computational cost. The source
+code is publicly available at: https://github.com/
+Mriya0306/Clade-AHD.
+1. Introduction
+Combinatorial Optimization (CO) problems are a corner-
+stone of modern science and engineering, with critical
+applications in fields such as logistics and route plan-
+ning (Schoenberg & Dressler, 2022), supply chain opti-
+mization (Li et al., 2023), chip design (Cheng et al., 2022;
+Shi et al., 2025), and drug discovery (Heydaribeni et al.,
+2024; Fu et al., 2022). The majority of these problems are
+NP-hard (Garey et al., 1990), making the search for op-
+timal solutions computationally prohibitive. Consequently,
+both academia and industry have long focused on designing
+efficient heuristic algorithms to find high-quality approxi-
+mate solutions. Nevertheless, traditional heuristic design
+remains a critical bottleneck, constrained by its reliance on
+*Equal contribution 1School of Mathematics and Statistics,
+Guangdong University of Technology, China. Correspondence
+to: Hai-Lin Liu <hlliu@gdut.edu.cn>.
+arXiv preprint.
+manual expertise and iterative trial-and-error. This depen-
+dency results in prohibitive costs.
+Recently, LLMs have catalyzed a paradigm shift in ad-
+dressing this long-standing challenge, positioning them
+as creativity engines (Romera-Paredes et al., 2024;
+Mankowitz et al., 2023) within evolutionary frameworks.
+This concept builds upon a rich history of ideas from Au-
+tomated Machine Learning (AutoML) (Hutter et al., 2019;
+Feurer et al., 2015) and Genetic Programming (GP) (Koza,
+1992), yet elevates the ceiling of AHD. Pioneering works
+such as Funsearch (Romera-Paredes et al., 2024) and Al-
+phaDev (Mankowitz et al., 2023) have demonstrated the
+profound potential of this synergy by discovering algo-
+rithms that surpass human-crafted baselines. EOH (Liu
+et al., 2024) pioneered the co-evolution of natural language
+thoughts and code to mimic human iterative design, while
+MCTS-AHD (Zheng et al., 2025) integrated MCTS to en-
+able more systematic global exploration.
+However, the effectiveness of MCTS-AHD is limited by a
+structural mismatch between the statistical requirements of
+MCTS and the computational constraints of code genera-
+tion. While standard MCTS relies on asymptotic conver-
+gence via the Law of Large Numbers to minimize estima-
+tion error (Kocsis & Szepesvári, 2006), the limited budget
+of executing generated code forces MCTS-AHD to operate
+under a sparse simulation regime. Consequently, the node
+statistics within the search tree lack sufficient sample size
+to yield reliable Monte Carlo estimates. This data spar-
+sity amplifies the impact of stochastic noise, particularly
+where specific random seed initializations yield transiently
+high performance for suboptimal heuristics. Such estima-
+tion bias misguides the tree selection policy to over-allocate
+computational resources to local optima, thereby prevent-
+ing the effective exploration of high-potential heuristics.
+To address this challenge, we introduceClade-AHD,
+a framework that systematically reformulates automatic
+heuristic design as a hierarchical Bayesian inference pro-
+cess. Instead of greedy selection based on point esti-
+mates, Clade-AHD models the potential of an entire Clade
+as shown in Figure 2. By aggregating genealogical evi-
+dence, it effectively mitigates estimation variance, identify-
+ing highly promising clades even in the presence of sparse
+1
+arXiv:2602.00549v1  [cs.LG]  31 Jan 2026
+
+===== Page 2 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+observations. Our specific contributions are:
+(1)Hierarchical Bayesian Abstraction: We redefine the
+search space from node-level point estimates to Clade-level
+Bayesian beliefs, modeling heuristic potential as Clade-
+level Beta distributions. To robustly infer these distribu-
+tions from sparse observations, we propose aClade-Aware
+Belief Updatemechanism that aggregates genealogical ev-
+idence bottom-up while strictly enforcing causal relevance
+via depth attenuated credit assignment, thereby mitigating
+the impact of noisy evaluations and preventing premature
+commitment to local optima.
+(2)Uncertainty Guided Exploration Policy: We intro-
+duce a robust selection strategy governed byClade-Level
+Thompson Sampling. By integrating prior stabilization
+with a budget-aware dynamic annealing, this policy ef-
+fectively navigates the exploration-exploitation trade-off.
+It progressively shifts search focus from high-uncertainty
+clades to high-potential clades as the evaluation budget is
+exhausted.
+2. Background
+2.1. LLM-driven Heuristic Design
+Automating algorithm design with computational intelli-
+gence is a long-standing research area, with origins in
+AutoML (Hutter et al., 2019; Feurer et al., 2015), and
+GP (Koza, 1992). The advent of LLMs, with their re-
+markable capabilities in code understanding, generation,
+and reasoning (Bubeck et al., 2023), has injected unprece-
+dented vitality into this field. Currently, LLM-driven AHD
+is dominated by two technical paradigms, each making a
+different trade-off between exploration and exploitation.
+Population-based methods currently dominate the field of
+LLM-driven AHD. These methods maintain a pool of high-
+quality heuristics and iteratively optimize them using evo-
+lutionary principles.Funsearch(Romera-Paredes et al.,
+2024) established this paradigm by employing an LLM
+as a mutator to discover novel mathematical solutions.
+EOH(Liu et al., 2024) later advanced this framework with
+sophisticated genetic operators and maintenance strategies,
+showing strong performance on combinatorial tasks. How-
+ever, EOH suffers from a critical structural flaw: its re-
+liance on greedy, fitness-based selection. To strictly en-
+force a fixed population limit, heuristics that are temporar-
+ily underperforming but possess high evolutionary poten-
+tial are prematurely culled. While this strategy acceler-
+ates convergence, it sacrifices population diversity, trapping
+the search in local optima. To overcome the local optima
+problem inherent in population-based methods, researchers
+have explored strategies with a more global perspective. In-
+spired by the success ofAlphaGo(Silver et al., 2016) in
+navigating vast game spaces, this method introduces MCTS
+to the heuristic evolution process. MCTS-AHD (Zheng
+et al., 2025) organizes all generated heuristics in a continu-
+ously growing search tree, using the UCT algorithm to bal-
+ance exploitation and exploration. By retaining all histor-
+ical information, this paradigm successfully mitigates the
+short-sightedness of population-based methods and signif-
+icantly improves the quality of the discovered heuristics.
+Nevertheless, MCTS-AHD (Zheng et al., 2025) is struc-
+turally prone to over-exploitation under limited evaluation
+budgets. Its reliance on point estimates without sufficient
+sampling makes the search policy susceptible to stochas-
+tic noise. This frequently leads to premature convergence,
+where the algorithm wastes resources optimizing local op-
+tima rather than maintaining effective global exploration.
+2.2. Limitations
+Limitation of Standard MCTS in AHD Scenario
+MCTS has achieved remarkable success in sequential
+decision-making problems, particularly in game playing
+as exemplified by AlphaGo (Silver et al., 2016). The al-
+gorithm typically operates through four iterative phases:
+Selection, Expansion, Simulation, and Backpropagation.
+During the Selection phase, standard MCTS relies on
+the Upper Confidence Bound for Trees (UCT) (Kocsis &
+Szepesvári, 2006) to balance exploration and exploitation.
+The UCT policy selects a child nodeaof nodevaccording
+to:
+UCT(a, v) =Q(a, v) +C
+s
+ln(N(v) + 1)
+N(a) ,(1)
+whereQ(a, v)represents the newly expended leaf nodes
+for their quality value,N(v)andN(a)denotes the visit
+counts, andCis an exploration constant.
+While UCT theoretically guarantees asymptotic conver-
+gence by treating nodes as independent bandits, this
+premise is untenable in LLM-based AHD. In this setting,
+LLM-based heuristic generation and evaluation are com-
+putationally prohibitive, resulting in extreme visit sparsity
+compared to traditional domains. Consequently, the Law of
+Large Numbers, which underpins standard mean-based es-
+timatorsQ(a, v), fails to hold under such strict budget con-
+straints. As high variance in value estimation drowns out
+the selection signal, the structured search degenerates into
+stochastic behavior rather than informed decision-making.
+Therefore, standard UCT fails to guide the optimization
+process effectively.
+Limitations of Node-Centric Bayesian MCTSTo ad-
+dress sample inefficiency, prior works have integrated
+Bayesian inference into the search framework. Mov-
+ing beyond scalar estimates, methods such as Bayes-
+UCT (Tesauro et al., 2012a) and Thompson Sampling
+2
+
+===== Page 3 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+MCTS (Bai et al., 2013) model potential as probability dis-
+tributions. This allows the policy to account for epistemic
+uncertainty, prioritizing actions with high information gain.
+However, these approaches remain strictlynode-centric.
+They operate on the assumption that a state’s value is in-
+trinsic and independent of its siblings, which is a flawed
+assumption in heuristic design where an intermediate code
+fragment, acting as a stepping stone, may perform poorly
+in isolation yet enable superior descendants.
+3. Methods
+We introduce Clade-AHD, a framework that shifts the
+evaluation paradigm from node-level scalar estimation to
+Clade-level distributional belief. By modeling the potential
+of each search branch as a Beta distribution and propagat-
+ing evidence bottom-up, we enable the system to identify
+transitional nodes that may appear modest in isolation but
+act as stepping stones to high-value evolutionary descen-
+dants. The framework consists of five integrated compo-
+nents:
+3.1. Bayesian Abstraction of Search Space
+Driven by the inherent unreliability of point estimates in
+sparse search spaces, we suggest that heuristic evolution in
+MCTS is better understood as a Clade-level potential infer-
+ence rather than a node-level point estimation. An individ-
+ual node’s value is transient and noisy, whereas the clade
+represents a robust, evolving belief state.
+Definition 1: CladeWe formally introduce the concept
+of acladeto capture the structural correlation of heuristics.
+Borrowing from biological taxonomy, a clade represents an
+ancestor and all its evolutionary descendants. Mathemati-
+cally, for a nodevin the current search treeT, we define its
+cladeT(v)as the set containingvall its progeny:
+T(v) ={v} ∪ {u∈T|vis an ancestor ofu}.(2)
+This set definition is crucial because it delineates the scope
+of evidence aggregation. In our framework, a nodevis
+not judged solely by its immediate fitness, but serves as
+the belief holder for the entire setT(v). This allows us
+to capture the value of high-potential heuristics, which are
+nodes that may perform poorly in isolation but possess the
+structural potential to generate superior descendants.
+Definition 2: Beta DistributionTo quantify the poten-
+tial of this structural unit, we map the fitness scores of each
+clade to a probabilistic belief space. We model the node’s
+potential as a random variable following a Beta distribution
+B(αv, βv)(Daniel et al., 2018), which serves as the conju-
+gate prior for the Bernoulli likelihood of heuristic evalua-
+tions. The probability density function is defined as:
+f(θ;α v, βv) = θαv−1(1−θ) βv−1
+B(αv, βv) ,(3)
+whereB(·)represents the Beta function serving as a nor-
+malization constant, and we do not treatvmerely as the
+visitation state of an individual node, but as the current sta-
+tistical representative of its entire evolutionary cladeT(v).
+This Bayesian abstraction allows us to represent the com-
+plete distribution of a heuristic’s performance, capturing
+both its expected quality and the associated uncertainty.
+Formally, the belief state of a nodevis parameterized by
+the counts of successesα v and failuresβ v, with the expec-
+tation and variance given by:
+E[θv] = αv
+αv +β v
+,Var[θ v] = αvβv
+(αv +β v)2(αv +β v + 1) .
+(4)
+3.2. Clade Belief Updates
+Our belief update mechanism is inspired by theClade-
+Metaproductivity (CMP)framework proposed in the
+Huxley-Gödel Machine(Wang et al., 2025). HGM pi-
+oneered the use of clade-based statistics in tree search,
+demonstrating that aggregating descendant evaluations
+yields more robust estimates than isolated node values.
+However, standard CMP treats all descendants equally, ig-
+noring the temporal distance between an ancestor and its
+distant offspring. This is problematic in heuristic design,
+where accumulative semantic drift inevitably weakens the
+correlation between an ancestor and its deep descendants.
+As the evolutionary path lengthens, the performance of a
+node becomes increasingly attributable to recent mutations
+rather than the ancestor’s initial logic. Consequently, uni-
+form aggregation is prone to credit misassignment, permit-
+ting uncorrelated variations from distant offspring to in-
+duce erroneous value estimates for their ancestors.
+To address this issue, we propose aClade-aware Belief
+Updatemechanism that aggregates performance evidence
+from the entire cladeT(v)rooted atv. Unlike traditional
+MCTS, which typically relies on node-local statistics, our
+approach establishes aBottom-up Evidence Propagation.
+Similar to how reliable value estimation requires grounding
+in verifiable outcomes, we ground the belief of an ances-
+tor node in the accumulated evidence of its entire clade.
+This propagates the discovery of high-quality descendants
+back to the root, effectively improving the evaluation signal
+for the entire branch(Tesauro et al., 2012b). Formally, the
+clade-level belief parametersα T (v)andβ T (v)are derived
+by aggregating evidence from all descendantsu∈ T(v),
+weighted by a decay factorλ∈(0,1]to account for tem-
+3
+
+===== Page 4 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+(a) Bayesian Selection (b) LLM Evaluation (c) Clade Update
+Sample Sample
+Root Node
+(High Confidence)
+Leaf 
+context
+LLM
+Agent
+New
+Heuristic
+Environment
+T(v) Evidence
+Snowflake:
+No longer update
+β (18,11)
+β (11,4) β (7,7)
+β (5,2) β (6,2)
+Figure 1.The schematic overview of the Clade-AHD framework. (a)Bayesian Selection: The policy navigates the tree via Clade-
+level Thompson Sampling, selecting nodes based on belief distributions. (b)LLM Evaluation: The LLM generates and evaluates new
+heuristics based on the leaf context. (c)Clade Update: Evidence propagates bottom-up to refine ancestral beliefs (sharper curves), while
+theDynamic Clade Freezingmechanism (snowflake icons) prunes suboptimal branches.
+poral credit assignment:
+αT (v) = 1 +
+X
+u∈T(v)
+λdist(v,u)(αu −1),(5)
+βT (v) = 1 +
+X
+u∈T(v)
+λdist(v,u)(βu −1).(6)
+where dist(v, u)represents the depth difference between
+nodevandu. This depth-attenuated aggregation ensures
+that the search is driven by the branch’s long-term poten-
+tial, whileλprevents deep, specific variations from overly
+dominating the search direction of ancestor nodes. Cru-
+cially, as more descendants are explored, the accumulated
+counts (α T , βT ) increase, naturally reducing the variance
+of the belief distribution and yielding a progressively more
+confident estimation of the clade’s true value.
+3.3. Clade-level Thompson Sampling
+We govern the search trajectory viaClade-level Thompson
+Sampling. Unlike rigid deterministic policies, this strat-
+egy naturally balances exploration and exploitation by sam-
+pling from the posterior belief of each clade. First, to miti-
+gate estimator variance in sparsely visited regions, we reg-
+ularize the aggregated clade evidence using expectation-
+based pseudo-counts (Sutton et al., 1998). This acts as a
+Prior Stabilizationmechanism:
+˜αT=αT+n pseudo·E[θv], ˜βT=βT+n pseudo·(1−E[θv]).
+(7)
+However, standard Thompson Sampling implicitly as-
+sumes an infinite time horizon, a premise that conflicts
+with the strict computational constraints of LLM-based de-
+sign. To reconcile this, we introduce aBudget-Aware An-
+nealingmechanism. We view the remaining computational
+budget as a constraint on permissible uncertainty, modulat-
+ing the precision of our beliefs via a temperature parameter
+τ(p)that evolves with search progressp=t/T:
+τ(p) =
+ 1
+1−p
+ω
+,(8)
+whereωcontrols the annealing rate. When the budget is
+ample (p→0), the system relies on the natural variance
+of the distributions to encourage broad exploration; as the
+budget depletes (p→1),τ→ ∞, forcing the probabil-
+ity mass to concentrate around the mean. This systemat-
+ically drives the policy from exploratory sampling to de-
+cisive exploitation, ensuring convergence to the optimal
+identified clade before resource exhaustion(Chapelle & Li,
+2011a). The final selection policy operates via a Stochastic
+Argmax over independent belief realizations. Specifically,
+for each candidate childv, a scalar sample ˆθv is indepen-
+dently drawn from the temperature parameter:
+ˆθv∼ B( ˜αT ·τ(p), ˜βT ·τ(p)),(9)
+This mechanism leverages posterior variance to adaptively
+balance exploration and exploitation: it exploits promis-
+ing clades with concentrated beliefs while driving the ex-
+ploration of sparse regions through high uncertainty. The
+winner of this stochastic competition determines the subse-
+quent search node:
+vnext = argmaxv∈children ˆθv.(10)
+This formulation ensures that the search explores diverse
+possibilities in the early stages (high variance) and asymp-
+4
+
+===== Page 5 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+totically converges to the most promising solution (zero
+variance) asp→1.
+3.4. Dynamic Clade Freezing
+To maximize the utility of the computational budget, we
+implement aDynamic Clade Freezingmechanism. This
+strategy proactively prunes the search tree by identifying
+and halting the expansion of sub-optimal clades, thereby
+concentrating resources on regions with higher discovery
+potential. Formally, a clade rooted atvis frozen if its ag-
+gregated performance demonstrates a significant gap rela-
+tive to the global optimum:
+freeze(v)⇐ ⇒visits(v)≥V min and µ T (v)< γ·µ ⋆
+global,
+(11)
+whereµ T (v)denotes the expected performance of the
+clade, andµ ⋆
+global represents the best performance observed
+across all clades, whileγ∈(0,1)serves as a strictness
+threshold. To avoid premature pruning due to stochastic
+noice, this crizterion is applied only when the node’s count
+satisfies visits(v)≥V min. This mechanism acts as a ro-
+bust filter, preventing the algorithm from allocating pre-
+cious samples to low-potential variations.
+4. Discussion
+In this section, we discuss the similarities and differences
+between MCTS-AHD (Zheng et al., 2025) and Clade-
+AHD. All of these algorithms leverage LLMs for AHD but
+employ different search strategies and efficiency optimiza-
+tion mechanisms.
+Similarities between MCTS-AHD and Clade-AHD:
+Both MCTS-AHD and Clade-AHD employ MCTS as the
+core search framework to organize and explore the heuris-
+tic space. Similarly, both methods maintain a tree structure
+that preserves all historical information, enabling compre-
+hensive exploration and avoiding premature convergence to
+local optima.
+Differences between MCTS-AHD and Clade-AHD:A
+primary distinction lies in the selection mechanism. Where
+MCTS-AHD relies on the traditional UCT algorithm to
+evaluate individual nodes, Clade-AHD adopts a Clade-
+level Thompson sampling approach. This shift in perspec-
+tive allows for a more strategic evaluation based on the col-
+lective evidence from all descendants in a subtree. The two
+frameworks also diverge in their approach to credit assign-
+ment. Clade-AHD introduces a depth-attenuated backprop-
+agation mechanism to address the temporal credit assign-
+ment problem, ensuring a node’s influence diminishes with
+ancestral distance. This contrasts with the uniform credit
+distribution used in MCTS-AHD.
+5. Experiment
+In this section, we evaluate the proposedClade-AHDon a
+diverse set of CO problems. To demonstrate versatility, we
+applyClade-AHDto design core heuristic functions for
+two distinct algorithmic paradigms:constructive heuris-
+ticsandAnt Colony Optimization (ACO). The problem
+definitions and details of these solver frameworks are pro-
+vided inAppendix BandAppendix C, respectively.
+Settings.We initialize the search withN I = 4nodes and
+maintain a population size of 10. For Bayesian inference,
+we use priorsα=β= 1.0with 10 pseudo-evaluations
+for stability. The annealing parameter is set toω cool = 1.0,
+and the backpropagation decay factor isλ= 0.8(The back-
+propagation decay factor is set toλ= 0.8, which was de-
+termined to be optimal through a sensitivity analysis com-
+paringλ∈ {0.0,0.5,0.8}inAppendix D.4). We apply dy-
+namic pruning with a threshold of 0.1 and a minimum visit
+count of 10. To handle score variance, we use adaptive nor-
+malization at the 90th percentile and enable parallel opera-
+tors for efficiency. During evaluation, each heuristic is re-
+stricted to a 180 seconds timeout on the datasetD. Detailed
+configurations of the dataset and framework are provided
+inAppendix D. To verify the generalization of our frame-
+work, we evaluateClade-AHDusingGPT-4o-miniand
+GLM-4-flash.
+Baselines.To validate the effectiveness of heuristics gen-
+erated byClade-AHD, we compare our approach against
+four categories of benchmarks:Manual Heuristics:Clas-
+sic baselines including Nearest-greedy (Romera-Paredes
+et al., 2024), ACO (Dorigo et al., 2007), and Expected Im-
+provement (EI) (Mo ˇckus, 1974).Traditional AHD:The
+Genetic Programming-based method GHPP (Duflo et al.,
+2019).Neural Combinatorial Optimization (NCO):
+Representative learning-based solvers under similar frame-
+works, specifically POMO (Kwon et al., 2020) and Deep-
+ACO (Ye et al., 2023).LLM-based AHD:State-of-the-art
+frameworks including FunSearch (Romera-Paredes et al.,
+2024), EoH (Liu et al., 2024), ReEvo (Ye et al., 2024), and
+the recent HSEvo (Dat et al., 2025).
+Regarding initialization, FunSearch, ReEvo, and HSEvo
+require a handcrafted seed function; to ensure fairness, we
+provide the same rudimentary seed for these methods with-
+out additional external knowledge. In contrast, EoH and
+ourClade-AHDinitiate evolution without manual seeds,
+demonstrating superior autonomy and applicability.
+All experiments are conducted on a single AMD-8845HS
+CPU. Following the protocol in (Liu et al., 2024), we set
+the evaluation budget for all LLM-based AHD methods to
+T= 1,000queries on the evaluation datasetD.
+5
+
+===== Page 6 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+?←?+
+?
+?
+UCT=0.8
+? ← ? + ?
+?
+? ← ? + ?
+?
+MECHANISM COMPARISON：NODE-LEVEL MCTS-AHD vs. CLADE-LEVEL CLADE-AHD
+PANEL A:Node-Level MCTS-AHD(Baseline) 
+Scalar & Myopic
+A1.Selection Phase
+A2.Update Phase
+PANEL B:Clade-Level CladeAHD(Ours) 
+Distributional & Far-sighted
+B1.Selection Phase
+B2.Update &Freezing Phase
+[Q=0.6,
+N=10]
+[Q=0.6,
+N=10]
+[Q=0.6,
+N=10]
+[Q=0.3,
+N=4]
+[Q=0.5,
+N=4]
+[Q=0.5,
+N=2]
+[Q=0.2,
+N=8]
+[Q=0.7,
+N=2]
+[Q=0.2,
+N=8]
+[Q=0.2,
+N=8]
+[Q=0.6,
+N=10]
+[Q=0.6,
+N=10]
+[Q=0.6,
+N=10]
+[Q=0.3,
+N=4]
+[Q=0.5,
+N=4]
+[Q=0.5,
+N=2]
+[Q=0.2,
+N=8]
+[Q=0.7,
+N=2]
+[Q=0.2,
+N=8]
+Greedy UCT Selection
+based on local scalars
+UCT=1.2 UCT=1.0
+? ← ? +
+?
+?
+? ← ? + ?
+?
+Individual Node 
+Scalar Update
+(No structural awareness)
+Clade Thompson Samplling
+based on belief distributions
+Dynamic Clade Freezing
+Clade Belief Update 
+(Aggregating evidence)
+Dynamic Clade Freezing
+Figure 2.Mechanism Comparison between Node-Level MCTS (MCTS-AHD) and Clade-Level MCTS (Clade-AHD). (Panel A)
+The baseline MCTS-AHD relies on scalar point estimates (e.g., mean value), leading toScalar Myopiawhere high-potential but high-
+variance branches are discarded due to initial noise.(Panel B)Our Clade-AHD models potential as belief distributions. By aggregating
+evidence from the entire clade and applyingThompson Sampling, it effectively identifies promising regions and reduces uncertainty
+(visualized as sharper posterior curves), while theDynamic Freezingmechanism prunes suboptimal branches.
+5.1. Clade-AHD for NP-hard CO Problems
+In this subsection, we evaluateClade-AHDon a suite of
+NP-hard CO problems, including the Traveling Salesman
+Problem (TSP), Knapsack Problem (KP), Capacitated Ve-
+hicle Routing Problem (CVRP), Multiple Knapsack Prob-
+lem (MKP), and Bin-Packing Problem (BPP) in both on-
+line and offline settings. We applyClade-AHDto design
+heuristics within two distinct solver paradigms:Construc-
+tive HeuristicsandAnt Colony Optimization (ACO).
+5.1.1. CONSTRUCTIVEHEURISTICSFRAMEWORK
+The constructive framework (or step-by-step construction)
+builds a feasible solution node-by-node (Asani et al., 2023).
+Beyond its role in LLM-based AHD, it serves as a foun-
+dational paradigm for Neural Combinatorial Optimization
+(NCO) methods (Vinyals et al., 2015; Bello et al., 2016).
+We utilize this framework to design heuristics for TSP, KP,
+and Online BPP.
+TSP and KPWe first evaluateClade-AHDon TSP and
+KP. The objective is to design a core heuristic function that
+selects the next node (TSP) or item (KP) to add to the par-
+tial solution based on the current state (e.g., remaining ca-
+pacity or visited nodes). This function executes recursively
+until a complete solution is formed.
+For all LLM-based AHD methods, the evaluation datasetD
+consists of 64 TSP instances (N= 50) and 64 KP instances
+(N= 100, CapacityW= 25). Table 1 benchmarks per-
+formance against standard baselines ("Nearest Neighbor"
+for TSP; "Max Value-Weight Ratio" for KP) and existing
+LLM-based methods.Clade-AHDoutperforms both man-
+ual heuristics and competing AHD methods (e.g., EoH,
+FunSearch) across almost all metrics. Notably, when tested
+on larger instances (N= 200),Clade-AHDsurpasses the
+advanced NCO method POMO. Crucially, unlike POMO,
+which mandates task-specific training, Clade-AHD oper-
+ates without pre-training, demonstrating superior zero-shot
+generalization on NP-hard problems.
+Online BPPOnline BPP requires immediate binning de-
+cisions upon item arrival, making it a standard benchmark
+for AHD methods. Following the protocol in (Liu et al.,
+2024), we generate instances using the Weibull distribu-
+tion (Castiñeiras et al., 2012). The evaluation datasetD
+comprises four Weibull datasets of varying scales. As
+shown in Table 2, the heuristics designed byClade-AHD
+achieve superior average performance across all six test
+configurations.
+5.1.2. ANTCOLONYOPTIMIZATIONFRAMEWORK
+ACO is a meta-heuristic inspired by the foraging behav-
+ior of ants. It utilizes a heuristic matrix and simulates
+pheromone-based communication to guide probabilistic
+path selection for solving CO problems (Dorigo et al.,
+2007; Kim et al., 2024).
+In the context of AHD, LLMs can be leveraged to automat-
+6
+
+===== Page 7 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+Table 1.Designing heuristics with the step-by-step construction framework for TSP and KP. We evaluate methods on 6 test sets with
+1,000 instances each. Test sets with in-domain scales (i.i.d. to the evaluation dataset D) are underlined. Since AHD methods have no
+guarantees for generalization ability, the effect on in-domain datasets is more important. Optimal for TSP is obtained by LKH (Lin &
+Kernighan, 1973), and Optimal for KP is the result of OR-Tools. Each LLM-based AHD method is run three times, and we report the
+average performance. The best-performing method with each LLM is shaded, and each test set’s overall best result is in bold.
+TaskTSP KP
+N=N=50 N=100 N=200N=50,W=12.5 N=100,W=25 N=200,W=25
+Methods Obj.↓Gap Obj.↓Gap Obj.↓Gap Obj.↑Gap Obj.↑Gap Obj.↑Gap
+Optimal 5.675 - 7.768 - 10.659 - 20.037 - 40.271 0.75% 57.448 0.68%
+Greedy Construct 6.959 22.62% 9.706 24.94% 13.461 26.29% 19.985 0.26% 40.225 0.86% 57.395 0.77%
+POMO5.697 0.39% 8.001 3.01%12.897 20.45% 19.612 2.12% 39.676 2.22% 57.271 0.98%
+LLM-based AHD: GPT-4o-mini
+Funsearch 6.357 12.00% 8.850 13.93% 12.372 15.54% 19.988 0.24% 40.227 0.86% 57.398 0.76%
+EoH 6.394 12.67% 8.894 14.49% 12.437 16.68% 19.993 0.22% 40.231 0.85% 57.399 0.76%
+MCTS-AHD6.225 9.69%8.684 11.79% 12.120 13.71% 20.015 0.11% 40.252 0.80% 57.423 0.72%
+Clade-AHD 6.265 10.39% 8.484 9.22% 11.864 11.30% 20.013 0.12% 40.576 0.00% 57.840 0.00%
+Table 2.Design step-by-step construction heuristics for online
+BPP. The table exhibits the performance gaps of heuristics to the
+lower bound. Each LLM-based AHD method is run three times
+for the average gaps. In-domain scales are underlined.
+Test sets 1k_100 1k_500 5k_100 5k_500 10k_100 10k_500 Avg.
+Best Fit 4.77% 0.25% 4.31% 0.55% 4.05% 0.47% 2.40%
+First Fit 5.02% 0.25% 4.65% 0.55% 4.36% 0.50% 2.56%
+LLM-based AHD: GPT-4o-mini
+Funsearch 2.45% 0.66% 1.30%0.25%1.05%0.21%0.99%
+EoH 2.69% 0.25% 1.63% 0.53% 1.47% 0.45% 1.17%
+ReEvo 3.94% 0.50% 2.72% 0.40% 2.39% 0.31% 1.71%
+HSEvo 2.64% 1.07% 1.43% 0.32% 1.13%0.21%1.13%
+MCTS-AHD 2.45% 0.50%1.06%0.32%0.74%0.26% 0.89%
+Clade-AHD2.32%0.00%1.22% 0.30% 1.07% 0.27% 0.86%
+ically design thegeneration functionfor the heuristic ma-
+trix, thereby generalizing the ACO framework to diverse
+tasks. Following the protocol in (Ye et al., 2024), we apply
+Clade-AHDto design heuristics within the ACO frame-
+work for four NP-hard problems: TSP, CVRP, MKP, and
+Offline BPP.
+Table 3 presents the results usingGPT-4o-mini.Clade-
+AHDdemonstrates significant improvements over exist-
+ing LLM-based methods (EoH and ReEvo) across all in-
+domain test sets and three out-of-domain scenarios. Fur-
+thermore, our approach consistently outperforms manually
+designed ACO heuristics on eight test sets and surpasses
+DeepACO (Ye et al., 2023), a state-of-the-art NCO method,
+on the TSP and MKP benchmarks.
+5.2. Ablation on Components
+To validate the contribution of individual components
+withinClade-AHD, we conducted ablation studies on the
+KP and TSP. We constructed five variants, each omitting a
+specific module, and evaluated them over three indepen-
+dent runs. Table 4 reports the performance gap (shown
+as positive percentages) relative to the full model, where
+a larger gap indicates greater importance.
+The results confirm that all components are essential,
+though their impact varies:Dynamic Clade Freezingdic-
+tates sample allocation efficiency; its removal precipitates
+the sharpest performance decline, confirming its utility
+in eliminating redundant computation to focus on high-
+potential clades.Temperature Annealingproves equally
+critical for modulating exploration-exploitation dynamics.
+Furthermore,Depth-Attenuated Backpropagationis essen-
+tial for preserving long-term dependencies against signal
+decay in deep trees. Finally,Pseudo-EvaluationandAdap-
+tive Normalizationenforce stability, preventing metric in-
+flation and ensuring consistent estimation despite their sub-
+tler magnitude.
+Collectively, these components synergize to maximize the
+effectiveness of theClade-AHDframework.
+5.3. Comparative Analysis with Population-based
+Methods
+To validate the effectiveness of our approach, we illustrate
+the performance evolution curves, usingGLM-4-flash
+, for designingstep-by-step construction heuristicsfor
+the TSP as shown in Figure 3. Each curve represents
+the average performance over three independent runs, with
+shaded regions indicating the standard deviation. Distin-
+7
+
+===== Page 8 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+Table 3.Designing heuristics with the ACO general framework for solving TSP, CVRP, MKP, and offline BPP. Each test set contains 64
+instances, and the LLM-based AHD methods’ performances are averaged over three runs.
+Method
+TSP CVRP MKP Offline BPP
+N=50N=100N=50,C=50N=100,C=50N=200,m=5N=200,m=5N=500N=1k
+Obj.↓Gap Obj.↓Gap Obj.↓Gap Obj.↓Gap Obj.↑Gap Obj.↑Gap Obj.↓Gap Obj.↓Gap
+ACO 5.992 4.66% 8.948 9.70% 11.355 27.77% 18.778 25.76% 22.738 2.28% 40.672 4.30% 208.828 2.81% 417.938 3.15%
+DeepACO 5.842 2.04% 8.282 1.53%8.888 0.00% 14.932 0.00%23.093 0.75% 41.988 1.20%203.125 0.00% 405.172 0.00%
+LLM-based AHD: GPT-4o-mini
+EoH 5.828 1.80% 8.263 1.30% 9.359 5.31% 15.681 5.02% 23.139 0.56% 41.994 1.19% 204.646 0.75% 408.599 0.85%
+ReEvo 5.856 2.29% 8.340 2.24% 9.327 4.94% 16.092 7.77% 23.245 0.10% 42.416 0.19% 206.693 1.76% 413.510 2.06%
+MCTS-AHD 5.801 1.33% 8.179 0.27% 9.286 4.48% 15.782 5.70%23.269 0.00% 42.498 0.00%204.094 0.48% 407.323 0.53%
+Clade-AHD 5.725 0.00% 8.157 0.00% 9.269 4.48% 15.544 0.77% 23.167 0.32% 42.152 0.39% 203.365 0.00% 405.245 0.01%
+Table 4.Ablation study on the components of Clade-AHD.We
+use different variants to design heuristics on TSP50 and KP100
+benchmarks with the step-by-step frameworks over three turns.
+Configuration TSP50 KP100
+Clade-AHD (Full Model) 6.269 (0.000%) 40.576 (0.000%)
+w/o Pseudo-Evaluations +1.869% +0.862%
+w/o Depth-Attenuated Credit +4.950% +0.143%
+w/o Dynamic Clade Freezing +7.751% +0.148%
+w/o Temperature Annealing +6.657% +0.416%
+w/o Adaptive Normalization +1.870% +0.064%
+guishing itself from population-based evolutionary com-
+putation (EC) methods, Clade-AHD demonstrates superior
+sample efficiency and exploration capabilities. This en-
+ables a more comprehensive exploration of the heuristic
+spaceH, effectively preventing the search from becoming
+trapped inlocal optima. Figure 3 reveals a distinct evolu-
+tionary pattern. Baselines like MCTS-AHD and EoH show
+steep initial gains, indicative of their aggressive exploita-
+tion tendency, yet they plateau early. In contrast, Clade-
+AHD exhibits a more gradual initial improvement. This
+behavior is attributable to the exploration enforced by our
+Clade-level Thompson Sampling in the early budget phase.
+Far from being a limitation, this broad search strategy al-
+lows the framework to bypass the suboptimal solutions that
+trap other methods, ultimately unlocking a higher perfor-
+mance ceiling and significantly surpassing the baselines as
+the search progresses.
+6. Conclusion
+We presentClade-AHD, a framework that reformulates
+heuristic search by shifting from noisy scalar estimates to
+Clade-level Bayesian beliefs. This distributional abstrac-
+tion effectively overcomes evaluation sparsity, enabling ro-
+Figure 3.Evolution curves of LLM-based AHD methods on de-
+signing Step-by-step Construction heuristics for TSP. The solid
+lines represent the mean performance over three independent
+runs, while the shaded regions indicate the standard deviation.
+Clade-AHD demonstrates superior asymptotic performance and
+robust search capabilities compared to population-based baselines
+and MCTS-AHD.
+bust identification of high-potential clades that standard
+methods overlook. Experiments on TSP, KP, and CVRP
+confirm that Clade-AHD achieves state-of-the-art quality
+and sample effectiveness.
+We also acknowledge that Clade-AHD’s performance ex-
+hibits sensitivity to the design of prompts, like many LLM-
+driven AHD methods. Consequently, adapting the frame-
+work to highly distinct problem domains may still neces-
+sitate empirical calibration of prompt templates to ensure
+alignment with the LLM’s reasoning capabilities. Future
+work will focus on integrating automated prompt opti-
+mization mechanisms, aiming to eliminate the dependency
+on manual calibration and ensure consistent performance
+across diverse domains.
+8
+
+===== Page 9 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+Impact Statement
+This paper aims to advance the field of Automated Heuris-
+tic Design. By improving the computational efficiency of
+solving complex combinatorial optimization problems, our
+method has the potential to optimize resource allocation in
+domains such as logistics, manufacturing, and chip design,
+thereby contributing to reduced operational costs and en-
+ergy consumption. We do not foresee any specific negative
+societal consequences that must be highlighted here.
+References
+Asani, E. O., Okeyinka, A. E., and Adebiyi, A. A. A com-
+putation investigation of the impact of convex hull sub-
+tour on the nearest neighbour heuristic. In2023 Inter-
+national Conference on Science, Engineering and Busi-
+ness for Sustainable Development Goals (SEB-SDG),
+volume 1, pp. 1–7. IEEE, 2023.
+Bai, A., Wu, F., and Chen, X. Bayesian mixture modelling
+and inference based thompson sampling in monte-carlo
+tree search.Advances in neural information processing
+systems, 26, 2013.
+Bello, I., Pham, H., Le, Q. V ., Norouzi, M., and Bengio,
+S. Neural combinatorial optimization with reinforce-
+ment learning.arXiv preprint arXiv:1611.09940, 2016.
+Bubeck, S., Chandrasekaran, V ., Eldan, R., Gehrke, J.,
+Horvitz, E., Kamar, E., Lee, P., Lee, Y . T., Li, Y .,
+Lundberg, S., et al. Sparks of artificial general intel-
+ligence: Early experiments with gpt-4.arXiv preprint
+arXiv:2303.12712, 2023.
+Castiñeiras, I., De Cauwer, M., and O’Sullivan, B. Weibull-
+based benchmarks for bin packing. InInternational Con-
+ference on Principles and Practice of Constraint Pro-
+gramming, pp. 207–222. Springer, 2012.
+Chapelle, O. and Li, L. An empirical evaluation of thomp-
+son sampling.Advances in neural information process-
+ing systems, 24, 2011a.
+Chapelle, O. and Li, L. An empirical evaluation of thomp-
+son sampling.Advances in neural information process-
+ing systems, 24, 2011b.
+Cheng, R., Lyu, X., Li, Y ., Ye, J., Hao, J., and Yan, J. The
+policy-gradient placement and generative routing neural
+networks for chip design.Advances in Neural Informa-
+tion Processing Systems, 35:26350–26362, 2022.
+Daniel, J. R., Benjamin, V . R., Abbas, K., Ian, O., and
+Zheng, W. A tutorial on thompson sampling.Foun-
+dations and trends® in machine learning, 11(1):1–99,
+2018.
+Dat, P. V . T., Doan, L., and Binh, H. T. T. Hsevo: El-
+evating automatic heuristic design with diversity-driven
+harmony search and genetic algorithm using llms. In
+Proceedings of the AAAI Conference on Artificial Intel-
+ligence, volume 39, pp. 26931–26938, 2025.
+Dorigo, M., Birattari, M., and Stutzle, T. Ant colony opti-
+mization.IEEE computational intelligence magazine, 1
+(4):28–39, 2007.
+Duflo, G., Kieffer, E., Brust, M. R., Danoy, G., and Bou-
+vry, P. A gp hyper-heuristic approach for generating tsp
+heuristics. In2019 IEEE International Parallel and Dis-
+tributed Processing Symposium Workshops (IPDPSW),
+pp. 521–529. IEEE, 2019.
+Feurer, M., Klein, A., Eggensperger, K., Springenberg, J.,
+Blum, M., and Hutter, F. Efficient and robust automated
+machine learning. InAdvances in neural information
+processing systems, volume 28, 2015.
+Fu, T., Gao, W., Coley, C., and Sun, J. Reinforced ge-
+netic algorithm for structure-based drug design.Ad-
+vances in Neural Information Processing Systems, 35:
+12325–12338, 2022.
+Garey, M. R., Johnson, D. S., et al.A Guide to the Theory
+of NP-Completeness. Freeman, 1990.
+Heydaribeni, N., Zhan, X., Zhang, R., Eliassi-Rad, T.,
+and Koushanfar, F. Distributed constrained combinato-
+rial optimization leveraging hypergraph neural networks.
+Nature Machine Intelligence, 6(6):664–672, 2024.
+Hutter, F., Kotthoff, L., and Vanschoren, J.Automated ma-
+chine learning: methods, systems, challenges. Springer
+Nature, 2019.
+Kim, M., Choi, S., Kim, H., Son, J., Park, J., and Bengio,
+Y . Ant colony sampling with gflownets for combinatorial
+optimization.arXiv preprint arXiv:2403.07041, 2024.
+Kocsis, L. and Szepesvári, C. Bandit based monte-carlo
+planning. InEuropean conference on machine learning,
+pp. 282–293. Springer, 2006.
+Koza, J.On the programming of computers by means of
+natural selection. MIT press, 1992.
+Kwon, Y .-D., Choo, J., Kim, B., Yoon, I., Gwon, Y ., and
+Min, S. Pomo: Policy optimization with multiple optima
+for reinforcement learning.Advances in Neural Informa-
+tion Processing Systems, 33:21188–21198, 2020.
+Li, B., Mellou, K., Zhang, B., Pathuri, J., and Menache,
+I. Large language models for supply chain optimization.
+arXiv preprint arXiv:2307.03875, 2023.
+9
+
+===== Page 10 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+Liu, F., Tong, X., Yuan, M., Lin, X., Luo, F., Wang, Z., Lu,
+Z., and Zhang, Q. Evolution of heuristics: Towards ef-
+ficient automatic algorithm design using large language
+model.arXiv preprint arXiv:2401.02051, 2024.
+Mankowitz, D. J., Michi, A., Zhernov, A., Gelmi, M.,
+Selvi, M., Paduraru, C., Leurent, E., Iqbal, S., Lespiau,
+J.-B., Ahern, A., et al. Faster sorting algorithms dis-
+covered using deep reinforcement learning.Nature, 618
+(7964):257–263, 2023.
+Moˇckus, J. On bayesian methods for seeking the ex-
+tremum. InIFIP Technical Conference on Optimization
+Techniques, pp. 400–404. Springer, 1974.
+Okasha, S. Does the concept of “clade selection” make
+sense?Philosophy of Science, 70(4):739–751, 2003.
+Romera-Paredes, B., Barekatain, M., Novikov, A., Balog,
+M., Kumar, M. P., Dupont, E., Ruiz, F. J., Ellenberg,
+J. S., Wang, P., Fawzi, O., et al. Mathematical discov-
+eries from program search with large language models.
+Nature, 625(7995):468–475, 2024.
+Schoenberg, S. and Dressler, F. Reducing waiting times
+at charging stations with adaptive electric vehicle route
+planning.IEEE Transactions on Intelligent Vehicles, 8
+(1):95–107, 2022.
+Shi, Y ., Xu, S., Kai, S., Lin, X., Xue, K., Yuan, M., and
+Qian, C. Timing-driven global placement by efficient
+critical path extraction. In2025 Design, Automation &
+Test in Europe Conference (DATE), pp. 1–7. IEEE, 2025.
+Silver, D., Huang, A., Maddison, C. J., Guez, A., Sifre, L.,
+Van Den Driessche, G., Schrittwieser, J., Antonoglou, I.,
+Panneershelvam, V ., Lanctot, M., et al. Mastering the
+game of go with deep neural networks and tree search.
+nature, 529(7587):484–489, 2016.
+Sutton, R. S., Barto, A. G., et al.Reinforcement learning:
+An introduction, volume 1. MIT press Cambridge, 1998.
+Tesauro, G., Rajan, V ., and Segal, R. Bayesian in-
+ference in monte-carlo tree search.arXiv preprint
+arXiv:1203.3519, 2012a.
+Tesauro, G., Rajan, V ., and Segal, R. Bayesian in-
+ference in monte-carlo tree search.arXiv preprint
+arXiv:1203.3519, 2012b.
+Toth, P. and Vigo, D.Vehicle routing: problems, methods,
+and applications. SIAM, 2014.
+Vinyals, O., Fortunato, M., and Jaitly, N. Pointer networks.
+Advances in neural information processing systems, 28,
+2015.
+Wang, W., Pi˛ ekos, P., Nanbo, L., Laakom, F., Chen, Y ., Os-
+taszewski, M., Zhuge, M., and Schmidhuber, J. Huxley-
+g\" odel machine: Human-level coding agent develop-
+ment by an approximation of the optimal self-improving
+machine.arXiv preprint arXiv:2510.21614, 2025.
+Ye, H., Wang, J., Cao, Z., Liang, H., and Li, Y . Deep-
+aco: Neural-enhanced ant systems for combinatorial op-
+timization.Advances in neural information processing
+systems, 36:43706–43728, 2023.
+Ye, H., Wang, J., Cao, Z., Berto, F., Hua, C., Kim, H.,
+Park, J., and Song, G. Reevo: Large language mod-
+els as hyper-heuristics with reflective evolution.Ad-
+vances in neural information processing systems, 37:
+43571–43608, 2024.
+Zheng, Z., Xie, Z., Wang, Z., and Hooi, B. Monte
+carlo tree search for comprehensive exploration in
+llm-based automatic heuristic design.arXiv preprint
+arXiv:2501.08603, 2025.
+10
+
+===== Page 11 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+A. Extended Related Work
+This section provides a comprehensive theoretical grounding for the Clade-AHD framework, situating our contributions
+within the broader context of evolutionary biology, Bayesian reinforcement learning, and temporal credit assignment.
+A.1. From Node-Centric to Clade-Centric Search
+Traditional MCTS algorithms, such as UCT (Kocsis & Szepesvári, 2006), operate under the assumption that nodes function
+as independent bandits. While theoretically sound in domains with abundant sampling budgets (e.g., Go or Chess), this
+independence assumption disintegrates in the context of Automatic Heuristic Design (AHD). In AHD, a heuristic is not an
+isolated entity but a refined continuation of its ancestral logic.
+We adopt the concept ofClade Selectionfrom evolutionary biology to formalize this dependency. As argued by Okasha
+(Okasha, 2003) in the philosophy of biology, strictly individual-level selection fails to account for traits that manifest only
+at the level of a lineage. Analogously, in our code evolution tree, a specific mutation might yield a statistically insignificant
+reward in isolation (due to evaluation noise) yet possess the structural potential to spawn a high-performing sub-tree.
+Clade-AHD shifts the unit of selection from the individual node to theclade—defined as an ancestor and all its lineal
+descendants—thereby capturing themeta-productivityof an evolutionary branch rather than the transient fitness of a single
+code snippet.
+A.2. Bayesian Inference in Sparse Evaluation Environments
+The core inefficiency of standard AHD methods lies in their reliance on frequentist estimation. The Law of Large Numbers,
+which underpins the asymptotic convergence of mean-based estimators (like those in UCT), is effectively suspended in
+LLM-driven optimization due to the prohibitive cost of evaluation. When the visit countN(v)is small (e.g.,<5), scalar
+point estimates are dominated by variance, reducing the search to a stochastic walk.
+To address this, Clade-AHD leverages Bayesian inference to model epistemic uncertainty explicitly. Building on the sem-
+inal work of Tesauro et al. (Tesauro et al., 2012a), we replace scalar values with belief distributions. Unlike deterministic
+Upper Confidence Bounds, which can be overly optimistic or pessimistic in sparse regimes, our use of Thompson Sampling
+(Bai et al., 2013) enablesprobability matching. This ensures that the exploration effort is proportional to the probability
+that a clade is optimal, a property that has been theoretically proven to minimize regret in bandit settings with delayed or
+sparse feedback (Chapelle & Li, 2011b).
+B. Definition of Tasks
+In this section, we provide formal mathematical formulations for the optimization tasks employed to evaluate Clade-AHD.
+These tasks encompass six representative NP-hard CO problems(Zheng et al., 2025).
+B.1. NP-hard CO Problems
+Our evaluation benchmark includes the Traveling Salesman Problem (TSP), Capacitated Vehicle Routing Problem (CVRP),
+0-1 Knapsack Problem (KP), Multiple Knapsack Problem (MKP), Admissible Set Problem (ASP), and Bin Packing Prob-
+lem (BPP).
+Traveling Salesman Problem (TSP).The TSP serves as a cornerstone in combinatorial optimization theory (Garey et al.,
+1990). The objective is to determine the minimal-cost Hamiltonian cycle that visits a set ofNcities exactly once and
+returns to the origin. Given a distance matrixD={d ij}whered ij denotes the Euclidean distance between nodeiand
+nodej, the problem is formulated as minimizing the total tour length:
+min
+π
+N−1X
+i=1
+dπ(i),π(i+1) +d π(N),π(1) (12)
+whereπrepresents a permutation of the city indices{1, . . . , N}. We evaluate our method on standard Euclidean TSP
+instances.
+Capacitated Vehicle Routing Problem (CVRP).Generalizing the TSP, the CVRP involves optimizing routes for a fleet of
+vehicles to serve a set of customers subject to capacity constraints (Toth & Vigo, 2014). This paper follows the settings of
+11
+
+===== Page 12 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+ReEvo(Ye et al., 2024) when generating CVRP data sets, fixing the depot coordinates to (0.5, 0.5). Each instance consists
+of a depot (node 0) andNcustomer nodes. The objective is to minimize the total travel distance of all vehicles such that:
+(1) each customer is visited exactly once; (2) all routes start and end at the depot; and (3) the total demand on any route
+does not exceed the vehicle capacityQ. Mathematically, lets={ρ 1, . . . , ρk}be a solution withkroutes. The objective
+function is defined as:
+f(s) =
+kX
+j=1
+
+d0,ρj
+1
++
+|ρj |−1X
+t=1
+dρj
+t ,ρj
+t+1
++d ρj
+|ρj |,0
+
+ (13)
+subject to the capacity constraintP
+node∈ρj dnode ≤Qfor all routesj.
+0-1 Knapsack Problem (KP).The KP represents a fundamental resource allocation problem. Given a knapsack with
+capacityWand a set ofNitems, each characterized by a valuev i and a weightw i, the goal is to select a subset of items
+to maximize the total value without violating the capacity constraint.
+max
+x
+NX
+i=1
+vixi s.t.
+NX
+i=1
+wixi ≤W, x i ∈ {0,1}(14)
+Following established protocols (Kwon et al., 2020), we generate instances where weights and values are sampled from
+uniform distributions.
+Multiple Knapsack Problem (MKP).The MKP extends the standard KP by introducing multiple resource constraints.
+Instead of a single container, we havemdistinct knapsacks with capacitiesC 1, . . . , Cm. We still follow the setting of
+Reevo(Ye et al., 2024) for the MKP instances, and the objective remains to maximize the total value of selected items,
+ensuring that the subset of items assigned to each knapsackjdoes not exceed its specific capacityC j. This problem
+introduces higher complexity due to the coupled constraints across multiple resources.
+Bin Packing Problem (BPP).The BPP aims to partition a set of items with varying sizes into the minimum number of
+bins, each with a fixed capacityC.Online BPP:Items arrive sequentially. The algorithm must strictly decide which
+bin to place the current item in before observing future items. This requires robust heuristic logic to handle uncertainty.
+We utilize Weibull distribution-based instances for evaluation, as they provide a challenging benchmark for bin packing
+heuristics (Castiñeiras et al., 2012)(Liu et al., 2024).
+C. Definition of General Frameworks
+To verify the framework-agnosticism of Clade-AHD, we apply it to design key heuristic functions within two distinct
+general frameworks: Step-by-Step Construction and Ant Colony Optimization (ACO). This section details the operational
+logic of these frameworks.
+C.1. Step-by-Step Construction
+The Step-by-Step Construction framework (also known as the Constructive Heuristic framework) is an intuitive approach
+capable of handling a wide range of CO problems. It constructs a complete solution from scratch by sequentially selecting
+decision variables. In each step, the framework evaluates all valid candidates using a specific priority function, and the
+candidate with the highest priority is added to the partial solution.
+In this work, Clade-AHD is employed to automatically design thiskey priority function. We apply this framework to four
+tasks:
+•TSP:The heuristic function selects the next city to visit based on the current city, the set of unvisited cities, and
+the distance matrix. It effectively learns a "next-node-prediction" policy similar to Pointer Networks (Vinyals et al.,
+2015).
+•KP:The function selects the next item to pack into the knapsack. It inputs the value and weight of remaining items
+and the current residual capacity, outputting a priority score for each item. This generalizes the classical greedy
+strategy based on the value-to-weight ratio.
+•Online BPP:For each incoming item, the heuristic assigns a preference score to each available bin (and the option of
+opening a new bin) based on the item size and the bins’ residual capacities.
+12
+
+===== Page 13 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+C.2. Ant Colony Optimization (ACO)
+Ant Colony Optimization (ACO) is a meta-heuristic inspired by the foraging behavior of ants (Dorigo et al., 2007). It con-
+structs solutions probabilistically based on a pheromone matrixτ(historical experience) and a heuristic matrixη(problem-
+specific desirability).
+Following the established protocol inReEvo (Ye et al., 2024), we utilize Clade-AHD to automatically evolve theHeuristic
+Matrix Generation Function. Instead of using a fixed formula (e.g.,η ij = 1/d ij), the LLM generates a Python function
+that computesηdynamically based on the specific constraints of each problem. The specific formulations for the involved
+tasks are detailed below:
+•Traveling Salesman Problem (TSP):The problem is modeled as a graph traversal. The LLM generates a function
+to compute anN×Nmatrixη, whereη ij represents the desirability of moving from cityito cityj. The generated
+heuristic typically balances Euclidean distance with other geometric features to guide the ant’s path construction.
+•Capacitated Vehicle Routing Problem (CVRP):Similar to TSP, this is an edge-based selection problem but with
+capacity constraints. The heuristic function inputs the distance matrix, node demands, and vehicle capacity. It outputs
+a matrixη ij that guides the vehicle to the next customerjfromi. A high-quality heuristic here must learn to balance
+minimizing travel distance with optimizing the remaining vehicle load (e.g., avoiding visiting a distant customer that
+consumes the last bit of capacity).
+•Multiple Knapsack Problem (MKP):Unlike the routing problems, MKP is a subset selection problem. The con-
+structive process involves selecting items to place into knapsacks. The LLM designs a function that calculates a
+heuristic vector (or matrix)η, representing the priority of selecting itemjgiven the current resource consumption of
+the knapsacks. The heuristic effectively learns a generalized "value-per-weight" density estimation across multiple
+dimensions.
+•Offline Bin Packing Problem (BPP):The goal is to pack items into the minimum number of bins. In the ACO
+framework, this is treated as selecting the best "next item" to pack into the current bin. The LLM generates a function
+that computes the desirabilityη j for each remaining itemj, considering its size and the residual capacity of the current
+bin. This allows the algorithm to evolve complex strategies beyond standard "Best Fit" or "First Fit" rules.
+By adopting this unified interface, Clade-AHD leverages the global search capability of the underlying ACO solver while
+replacing the handcrafted, problem-specific heuristic rules with data-driven logic evolved by our clade-based search.
+D. Experimental Setup and Implementation Details
+To ensure the transparency, reproducibility, and fairness of our comparative study, this appendix provides a comprehensive
+description of the experimental protocols. We detail the evaluation logic, dataset composition, computational environment,
+and specific hyperparameter configurations for both Clade-AHD and the baseline methods.
+D.1. Evaluation Protocols
+The setup of evaluation budgets (T) and evaluation datasets (D) in this work generally follows the standard protocols
+established by FunSearch (Romera-Paredes et al., 2024), EoH (Liu et al., 2024), and ReEvo(Ye et al., 2024). Adopting
+these community-recognized settings ensures that our performance gains are attributable to the search strategy itself rather
+than skewed experimental conditions.
+The Setting of Evaluation BudgetT.In population-based methods like EoH (Liu et al., 2024), the total number of
+evaluations is typically determined by generations×population_size (e.g.,20×20≈400∼1,600queries). To align with
+this computational magnitude while ensuring sufficient exploration for our Bayesian beliefs, we standardize the maximum
+evaluation budget toT= 1,000for all tasks (including TSP, KP, and Online BPP). This strict budget constraint challenges
+the algorithm to be sample-efficient, distinguishing efficient search strategies from brute-force enumeration.
+he Setting of Evaluation DatasetD.The composition ofDis critical for preventing overfitting. Our design logic
+balances fairness with robustness:
+13
+
+===== Page 14 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+•Standardization for Fairness (General Tasks):For TSP, CVRP, KP, and MKP, we strictly adopt the standard syn-
+thetic instances used in MCTS-AHD (Zheng et al., 2025) and EoH (Liu et al., 2024). This ensures a direct "apples-
+to-apples" comparison with baselines.
+•Variation for Robustness (Special Case: Online BPP):Standard baselines often use a fixed dataset (e.g., 5,000
+items withW= 100). However, heuristics evolved on such uniform data frequently fail to generalize to other scales
+(e.g.,W= 500). To address this, we implement avarying-scale setupsimilar to (Castiñeiras et al., 2012). Our
+evaluation datasetDcomprises a mixture of Weibull distribution instances with diverse characteristics (varying item
+counts and capacities), compelling the heuristic to learn generalized packing logic.
+The detailed specifications ofDare summarized in Table 5.
+Table 5.Detailed Specifications of Evaluation Datasets (D S).
+Task Dataset Size Instance Details (Attributes)
+TSP64 InstancesN= 50nodes, coordinatess∼ U[0,1] 2d.
+CVRP64 InstancesN= 50nodes, Demands∼ U[1,9], Capacity varies.
+KP64 InstancesN= 100items, CapacityS W = 25, uncorrelated weights/values.
+MKP64 InstancesN= 50items,M= 5knapsacks.
+Online BPP. Mixture (4 Sets) Varying Scales (Weibull Dist.):A robust mix of Short (N≈1k) vs. Long (N≈5k)
+sequences, and Small vs. Large Bin Capacities.
+D.2. Computational Environment
+Hardware Setup.Unlike many Neural Combinatorial Optimization (NCO) approaches that rely on heavy GPU accel-
+eration (e.g., POMO (Kwon et al., 2020), DeepACO (Ye et al., 2023)), Clade-AHD is designed to be computationally
+lightweight. All experiments were conducted on a personal workstation:
+•CPU:AMD Ryzen 7 8845HS (8 cores, 16 threads).
+•GPU:None (Inference is purely CPU-based).
+•Software:Python 3.10, leveragingNumPyfor vectorization.
+LLM Configuration.We utilizedGPT-4o-mini(gpt-4o-mini-2024-07-18) as the core reasoning engine. The
+temperature is set toT= 1.0during theExpansionphase to maximize code diversity, andT= 0.2duringSelection
+logic (if aided) for stability. The context window includes the task description, parent code, and a history of the top-3 past
+successful mutations.
+D.3. Baseline and Hyperparameter Configuration
+To validate the effectiveness of Clade-AHD, we compare it against four state-of-the-art LLM-based AHD methods under
+identical budget constraints (T= 1,000):
+Table 6 summarizes the specific hyperparameters used in Clade-AHD, empirically tuned on a separate validation set.
+14
+
+===== Page 15 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+Table 6.Hyperparameter settings for Clade-AHD.
+Parameter Value Description
+Ninit 4 Number of initial random heuristics
+K(Population) 10 Maximum active population size
+Bayesian Inference
+αprior , βprior 1.0 Uniform Beta priors (uninformative)
+npseudo 10 Pseudo-counts for prior stabilization
+ωcool 1.0 Annealing rate for Thompson Sampling
+Tree Update
+λ 0.8 Decay factor for Depth-Attenuated Backpropagation
+Vmin 10 Minimum visits required before freezing
+γ 0.1 Pruning threshold for Dynamic Clade Freezing
+Evaluation
+Timeout 60s Max execution time per heuristic on datasetD
+D.4. Experiments ofλ
+We analyze the impact of the decay factorλ, which governs the temporal credit assignment in our Clade-AHD frame-
+work, under the ACO framework for TSP heuristic design setting. Figure 4 presents the convergence curves for
+λ∈ {0.0,0.5,0.8}on the evaluation benchmark.
+0 200 400 600 800 1000
+Number of Evaluations
+5.75
+6.00
+6.25
+6.50
+6.75
+7.00
+7.25
+7.50Best Objective Found
+0 (Myopic)
+= 0.5 (Moderate)
+= 0.8 (Ours)
+600 700 800 900 1000
+5.8
+5.9
+6.0
+Zoom: Final Convergence
+Figure 4.Sensitivity Analysis of the Decay Factorλ.The main plot (left) shows the best objective value found over 1,000 evaluations.
+Theblue line(λ= 0) represents a myopic, node-centric baseline, which suffers from premature convergence. Thered line(λ= 0.8,
+Ours) demonstrates the most robust convergence trajectory. Thezoom panel(right) highlights the final optimization stage (iterations
+600-1000), showing thatλ= 0.8consistently achieves the lowest objective value with narrower variance compared toλ= 0.5and
+λ= 0.
+As observed in Figure 4, the configuration ofλ= 0.8yields the most effective search trajectory. TheMyopicsetting
+(λ= 0) clearly underperforms, validating our core hypothesis that clade-level information aggregation is essential for
+overcoming evaluation sparsity. Meanwhile,λ= 0.8outperformsλ= 0.5, confirming that retaining a longer memory
+horizon (with appropriate attenuation) allows the algorithm to better identify potential heuristics that lead to global optima.
+E. Algorithm
+We present the complete workflow of the Clade-AHD framework in Algorithm 1.
+15
+
+===== Page 16 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+Algorithm 1Clade-AHD: Clade-level Bayesian MCTS for Heuristic Design
+Require:Evaluation BudgetT max, Initial PopulationN init, DatasetD
+Require:Bayesian Priorsα 0, β0, Decay Factorλ, Temperature Paramω cool
+Require:Pruning Thresholdγ, Min VisitsV min
+Ensure:Best Heuristich ∗
+1:Initialization:
+2:v root ←CREATENODE(h seed, α0, β0)
+3:T ← {v root},evals←0,h ∗ ←h seed
+4:whileevals < T max do
+5: // Phase 1: Selection via Clade-Level Thompson Sampling
+6:v next ←v root
+7:whilev next is not Leafdo
+8: CandidatesC ← {u∈v next.children|u.f rozen=False}
+9:ifCis emptythen
+10:break
+11:end if
+12:foreach childu∈ Cdo
+13:// 1. Clade Belief Aggregation
+14:α T (u)←1 + P
+d∈desc(u) λdist(u,d)(αd −1)
+15:β T (u)←1 + P
+d∈desc(u) λdist(u,d)(βd −1)
+16:// 2. Budget-Aware Annealing
+17:p←evals/T max
+18:τ←(1/(1−p)) ωcool
+19:˜α←α T (u)·τ, ˜β←β T (u)·τ
+20:// 3. Thompson Sampling
+21:θ u ∼Beta( ˜α,˜β)
+22:end for
+23:v next ←argmax u∈C(θu)
+24:end while
+25: // Phase 2: Expansion (LLM Generation)
+26: Select operatorop∈ {Mutation,Crossover}
+27:h new ←LLM(v next.context, op)
+28:v new ←CREATENODE(h new, α0, β0)
+29:v next.children.add(vnew),T.add(v new)
+30: // Phase 3: Evaluation
+31:score←Evaluate(h new, D)
+32: Update global besth ∗ ifscore >score(h ∗)
+33:outcome←NORMALIZE(score){Convert to binary win/loss}
+34:evals←evals+ 1
+35: // Phase 4: Bottom-Up Belief Update
+36:v←v new
+37:whilev̸=NULLdo
+38:α v ←α v +outcome
+39:β v ←β v + (1−outcome)
+40:v←v.parent
+41:end while
+42: // Phase 5: Dynamic Clade Freezing
+43:ifevals(modN check) == 0then
+44:forv∈ Twherev.visits > V min do
+45:µ T ←α T (v)/(αT (v) +β T (v))
+46:ifµ T < γ·score(h ∗)then
+47:v.f rozen←True {Prune entire clade}
+48:end if
+49:end for
+50:end if
+51:end while
+52:returnh ∗
+16
+
+===== Page 17 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+F. Detailed Methodology
+F.1. Prompts of MCTS Actions
+To ensure a strictly fair comparison and to isolate the contribution of our Clade-based search strategy from prompt engineer-
+ing,we adopt the exact prompt templates provided in MCTS-AHD (Zheng et al., 2025) without any modification.
+We utilize the six distinct actions (i1, e1, e2, m1, m2, s1) defined in MCTS-AHD for initialization and expansion. The
+specific prompts for these actions are presented below. In all examples, we use the Traveling Salesman Problem (TSP)
+with the step-by-step construction framework as the representative task context.
+Prompt for Action i1 (Initialization)
+Task Context:
+Solving Traveling Salesman Problem (TSP) with constructive heuristics. TSP requires finding the shortest path that visits all
+given nodes and returns to the starting node.
+Instruction:
+First, describe the design idea and main steps of your algorithm in one sentence. The description must be inside a brace outside
+the code implementation. Next, implement it in Python as a function named ’select_next_node’.
+This function should accept 4 input(s): ’current_node’, ’destination_node’, ’unvisited_nodes’, ’distance_matrix’.
+The function should return 1 output(s): ’next_node’. The select next node function takes as input the current node, the destina-
+tion node, a set of unvisited nodes, and a distance matrix, and returns the next node to visit.
+Do not give additional explanations.
+Prompt for Action m1 (Mutation - Mechanism)
+Task Context:
+Solving Traveling Salesman Problem (TSP) with constructive heuristics. TSP requires finding the shortest path that visits all
+given nodes and returns to the starting node.
+Input Context:
+I have one algorithm with its code as follows:
+# Its Description
+# It’s Python Code Implementation of A Function
+Instruction:
+Please create a new algorithm that has a different form, but can be a modified version of the provided algorithm. Attempt to
+introduce more novel mechanisms and new equations or programme segments.
+First, describe the design idea and main steps of your algorithm in one sentence. The description must be inside a brace outside
+the code implementation. Next, implement it in Python as a function named ’select_next_node’.
+This function should accept 4 input(s): ’current_node’, ’destination_node’, ’unvisited_nodes’, ’distance_matrix’.
+The function should return 1 output(s): ’next_node’. The select next node function takes as input the current node, the destina-
+tion node, a set of unvisited nodes, and a distance matrix, and returns the next node to visit.
+Do not give additional explanations.
+Prompt for Action m2 (Mutation - Parameter)
+Task Context:
+Solving Traveling Salesman Problem (TSP) with constructive heuristics. TSP requires finding the shortest path that visits all
+given nodes and returns to the starting node.
+Input Context:
+I have one algorithm with its code as follows:
+# Its Description
+# It’s Python Code Implementation of A Function
+Instruction:
+Please identify the main algorithm parameters and help me in creating a new algorithm that has different parameter settings for
+equations compared to the provided algorithm.
+First, describe the design idea and main steps of your algorithm in one sentence. The description must be inside a brace outside
+the code implementation. Next, implement it in Python as a function named ’select_next_node’.
+This function should accept 4 input(s): ’current_node’, ’destination_node’, ’unvisited_nodes’, ’distance_matrix’.
+The function should return 1 output(s): ’next_node’. The select next node function takes as input the current node, the destina-
+tion node, a set of unvisited nodes, and a distance matrix, and returns the next node to visit.
+Do not give additional explanations.
+17
+
+===== Page 18 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+Prompt for Action e1 (Crossover - Divergent)
+Task Context:
+Solving Traveling Salesman Problem (TSP) with constructive heuristics. TSP requires finding the shortest path that visits all
+given nodes and returns to the starting node.
+Input Context:
+I havekexisting algorithms with their codes as follows:
+No.1 algorithm’s description, its corresponding code, and its objective value are:
+...
+No.kalgorithm’s description, its corresponding code, and its objective value are:
+...
+Instruction:
+Please create a new algorithm that has a totally different form from the given algorithms. Try generating codes with different
+structures, flows, or algorithms. The new algorithm should have a relatively low objective value.
+First, describe the design idea and main steps of your algorithm in one sentence. The description must be inside a brace outside
+the code implementation. Next, implement it in Python as a function named ’select_next_node’.
+This function should accept 4 input(s): ’current_node’, ’destination_node’, ’unvisited_nodes’, ’distance_matrix’.
+The function should return 1 output(s): ’next_node’. The select next node function takes as input the current node, the destina-
+tion node, a set of unvisited nodes, and a distance matrix, and returns the next node to visit.
+Do not give additional explanations.
+Prompt for Action e2 (Crossover - Elitist)
+Task Context:
+Solving Traveling Salesman Problem (TSP) with constructive heuristics. TSP requires finding the shortest path that visits all
+given nodes and returns to the starting node.
+Input Context:
+I have 2 existing algorithms with their codes as follows:
+No.1 algorithm’s description, its corresponding code, and its objective value are:
+...
+No.2 algorithm’s description, its corresponding code,e and its objective value are:
+...
+Instruction:
+Please create a new algorithm that has a similar form to the No.2 algorithm and is inspired by the No.1 algorithm. The new
+algorithm should have an objective value lower than both algorithms.
+Firstly, list the common ideas in the No.1 algorithm that may give good performances. Secondly, based on the common idea,
+describe the design idea based on the No.len(indivs) algorithm and main steps of your algorithm in one sentence. The descrip-
+tion must be inside a brace. Next, implement it in Python as a function named ’select_next_node’.
+This function should accept 4 input(s): ’current_node’, ’destination_node’, ’unvisited_nodes’, ’distance_matrix’.
+The function should return 1 output(s): ’next_node’. The select next node function takes as input the current node, the destina-
+tion node, a set of unvisited nodes, and a distance matrix, and returns the next node to visit.
+Do not give additional explanations.
+18
+
+===== Page 19 =====
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design
+Prompt for Action s1 (Tree-Path Reasoning)
+Task Context:
+Solving Traveling Salesman Problem (TSP) with constructive heuristics. TSP requires finding the shortest path that visits all
+given nodes and returns to the starting node.
+Input Context:
+I havekexisting algorithms with their codes as follows:
+No.1 algorithm’s description, its corresponding code, and its objective value are:
+...
+No.kalgorithm’s description, its corresponding code, and its objective value are:
+...
+Instruction:
+Please help me create a new algorithm that is inspired by all the above algorithms with its objective value lower than any of
+them.
+Firstly, list some ideas in the provided algorithms that are clearly helpful to a better algorithm. Secondly, based on the listed
+ideas, describe the design idea and main steps of your new algorithm in one sentence. The description must be inside a brace.
+Thirdly, implement it in Python as a function named ’select_next_node’.
+This function should accept 4 input(s): ’current_node’, ’destination_node’, ’unvisited_nodes’, ’distance_matrix’.
+The function should return 1 output(s): ’next_node’. The select next node function takes as input the current node, the destina-
+tion node, a set of unvisited nodes, and a distance matrix, and returns the next node to visit.
+Do not give additional explanations.
+G. Licenses
+To ensure transparency and facilitate reproducibility, we strictly adhere to the open-source licenses of all baselines and
+datasets used in this work. The specific licenses and access URLs are summarized in Table 7.
+Table 7.A summary of licenses for baselines and resources used in this work.
+Resources Type License URL
+LKH3 Code Academic research use http://webhotel4.ruc.dk/~keld/research/LKH-3/
+OR-Tools Code MIT License https://developers.google.com/optimization/
+POMO Code Available online https://github.com/yd-kwon/POMO
+DeepACO Code MIT License https://github.com/henry-yeh/DeepACO
+VRP-DACT Code MIT License https://github.com/yining043/VRP-DACT
+NeuOpt Code MIT License https://github.com/yining043/NeuOpt
+FunSearch Code Apache License 2.0 https://github.com/google-deepmind/funsearch
+EoH Code MIT License https://github.com/FeiLiu36/EoH
+ReEvo Code MIT License https://github.com/ai4co/reevo
+HSEvo Code Available online https://github.com/datphamvn/HSEvo
+Synthetic Datasets Dataset Available online https://github.com/FeiLiu36/EoH/tree/main/examples
+TSPLib Dataset Non-commercial use http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95
+19

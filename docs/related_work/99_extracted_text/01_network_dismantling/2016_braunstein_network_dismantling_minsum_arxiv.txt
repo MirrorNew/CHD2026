@@ -1,0 +1,1770 @@
+
+
+===== Page 1 =====
+Network dismantling
+Alfredo Braunstein
+Politecnico di Torino, Torino, Italy
+Human Genetics Foundation, Torino, Italy and
+Collegio Carlo Alberto, Moncalieri, Italy
+Luca Dall’Asta
+Politecnico di Torino, Torino, Italy and
+Collegio Carlo Alberto, Moncalieri, Italy
+Guilhem Semerjian
+LPTENS, Ecole Normale Supérieure, PSL Research University, Sorbonne Universités,
+UPMC Univ Paris 06, CNRS UMR 8549, 24 Rue Lhomond, 75005 Paris, France
+Lenka Zdeborová
+Institut de Physique Théorique, CNRS, CEA and Université Paris-Saclay, Gif-sur-Yvette, France.
+We study the network dismantling problem, which consists in determining a minimal set of ver-
+tices whose removal leaves the network broken into connected components of sub-extensive size.
+For a large class of random graphs, this problem is tightly connected to the decycling problem
+(the removal of vertices leaving the graph acyclic). Exploiting this connection and recent works
+on epidemic spreading we present precise predictions for the minimal size of a dismantling set in
+a large random graph with a prescribed (light-tailed) degree distribution. Building on the statisti-
+cal mechanics perspective we propose a three-stage Min-Sum algorithm for eﬃciently dismantling
+networks, including heavy-tailed ones for which the dismantling and decycling problems are not
+equivalent. We also provide further insights into the dismantling problem concluding that it is an
+intrinsically collective problem and that optimal dismantling sets cannot be viewed as a collection
+of individually well performing nodes.
+arXiv:1603.08883v2  [physics.soc-ph]  15 Nov 2016
+
+===== Page 2 =====
+2
+I. INTRODUCTION
+A network (a graphG in the discrete mathematics language) is a setV of N entities called nodes (or vertices), along
+with a set E of edges connecting some pairs of nodes. In a simpliﬁed way, networks are used to describe numerous
+systems in very diverse ﬁelds, ranging from social sciences to information technology or biological systems, see [1, 2]
+for reviews. Several crucial questions in the context of network studies concern the modiﬁcations of the properties of
+a graph when a subsetS of its nodes is selected and treated in a speciﬁc way. For instance: How much does the size
+of the largest connected component of the graph decreases if the vertices inS (along with their adjacent edges) are
+removed? Do the cycles survive this removal? What is the outcome of the epidemic spreading if the vertices inS are
+initially contaminated, constituting the seed of the epidemic? On the contrary, what is the inﬂuence of a vaccination
+of nodes inS preventing them from transmitting the epidemic? It is relatively easy to answer these questions when the
+set S is chosen randomly, with each vertex being selected with some probability independently. Classical percolation
+theory is nothing but the study of the connected components of a graph in which some vertices have been removed
+in this way.
+A much more interesting case is when the setS can be chosen in some optimal way. Indeed, in all applications
+sketched above it is reasonable to assign some cost to the inclusion of a vertex inS: vaccination has a socioeconomic
+price, incentives must be paid to customers to convince them to adopt a new product in a viral marketing campaign,
+incapacitating a computer during a cyber attack requires resources. Thus, one faces a combinatorial optimization
+problem: the minimization of the cost ofS under a constraint on its eﬀect on the graph. These problems thus exhibit
+both static and dynamic features, the former referring to the combinatorial optimization aspect, the latter to the
+deﬁnition of the cost function itself through a dynamical process.
+In this paper we focus on the the existence of a giant component in a network, that is the largest component
+containing a positive fraction of the vertices (in theN → ∞limit). On the one hand, the existence of a giant
+component is often necessary for the network to fulﬁll its function (e.g. to deliver electricity, information bits or
+ensure possibility of transportation). An adversary might be able to destroy a set of nodes with the goal of destroying
+this functionality. It is thus important to understand what is an optimal attack strategy, possibly as a ﬁrst step
+in the design of optimal defense strategies. On the other hand, a giant component can propagate an epidemic to
+a large fraction of a population of nodes. Interpreting the removal of nodes as the vaccination of individuals who
+cannot transmit the epidemic anymore, destroying the giant component can be seen as an extreme way of organizing
+a vaccination campaign [3, 4] by conﬁning the contagion to small connected components (less drastic strategies can
+be devised using speciﬁc information about the epidemic propagation model [5, 6]). Another related application
+is inﬂuence maximization as studied in many previous works [7–9]. In particular, optimal destruction of the giant
+component is equivalent to selection of the smallest set of initially informed nodes needed to spread the information
+into the whole network under a special case of the commonly considered model for information spreading [7–9].
+To deﬁne the main subject of this paper more formally, following [10], we callS a C-dismantling set if its removal
+yields a graph whose largest component has size (in terms of its number of nodes) at mostC. The C-dismantling
+number of a graph is the minimal size of such a set. When the value ofC is either clear from the context or not
+important for the given claim, we will simply talk aboutdismantling. Typically, the size of the largest component
+is a ﬁnite fraction of the total number of nodesN. To formalize the notion ofdestroying the giant componentwe
+will consider the bound C on the size of the connected components of the dismantled network to be such that
+1≪ C≪ N. It should be noted that we deﬁned dismantling in terms of node removal, it could be rephrased in terms
+of edge-removal [11], which turns out to be a much easier problem. The dismantling problem is also referred to as
+fragmentability of graphsin graph theory literature [12–14], and asoptimal percolationin [15].
+Determining whether the C-dismantling number of a graph is smaller than some constant is an NP-complete
+decision problem (for a proof see Appendix A). The concept of NP-completeness concerns the worst-case diﬃculty
+of the problem. The questions we address in the present paper are instead the following: What is the dismantling
+number on some representative class of graphs, in our case random graphs? What are the best heuristic algorithms
+and how does their performance compare to the optimum, and how do they perform on benchmarks of real-world
+graphs? Simple heuristic algorithms for the dismantling problem were considered in previous works [16–18], where
+the choice of the nodes to be included in the dismantling set was based on their degrees (favoring the inclusion of the
+most connected vertices), or some measure of their centrality. More recently, a heuristic for the dismantling problem
+has been presented in [15] under the name “collective” inﬂuence, in which the inclusion of a node is decided according
+to a combination of its degree and the degrees of the nodes in a local neighborhood around it. Ref. [15] also attempts
+to estimate the dismantling number on random graphs.
+
+===== Page 3 =====
+3
+II. OUR MAIN CONTRIBUTION
+Inthispaperweprovideadetailedstudyofthedismantlingproblem, withbothanalyticalandalgorithmicoutcomes.
+We present very accurate estimates of the dismantling number for large random networks, building on a connection
+with the decycling problem (in which one seeks a subset of nodes whose removal leaves the graph acyclic, also an
+NP-complete problem [19]) and on recent studies of optimal spreading [20–22, 27]. Our results are the one-step replica
+symmetry broken estimate of the ground state of the corresponding optimization problem.
+On the computational side, we introduce a very eﬃcient algorithm that outperforms considerably state-of-the-art
+algorithms for solving the dismantling problem. We demonstrate its eﬃciency and closeness to optimality both on
+random graphs and on real world networks. The goal of our paper is closely related to the one of [15], we present an
+assessment of the results reported therein, on random as well as on real world networks.
+Our dismantling algorithm, which has been inspired by the theoretical insight gained on random graphs, is composed
+of three stages:
+(1) Min-sum message passing for decycling. Thisisthecoreofthealgorithm, employingavariantofamessage-
+passing algorithm developed in [20, 21]. A related but diﬀerent message-passing algorithm was developed for
+decycling in [22], and later applied to dismantling in [23], it performs comparably to ours.
+(2) T ree breaking. Once all cycles are broken, some of the tree components may still be larger than the desired
+threshold C. We break them into small components removing a fraction of nodes that vanishes in the large size
+limit. This can be done in timeO(N log N) by an eﬃcient greedy procedure (detailed in Appendix C2).
+(3) Greedy reintroduction of cycles. As explained below the strategy of ﬁrst decycling a graph before disman-
+tling it is the optimal one for graphs that contain few short cycles (a typical property of light-tailed random
+graphs). Forgraphswithmanyshortcyclesweimproveconsiderablytheeﬃciencyofouralgorithmbyreinserting
+greedily some nodes that close cycles without increasing too much the size of the largest component.
+The dismantling problem, as is often the case in combinatorial optimization, exhibits a very large number of
+(quasi-)optimal solutions. We characterize the diversity of these degenerate minimal dismantling sets by a detailed
+statistical analysis, computing in particular the frequency of appearance of each node in the quasi-optimal solutions,
+and conclude that dismantling is an intrinsically collective phenomenon that results from a correlated choice of a ﬁnite
+fraction of nodes. It thus makes much more sense to think in terms ofgood dismantling setsas a whole and not about
+individual nodes as theoptimal inﬂuencers/spreaders[15]. We further study the correlation between the degree of a
+node and its importance for dismantling, exploiting a natural variant of our algorithm in which the dismantling set
+is required to avoid some marked nodes. This allows us to show that each of the low degree nodes can be replaced
+by other nodes without increasing signiﬁcantly the size of the dismantling set. Contrary to claims in [15] we do not
+conﬁrm any particular importance of weak-nodes, apart from the obvious fact that the set of highest degree nodes is
+not a good dismantling set.
+To give a quantitative idea of our algorithmic contribution, we state two representative examples of the kind of
+improvement we obtain with the above algorithm with respect to the state-of-the-art [15].
+• In an Erdős-Rényi (ER) random graph of average degree 3.5 and sizeN = 57 we found C = 1000-dismantling
+sets removing17.8% of the nodes, whereas the best known method (adaptive eigenvalue centrality for this case)
+removes 20.2% of the nodes, and the adaptive “collective” inﬂuence (CI) method of [15] removes20.6% of the
+nodes. Hence, we provide a13% improvement over the state of the art. Our theoretical analysis estimates the
+optimum dismantling number to be around17.5% of the nodes, thus the algorithm is extremely close to optimal
+in this case.
+• Our algorithm managed to dismantle the Twitter network studied in [15] (with532, 000 nodes) into components
+smaller than C = 1000 using only 3.4% of the nodes, whereas the CI heuristics of [15] needs5.6% of the nodes.
+Here we thus provide a60% improvement over the state-of-the-art.
+Not only does our algorithm demonstrate beyond state-of-the-art performance, but it is also computationally
+eﬃcient. Its core part runs in linear time over the number of edges, allowing us to easily dismantle networks with
+tens of millions of nodes.
+III. THE RELA TION BETWEEN DISMANTLING AND DECYCLING
+We begin our discussion by clarifying the relation between the dismantling and decycling problems. While the
+argument below can be found in [10], we reproduce it here in a simpliﬁed fashion. The decycling number (or more
+precisely fraction)θdec(G) of G is the minimal fraction of vertices that have to be removed to make the graph acyclic.
+
+===== Page 4 =====
+4
+We deﬁne similarly the dismantling numberθdis(G, C) of a graphG as the minimal fraction of vertices that have to
+be removed to make the size of the largest component of the remaining graph smaller than a constantC.
+For random graphs with degree distributionq ={qk}k≥0, in the large size limit, the parametersθdec and θdis will
+enjoy concentration (self-averaging) properties, we shall thus write their typical values as
+θdec(q) = lim
+N→∞
+E[θdec(G)] , (1)
+θdis(q) = lim
+C→∞
+lim
+N→∞
+E[θdis(G, C)] , (2)
+where E[•] denotes an average over the random graph ensemble. For the dismantling number we allow the connected
+components after the removal of a dismantling set to be large but sub-extensive because of the order of limits. It was
+proven in [10] that for some families of random graphs an equivalent deﬁnition islimϵ→0 limN→∞ E[θdis(G, ϵN)], i.e.
+connected components are allowed to be extensive but with a vanishing intensive size.
+The crucial point for the relation between dismantling and decycling is that trees (or more generically forests) can
+be eﬃciently dismantled. It was proven in [10] thatθdis(G, C)≤ 1/(C + 1) whenever G is a forest. This means that
+the fraction of vertices to be removed from a forest to dismantle it into components of sizeC goes to zero whenC
+grows.
+This observation brings us to the following two claims concerning the dismantling and decycling numbers for
+random graphs with degree distributionq: (i) for any degree distribution, θdis(q)≤ θdec(q); (ii) if q also admits a
+second moment (we shall callq light-tailed when this is the case) then there is actually an equality between these two
+parameters, θdis(q) = θdec(q).
+The ﬁrst claim follows directly from the above observation on the decycling number of forests. Once a decycling
+set S of G has been found one can add toS additional vertices to turn it into aC-dismantling set, the additional
+cost being bounded asθdis(G, C)≤ θdec(G) + 1/(C + 1). Taking averages of this bound and the limitC→∞ after
+N→∞ yields directly (i).
+To justify our second claim, we consider aC-dismantling set S of a graph G. To turn S into a decycling set we
+need to add additional vertices in order to break the cycles that might exist inG\ S. The lengths of these cycles are
+certainly smaller than C, and removing at most one vertex per cycle is enough to break them. We can thus write
+θdec(G)≤ θdis(G, C) +nC(G)/N, with nC(G) denoting the number of cycles ofG of length at mostC. We recall that
+the existence of a second moment ofq implies that nC(G) remains bounded whenN→∞ with C ﬁxed. Considering
+the limit N→∞ and property (i), property (ii) follows.
+IV. NETWORK DECYCLING
+In this section, we shall explain the results on the decycling number of random graphs we obtained via statistical
+mechanics methods, and how they can be exploited to build an eﬃcient heuristic algorithm for decycling arbitrary
+graphs.
+A. T esting the presence of cycles in a graph
+The 2-core of a graphG is its largest subgraph of minimal degree 2; it can be constructed by iteratively removing
+isolated nodes and leaves (vertices of degree 1) until either all vertices have been removed or all remaining vertices
+have degree at least 2. It is easy to see that a graph contains cycles if and only if its 2-core is non-empty. To decide
+if a subsetS is decycling or not we remove the nodes inS and perform this leaf removal on the reduced graph. To
+formalize this we introduce binary variablesxt
+i(S)∈{ 0, 1} on each vertexi∈ V of the graph,t being a discrete time
+index. At the starting timet = 0, one marks the initially removed vertices by settingx0
+i (S) = 1 if i∈ S, 0 otherwise,
+and let thex variables evolve in time according to
+xt+1
+i (S) =
+
+
+
+1 if xt
+i(S) = 1 ,
+I
+[
+∑
+j∈∂i
+(1− xt
+j(S))≤ 1
+]
+if xt
+i(S) = 0 , (3)
+where ∂i ={j : (ij)∈ E} denotes the local neighborhood of vertexi and I denotes the indicator function, that is 1 if
+its argument is true and 0 otherwise. One can check that thexi’s are monotonous in time (they can only switch from
+0 to 1), hence they admit a limitx∗
+i (S) when t→∞ . At this ﬁxed pointx∗
+i (S) = 0 if and only ifi is in the 2-core of
+G\ S, hence the suﬃcient and necessary condition forS to be a decycling set ofG is x∗
+i (S) = 1 for all verticesi.
+Note that the leaf-removal procedure can be equivalently viewed as a particular case of the linear threshold model
+of epidemic propagation or of information spreading. By calling a removed vertex infected (or informed), one sees that
+
+===== Page 5 =====
+5
+the infection (or information) of nodei occurs whenever the number of its infected (or informed) neighbors reaches
+its degree minus one. This equivalence, which was already exploited in [15, 27], allows us to build on previous works
+on minimal contagious sets [20, 21, 27] and on inﬂuence maximization [7–9].
+B. Optimizing the size of decycling sets
+From the point of view of statistical mechanics, it is natural to introduce the following probability distribution over
+the subsets S in order to ﬁnd the optimal decycling sets of a given graph
+ˆη(S) = 1
+Z(µ) eµ|S| ∏
+i∈V
+I[x∗
+i (S) = 1] , (4)
+where|S| denotes the number of vertices inS, µ is a real parameter to be interpreted as a chemical potential (or an
+inverse temperature), and the partition functionZ(µ) normalizes this probability distribution. From the preceding
+discussion, this measure gives a positive probability only to decycling sets, and their minimal size can be obtained as
+the ground state energy in the zero-temperature limit:
+θdec(G) = 1
+N lim
+µ→−∞
+1
+µ ln Z(µ) . (5)
+The computation of this partition function remains at this point a diﬃcult problem, in particular the variablesx∗
+i
+depend on the choice ofS in a non-local way. One can get around this diﬃculty in the following way: as the evolution
+of xt
+i is monotonous in time it can be completely described by a single integer,ti(S) = min{t : xt
+i(S) = 1}, the time
+at which i is removed in the parallel evolution described above. Note thatti(S) = 0 if and only ifi∈ S, ti(S) > 0
+otherwise. We use the natural conventionmin∅ =∞, hence the nodesi in the 2-core ofG\ S are precisely those with
+an inﬁnite removal timeti(S) =∞. The crucial advantage of this equivalent representation in terms of the activation
+times is its locality along the graph. Indeed, the dynamical evolution rule (3) can be rephrased as static equations
+linking the timesti on neighboring vertices:
+ti(S) =
+{
+0 if i∈ S ,
+φi({tj}j∈∂i) if i∈ V\ S , (6)
+with φi({tj}j∈∂i) = 1 + max2({tj(S)}j∈∂i) (7)
+where we denote max2 the second largest of the arguments (reordering them ast1 ≥ t2 ≥ ··· ≥tn one deﬁnes
+max2(t1, . . . , tn) = t2). In the leaf-removal procedure, one vertex is removed in the ﬁrst step following the time at
+which all but one of its neighbors have been removed, making it a leaf. The set of equations (6) admits a unique
+solution for eachS, hence the partition function can be rewritten as:
+Z(µ) =
+∑
+{ti}
+eµ ∑
+i ψi(ti) ∏
+i∈V
+I[ti <∞]
+∏
+i∈V
+Φ(ti,{tj}j∈∂i) , (8)
+with ψi (ti) = I [ti = 0], and Φ(ti,{tj}j∈∂i) = I[ti = 0] + I[ti = φi({tj}j∈∂i)]. We have thus obtained an exact
+representation of the generating function counting the number of decycling sets according to their size as a statistical
+mechanics model of variables (theti’s) interacting locally along the graphG. We transformed the non-equilibrium
+problem of leaf removal into an equilibrium problem where the times of removal play the role of the static variables.
+Note that Ref. [22], which also estimates the decycling number, uses a simpler, but approximate, representation, where
+one cycle may remain in every connected component, and the correspondence between microscopic conﬁgurations and
+sets of removed vertices is many to one. The domain of the variablesti should include all integers between0 and
+the diameter ofG, and the additional∞ value. For practical reasons, in the rest of this paper we restrict this set to
+{0, 1, . . . , T,∞}, where T is a ﬁxed parameter, and project allti’s greater thanT to∞. This means that we require
+G\ S not only to be acyclic, but that its connected components are trees of diameter at mostT. For large enough
+values of T this additional restriction is inconsequential.
+The exact computation of the partition function (8) for an arbitrary graph remains an NP-hard problem. However,
+if G is a sparse random graph the large size limit of its free-energy densityln Z(µ)/(N µ) can be computed by the
+cavity method [24, 25]. The latter has been developed for statistical mechanics models on locally tree-like graphs,
+such as light-tailed random graphs, for which the exactness of the cavity method has been proven mathematically
+
+===== Page 6 =====
+6
+d θ dec(d) θMS
+dec(d)
+1.5 0.0125 0.0135
+2.5 0.0912 0.0936
+3.5 0.1753 0.1782
+5 0.2789 0.2823
+TABLE I. The (1RSB) cavity predictions for the decycling number of Erdös-Rényi random graphs of average degreed, and the
+decycling number reached by the Min-Sum algorithm on graphs of sizeN = 10 7 nodes.
+on several problems. The starting point of the method is based on the fact that light-tailed random graphs converge
+locally to trees in their large size limit, hence models deﬁned on them can be treated with belief propagation (BP,
+also called Bethe Peierls approximation in statistical mechanics). In BP, a partition function akin to (8) is computed
+via the exchange ofmessages between neighboring nodes. In the present case, where an interaction in (8) includes
+node i and all its neighborsj∈ ∂i, we obtain a tree-like representation if we let pairs of variablesti, tj live on the
+edges and add consistency constraints on the nodes. The BP messageηij(ti, tj) from i to j∈ ∂i is then a function of
+both the activation timesti and tj. This message is interpreted as the marginal probability law of the local variables
+ti and tj in an amputated (cavity) graph in which the interaction betweeni and j has been removed. Thanks to the
+locally tree-like character of the graph, some correlation-decay properties are veriﬁed and allow a node’s incoming
+messages to be treated as independent. Under this assumption, the iterative BP equations [20, 21, 27], for decycling
+are written as
+ηij(ti, tj)∝
+∑
+{tk}k∈∂i\j
+eµψi(ti)Φ(ti,{tk}k∈∂i)
+∏
+k∈∂i\j
+ηki(tk, ti) , (9)
+the∝ symbol includes a multiplicative normalization constant. The free-energy can then be computed as a sum of
+local contributions depending on the messages solution of the BP equations.
+Better parametrizations with a number of real values per message that scales linearly withT (rather that quadrat-
+ically) can be devised [21, 27]. A parametrization with2T real values per message was introduced in [27] and was
+employed to obtain improved results for the minimum decycling set on regular random graphs by extending the cavity
+method to the so-called ﬁrst level of the replica symmetry breaking (1RSB) scheme. The extension of this calculation
+to random graphs with arbitrary light-tailed degree distributions is reported in the Appendix B (along with expansions
+close to the percolation threshold and at large degrees, and a lower bound onθdec valid for all graphs). The 1RSB
+predictions for the decycling fractionθdec(d) of Erdős-Rényi random graphs with average degreed, obtained solving
+numerically the corresponding equations and extrapolating the results in the largeT limit, are presented for a few
+values of d in Table I.
+C. Min-Sum algorithm for the decycling problem
+We turn now to the description of our heuristic algorithm for ﬁnding decycling sets of the smallest possible size.
+The above analysis shows the equivalence of this problem with the minimization of the cost function∑
+i ψi(ti) over
+the feasible conﬁgurations of the activation times{ti}∈{ 0, . . . , T}V, where feasible means that, for all verticesi,
+either ti = 0 (then i is included in the decycling setS) or ifti > 0 it obeys the constraintti = 1 + max2({tj}j∈∂i).
+Since this minimization is NP-hard, we formulate a heuristic strategy in the following manner. We ﬁrst consider a
+slightly modiﬁed cost function withψi (ti) = I [ti = 0] +εi(ti), where εi(ti) is a randomly chosen inﬁnitesimally small
+cost associated with the removal of nodei at time ti. The minimum{t∗
+i} of this cost function is now unique with
+probability 1, and can be constructed ast∗
+i = argmin hi(ti), where theﬁeld hi(ti) is the minimum cost among the
+feasible conﬁgurations with a prescribed value for the removal timeti of sitei. From the solution of this combinatorial
+optimization problem we construct one of the minimal decycling setsS by including vertexi in S if and only ift∗
+i = 0.
+It remains now to ﬁnd a good approximation forhi; we compute it by the Min-Sum (MS) algorithm, which corresponds
+to theµ→−∞ limit of BP and is similarly based on the exchange of messageshij(ti, tj) between neighboring vertices,
+an analog ofηij(ti, tj), but interpreted as a minimal cost instead of a probability. We defer to the Appendix C1 for
+a full derivation and implementation details, stating here only the ﬁnal equations. ForT≥ ti > 0:
+hi (ti) = ψi (ti) +
+∑
+k∈∂i
+Lki(ti) + Mi (ti) , (10a)
+hi (0) = ψi (0) +
+∑
+k∈∂i
+Rki(0) , (10b)
+
+===== Page 7 =====
+7
+where
+Mi(ti) = min{0, min
+k∈∂i
+{Rki(ti)− Lki(ti)}} , (11)
+and Lij, Rij, Mij, h0
+ij, and h1
+ij form a solution of the following system of ﬁxed-point equations for messages deﬁned
+on each directed edgei→ j of the graph:
+Lki (ti) = min
+tk<ti
+h0
+ki (tk) , (12a)
+Rki (ti) = min
+{
+h0
+ki (ti) , min
+tk>ti
+h1
+ki (tk)
+}
+, (12b)
+Mij (ti) = min
+{
+0, min
+k∈∂i\j
+{Rki(ti)− Lki(ti)}
+}
+, (12c)
+h0
+ij (ti)∝ ψi (ti) +
+∑
+k∈∂i\j
+Lki(ti) , (12d)
+h1
+ij (ti)∝ ψi (ti) +
+∑
+k∈∂i\j
+Lki(ti) + Mij (ti) , (12e)
+h0
+ij (0)∝ ψi (0) +
+∑
+k∈∂i\j
+Rki(0) , (12f)
+where∝ includes now an additive normalization constant. An intuitive interpretation of all these quantities and
+equations is provided in the Appendix C1, let us only mention at this point that the messageh0
+ij (ti) (resp. h1
+ij (ti))
+is the minimum feasible cost on the connected component ofi in G\ j, under the condition thati is removed at time
+ti in the original graph assuming thatj is not removed yet (resp. assuming thatj is already removed fromG).
+This system can be solved eﬃciently by iteration. The computation of one iteration takesO (|E| T ) elementary
+(+,−,×, min) operations, where|E| denotes the number of edges of the graph, and a relatively small number of
+iterations are usually suﬃcient to reach convergence. In principle one should take the cutoﬀT on the removal times
+to be greater thanN in order to solve the decycling problem, we found however that using large but ﬁnite values of
+T (i.e. constraining the diameter of the tree components after the node removal) did not increase extensively the size
+of the decycling set; in the simulations presented below we usedT = 35. Note that our algorithm is very ﬂexible and
+many variations can be implemented by appropriate modiﬁcations of the cost function. For example, we exploited
+the possibility to forbid the removal of certain marked nodesi by setting ψi(ti = 0) =∞ for them.
+ 0
+ 0.1
+ 0.2
+ 0.3
+ 0.4
+ 0.5
+ 0.6
+ 0.7
+ 0.8
+ 0.14  0.15  0.16  0.17  0.18  0.19  0.2  0.21  0.22  0.23  0.24
+C/N
+S/N
+SA
+RND
+DEG
+EC
+CI5
+MS
+FIG. 1. Fraction of nodes in the largest component as a function of the fraction of removed nodes for an Erdös-Rényi random
+graph of average degreed = 3.5 and sizeN = 78, 125. We compare the result of our Min-Sum algorithm (MS) to random node
+removal (RND), adaptive largest degree (DEG), adaptive eigenvector centrality (EC), adaptive “collective” inﬂuence centrality
+(CI) and Simulated Annealing (SA).
+
+===== Page 8 =====
+8
+V. RESUL TS FOR DISMANTLING
+A. Results on random graphs
+TheoutcomeofouralgorithmappliedtoanErdős-Rényirandomgraphofaveragedegree 3.5ispresentedinFigure1.
+Here, the red point corresponds to the output of its ﬁrst stage (decycling with MS) which yields, after the removal
+of a fraction0.1781 of the nodes, an acyclic graph whose largest components contain a fraction0.032 of the vertices.
+The red line corresponds to the second stage, which further reduces the size of the largest component by greedily
+breaking the remaining trees. We compare to Simulated Annealing (SA, black point) as well as to several incremental
+algorithms that successively remove the nodes with the highestscores, where the score of a vertex is a measure of its
+centrality. Besides a trivial function which gives the same score to all vertices (hence removing the vertices in random
+order, RND), and the score of a vertex equal to its degree (DEG), we used the eigenvector centrality measure (EC)
+and the recently proposed Collective Inﬂuence (CI) measure [15]. We used all these heuristics in anadaptive way,
+recomputing the scores after each removal. Further details on all these algorithms can be found in Appendix C4.
+We see from the ﬁgure that the MS algorithm outperforms the others by a considerable margin: it dismantles the
+graph using13% fewer nodes than the CI method. The Monte Carlo based SA algorithm performs rather well, but is
+considerably slower than all the others.
+ 0
+ 2
+ 4
+ 6
+ 8
+ 10
+ 12
+ 14
+ 0.18  0.2  0.22  0.24  0.26  0.28  0.3
+C/N ( x 10-4 )
+S/N
+ 0
+ 2
+ 4
+ 6
+ 8
+ 10
+ 0.18  0.2  0.22 0.24 0.26 0.28  0.3
+C ( x 100 )
+S/N
+N=78125
+N=156250
+N=312500
+N=625000
+N=1250000
+N=2500000
+N=5000000
+N=10000000
+N=100000000
+FIG. 2. Fraction of nodes in the largest componentC/N as a function of the fraction of nodes removed by the MS algorithm
+followed by the greedy tree breaking for the ER random graph of average degreed = 3.5 and a range of sizes. Inset: Same
+plot for the size of the largest component. The collapse of the curves suggests that to reduce the largest component to a given
+constant sizeC, it is suﬃcient to removeS =sN nodes, wheres =s(C) does not depend onN.
+In Fig. 2 we zoom in on the results of the second stage of our algorithm and perform a ﬁnite size scaling analysis,
+increasing the size of the dismantled graphs up toN = 108. In this way, we identify a threshold for decycling (and
+thus for dismantling) by the MS algorithm that converges towards the valueθM S
+dec ≈ 0.1782, that is close but not equal
+to the theoretical prediction of the 1RSB calculationθ1RSB
+dec ≈ 0.1753 (vertical arrow). The inset of Fig. 2 shows a
+remarkable scaling that indicates that the size of the largest component after dismantling by removing a given fraction
+of nodes does not depend on the graph size.
+Combinatorialoptimizationproblemstypicallyexhibitaverylargedegeneracyoftheir(quasi)-optimalsolutions. We
+performed a detailed statistical analysis of the quasi-optimal dismantling sets constructed by our algorithm, exploiting
+the fact that the MS algorithm ﬁnds diﬀerent decycling sets for diﬀerent realizations of the random tie-breaking noise
+εi(ti).
+For a given ER random graph of average degree3.5 and size N = 78125 we ran the algorithm for 1000 diﬀerent
+realizations of the tie-breaking noiseεi(ti) and obtained 1000 diﬀerent decycling sets, all of which had sizes within
+40 nodes of one another. Randomly chosen pairs among these 1000 decycling sets coincided, on average, on 82% of
+their nodes. For each node, we computed its frequency of appearance among the 1000 decycling sets we obtained.
+We then ordered nodes by this frequency and plotted the frequency as a function of this ordering in Fig. 3. We see
+
+===== Page 9 =====
+9
+that some nodes appear in almost all found sets, about60% of nodes does not appear in any, and a large portion of
+nodes appear only in a fraction of the decycling sets. We compare the frequencies of nodes belonging to one typical
+set found by MS and by the CI heuristics.
+ 0
+ 20
+ 40
+ 60
+ 80
+ 100
+ 0  0.05  0.1  0.15  0.2  0.25  0.3  0.35  0.4
+frequency (%)
+vertices / N
+all vertices
+MS solution
+CI4 solution
+FIG. 3. Frequencies with which vertices appear in diﬀerent decycling sets, on an ER graph,N = 78125,d = 3.5. The y-axis
+gives the frequency with which a given vertex appears in close-to-optimal decycling sets found by the MS algorithm. We
+ordered the vertices by this frequency and depict their ordering divided byN on the x-axis. The diﬀerent curves correspond
+to all vertices, vertices appearing in one randomly chosen decycling set found by the MS algorithm, and in one found by the
+CI algorithm.
+An important question to ask about dismantling sets is whether they can be thought of as a collection of nodes that
+are in some sense goodspreadersor whether they are a result of highly correlated optimization. We use the result of
+the previous experiment and remove the nodes that appeared most often, i.e have the highest frequencies in Fig. 3.
+If the nature of dismantling was additive rather than collective then such a choice should further decrease the size
+of the discovered dismantling set. This is not what happens, with this strategy we need to remove20.1% of nodes
+in order to dismantle the graph, compared to the17.8% of nodes found systematically by the MS algorithm. From
+this we conclude that dismantling is an intrinsically collective phenomenon and one should always speak of the full
+set rather than of a collection ofinﬂuential spreaders.
+We also studied the degree histogram of nodes that the MS algorithm includes in the dismantling sets and saw that,
+as expected, most of the high-degree nodes belong to most of the dismantling sets. Each of the dismantling sets also
+included some nodes of relatively low degrees; for instance, for an ER random graph of average degreed = 6 and size
+57 a typical decycling set found by the MS algorithm has around460 (i.e. around 17% of the decycling set) nodes of
+degree 4 or lower. To assess the importance of low degree nodes for dismantling, we ran the MS algorithm under the
+constraint that only nodes of degree at least5 can be removed, we ﬁnd decycling sets almost as small (only about 50
+nodes, i.e. 0.2% larger) as without this constraint. From this we conclude that none of the low degree nodes (even
+those with high CI centrality) is indispensable for dismantling, going against a highlight claim of [15].
+B. More general graphs
+Up to this point our study of dismantling relies crucially on the relation to decycling. For light-tailed random
+graphs these two problems are essentially asymptotically equivalent. But for arbitrary graphs, that contain many
+small cycles, the decycling number can be much larger than the dismantling one. We argue that, from the algorithmic
+point of view, decycling still provides a very good basis for dismantling. For instance, consider a portion ofN = 532000
+nodes of the Twitter network already analyzed in [15]. The decycling solution found by MS improves considerably
+the results obtained with the CI and EC heuristics (see Fig. 4).
+In a network that contains many short cycles cycles, decycling removes a large proportion of nodes expressly to
+destroy these short cycles. Many of these nodes can be put back without increasing the size of the largest component.
+For this reason we introduce areverse greedy(RG) procedure, in which, starting from a dismantled graph with
+dismantling setS, maximum component sizeC and a chosen target valueC′ > C for the maximum allowed component
+size, removed nodes are iteratively reinserted. At each step, among all removed nodes, the one which ends up in the
+
+===== Page 10 =====
+10
+ 0
+ 0.1
+ 0.2
+ 0.3
+ 0.4
+ 0.5
+ 0.6
+ 0.7
+ 0.8
+ 0.015  0.02  0.025  0.03  0.035  0.04  0.045  0.05  0.055
+C/N
+S/N
+EC
+CI
+MS
+EC+RG
+CI+RG
+MS+RG
+SA
+FIG. 4. FractionC/N taken by the largest component in the Twitter network achieved after removing a fractionS/N of nodes
+using the Min-Sum algorithm (MS) and the adaptive versions of “Collective” Inﬂuence (CI) and Eigenvector Centrality (EC)
+measures. The red point marks the result obtained by decycling using MS (followed by the curve from the optimal tree-breaking
+process). The branches at lower values ofS/N are obtained after the application of the reverse greedy strategy (RG) from the
+graph obtained when the largest component hasC = 100 nodes. The black point denotes the dismantling fraction obtained by
+Simulated Annealing (SA).
+smallest connected component is chosen for reinsertion (see Appendix C3 for details). The computational cost of this
+operation is bounded bykmaxC′ log(kmaxC′), where kmax is the maximal degree of the graph; the update cost is thus
+typically sublinear inN.
+In graphs where decycling is an optimal strategy for dismantling, such as the random graphs, a vanishing fraction
+of nodes can be reinserted by the RG procedure before the size of the largest component starts to grow steeply. For
+real-world networks, the RG procedure reinserts a considerable number of nodes, negligibly altering the size of the
+largest component. For the Twitter network in Fig. 4, the improvement obtained by applying the RG procedure is
+impressive, 32% fewer nodes for the CI method, and20% fewer nodes for the MS algorithm, which ends up being the
+best solution we found, removing only3.4% of nodes in order to dismantle into components smaller thatC = 1000
+nodes. RG makes possible to reach, and even improve, the best result obtained with Simulated Annealing (SA) that
+solves the dismantling problem directly and is not aﬀected by the presence of short loops (see Appendix C4 for details
+on SA). Qualitatively similar results are achieved on other real networks, e.g. on the Youtube network with1.13
+million nodes [26] the best dismantling set we found with MS+RG included4.0% of nodes, this is a22% improvement
+with respect to the CI heuristics.
+The reverse-greedy procedure is introduced as a heuristic that provides a considerable improvement for the examples
+we treated. The theoretical results of this paper are valid only for classes of graphs that do not contain many small
+cycles and hence our theory does not provide a principled derivation nor analysis of the RG procedure. This is an
+interesting open direction for future work. More detailed study (both theoretical and algorithmic) of dismantling of
+networks for which decycling is not a reasonable starting point is an important direction of future work.
+We provide in the appendices further technical details and additional results in support of the main text. They
+are organized as follows. In Appendix A we prove the NP-completeness of the dismantling decision problem. In
+Appendix. B we extend the analytic results of the main text, presenting the details of the cavity method computation
+of the decycling number of random graphs (B1), a lower bound on the decycling number valid for all graphs (B2),
+and an expansion of the decycling number for Erdős-Rényi random graphs close to their percolation threshold and
+for large average degrees (B3). Appendix C is then devoted to several algorithmic aspects: in C1, C2 and C3 we
+detail the three stages of our main algorithm (derivation of the Min-Sum equations, tree dismantling and greedy
+reintroduction of cycles respectively), while in C4 we give further details on the other dismantling algorithms we have
+studied. Finally in Appendix D we provide further results on other real-world and artiﬁcial scale-free networks.
+
+===== Page 11 =====
+11
+Appendix A: Proof of NP-Completeness of the dismantling problem
+For our proof, we will employ the decisional (minimum) Vertex Cover problem, which is NP-Complete, and is
+deﬁned as follows. Remember that a vertex cover is a subset of verticesW⊂ V such that for each(i, j) in E, i∈ W
+or j∈ W.
+Vertex Cover: Given a graphG = (V, E) and F∈ N, does a vertex coverW⊂ V with|W|≤ F exist?
+The Vertex Coverproblem is NP-Complete.
+C (N)–Dismantling: Given a graphG′ = (V′, E′) and F∈ N, does aC (|V′|)–dismantling set S with|S|≤ F of G′
+exist?
+Theorem 1. Assume C : N→ N to be a non-decreasing (polynomially computable) function withC (N) < N a for
+N≥ N0 with 0≤ a < 1. Then the C (N)–Dismantling problem is NP-Complete.
+Proof. C (N)–Dismantling belongs clearly to NP. IfC≡ 1, one can see thatC–Dismantling is identical toVertex
+Cover and is thus is NP–Complete. Otherwise, take N1 such that C (N1)≥ 2 and consider N ≥ max{N0, N1} .
+Deﬁne
+C′ = C′ (N) = min
+{
+k∈ N : C(kN )
+k < 2
+}
+. (A1)
+Remark. For constantC (N)≡ C≥ 2, then C′ (N)≡ C+1
+2 if C is odd, andC′ (N)≡ C
+2 + 1 if C is even.
+Note that C′≥ 2 and C′ is polynomial in N: the value k =
+⌈ 1
+2 N a⌉ 1
+1−a belongs to the set in the RHS of (A1), as
+k≥
+(1
+2 N
+) a
+1−a so ka−1≤
+(1
+2 N
+)−a
+and then C(kN )
+k < (kN )a
+k = ka−1N a≤ 2; so C′≤ k =
+⌈ 1
+2 N a⌉ 1
+1−a. We will prove
+that
+C′≤C (C′N) < 2C′. (A2)
+The second inequality in (A2) follows from (A1). For the ﬁrst inequality,
+C (C′N)≥ C ((C′− 1) N) (A3)
+≥ 2 (C′− 1) (A4)
+≥ C′, (A5)
+where (A3) follows from the fact thatC is non-decreasing, (A4) follows from the minimality ofC′ in its deﬁnition
+(A1) and (A5) from the fact thatC′≥ 2.
+Now, take a graph G with|V| = N, and construct G′ by adding C′− 1 leaves to any vertex ofG. Precisely,
+let G′ = (V′, E′) with V′ = V∪{ ℓv,i : v∈ V, i∈{ 1, . . . , C′− 1}} and E′ = E∪{ (v, ℓv,i) : v∈ V, i∈{ 1, . . . , C′− 1}}
+where we assume the two unions to be disjoint. The number of vertices ofG′ is|V′| = N′ = N C′ (which is polynomial
+in N). The construction ofG′ is clearly polynomial.
+Take any vertex coverW of G. Then W is a C′–dismantling of G′: thanks to the vertex cover property, each
+v∈ V\ W can only be connected to theC′−1 extra leavesℓv,i. As C′≤ C (N′), thenW is also aC (N′)–dismantling
+of G′.
+Conversely, take anyC (N′)–dismantling set S of G′. Deﬁne π : V′→ V by π (v) = v for v∈ V and π (ℓv,i) = v for
+v∈ V, 1≤ i≤ C′− 1. Consider the setW = π (S). In short,W is constructed fromS by replacing all occurrencesℓv,i
+by v. Then clearly|W| =|π (S)|≤| S| and W is still aC (N′)–dismantling of G′: replacing ℓv,i by v introduces a new
+component{ℓv,i} of size 1 but can only reduce the size of the other components. Moreover,W is also a vertex cover of
+G: suppose on the contrary that it is not, and take an edge(i, j)∈ E such thati, j /∈ W. Then both vertices belong to
+a connected component ofG′\ W of size 2C′ > C (N′), which contradicts the fact thatW was a C (N′)–dismantling
+of G′. Thus, W must be a vertex cover ofG with size no greater than|S| and that proves the result.
+Corollary 2. For C (N) = const, C (N) = log N, and C (N) = N a with 0≤ a < 1, C (N)–Dismantling is
+NP-Complete.
+Remark. (N− k)–Dismantling is polynomial for any constantk.
+
+===== Page 12 =====
+12
+Appendix B: Analytic results
+1. Details on the cavity equations for the decycling number of random graphs
+We give here some more details on the cavity method computation of the decycling number of sparse random
+graphs, in particular on the derivation and solution of the BP equations. A full derivation in a more general context
+can be found in [27].
+When computing the typical free-energy of a large random graph with degree distributionq one has to determine
+the probability lawP (η) of the messagesη, which is the solution of an integral equation of the form:
+P (η) =
+∞∑
+k=0
+˜qk
+∫
+dP (η(1)) . . .dP (η(k)) δ(η− fk(η(1), . . . , η(k))) , (B1)
+where ˜qk = (k+1)qk+1/ ∑
+k kqk is the size-biased distribution associated toq (i.e. the probability of ﬁnding a vertex of
+degree k +1 when choosing an edge uniformly at random), andfk the function encoding the local BP equation, eq. (9)
+in the main text, between messages around a vertex of degreek + 1. This type of equation can be eﬃciently solved
+numerically via a population dynamics procedure, in whichP is approximated by a large sample of representative
+values of η, updated according to (B1) until convergence to a ﬁxed point. The free-energy density of the model can
+then be computed as the average with respect toP of suitable functions of the messages. In the present model these
+messages are real vectors of a dimension which grows linearly with the parameterT introduced above as a cutoﬀ on
+the allowed times in the leaf-removal dynamics.
+IntheReplicaSymmetricversionofthecavitymethodamessage (orﬁeld) η of (B1)correspondstoa 2T dimensional
+vectorofcomponentsdenoted (a0, a1, . . . , aT , bT−1, . . . , b1). Thefunction fk whichgives η asafunctionof η(1), . . . , η(k)
+reads explicitly:
+e−µbt = 1 + e
+−µ+µ
+k∑
+i=1
+(a(i)
+0 −b(i)
+t−1)
+, (B2)
+e−µat− e−µat+1 = e
+−µ+µ
+k∑
+i=1
+(a(i)
+0 −b(i)
+t ) k∑
+i=1
+(
+eµ(b(i)
+t −a(i)
+t+1)− eµ(b(i)
+t −a(i)
+t+2)
+)
+,
+with the conventions used to have more compact expressions:b0 = 0, bT = aT, aT +1 = bT−1. Once the self-consistent
+equation on P (η) is solved the thermodynamic quantities are obtained as follows. The limit of(ln Z)/N reads
+φ = µ + E[ln zsite(η(1), . . . , η(k))]− d
+2 E[ln zedge(η(1), η(2))] ,
+where E[·] denotes the average over the i.i.d. copiesη(i) drawn from P (η) and over the integerk drawn from the
+degree distribution q, and d is the mean ofq. The two functionszsite and zedge arise from the local contributions to
+the Bethe free-energy of sites and edges respectively, and read
+zsite = 1 + e
+−µ+µ
+k∑
+i=1
+a(i)
+0
+
+e
+−µ
+k∑
+i=1
+b(i)
+T−1
++
+T∑
+t=1
+e
+−µ
+k∑
+i=1
+b(i)
+t−1
+k∑
+i=1
+(
+eµ(b(i)
+t−1−a(i)
+t )− eµ(b(i)
+t−1−a(i)
+t+1)
+)
+
+ , (B3)
+zedge = eµ(a(1)
+0 +a(2)
+0 )
+[
+e−µ(b(1)
+T +b(2)
+T ) +
+T−1∑
+t=0
+{
+(e−µa(1)
+t − e−µa(1)
+t+1)e−µb(2)
+t + (e−µa(2)
+t − e−µa(2)
+t+1)e−µb(1)
+t
+}]
+. (B4)
+The fraction θ of vertices included in the decycling sets selected by the conjugated chemical potentialµ and the
+entropy s (the Legendre transform ofφ) then read:
+θ = E
+[ 1
+zsite(η(1), . . . , η(k))
+]
+, s = φ− µ θ . (B5)
+Varying the parameterµ one can compute in this way the entropys(θ) counting the exponential number of decycling
+sets containing a fractionθ of vertices. The RS estimate of the decycling numberθdec is then obtained as the point
+where s vanishes.
+This estimate is, however, only a lower bound to the true value ofθdec because of the eﬀects of the replica symmetry
+breaking. A more precise estimate is obtained by using the (energetic) cavity method at the ﬁrst level of replica
+symmetry breaking (1RSB), in which the parameterµ is replaced by the Parisi breaking parametery; the messageη
+
+===== Page 13 =====
+13
+of (B1) is then a vector(p0, . . . , pT−1, rT , . . . , r0) constrained by the normalizationp0 +··· + pT−1 + rT +··· + r0 = 1
+(hence the number of independent parameters is again2T). These are updated according to
+pt = 1
+Z ey ˜pt , (B6)
+rt = 1
+Z ey ˜rt for t≥ 1 , (B7)
+r0 = 1
+Z
+(
+1−
+T−1∑
+t=0
+˜pt−
+T∑
+t=1
+˜rt
+)
+, (B8)
+Z = 1 + (ey− 1)
+(T−1∑
+t=0
+˜pt +
+T∑
+t=1
+˜rt
+)
+, (B9)
+˜pt =
+k∑
+i=1
+p(i)
+t+1
+∏
+j̸=i
+( t∑
+t′=0
+r(j)
+t′
+)
+, (B10)
+˜rt =
+k∏
+i=1
+( t−1∑
+t′=0
+r(i)
+t′
+)
+−
+k∏
+i=1
+( t−2∑
+t′=0
+r(i)
+t′
+)
+, (B11)
+with pT = rT by convention. One computes then a thermodynamic potentialΦ(y) with a formula similar to the one
+yielding φ(µ) at the RS level, namely
+Φ =−y + E[lnZsite(η(1), . . . , η(k))]− d
+2 E[lnZedge(η(1), η(2))] ,
+with
+Zsite = 1 + (ey− 1)
+
+
+k∏
+i=1
+(T−1∑
+t=0
+r(i)
+t
+)
++
+k∑
+i=1
+T∑
+t=1
+p(i)
+t
+∏
+j̸=i
+(t−1∑
+t=0
+r(j)
+t
+)
+ , (B12)
+Zedge = e−y + (1− e−y)
+[( T∑
+t=0
+r(1)
+t
+) ( T∑
+t=0
+r(2)
+t
+)
++
+T−1∑
+t=0
+{
+p(1)
+t
+( t∑
+t′=0
+r(2)
+t′
+)
++ p(2)
+t
+( t∑
+t′=0
+r(1)
+t′
+)}]
+. (B13)
+The energetic complexity function (the equivalent of the entropy at the 1RSB level) is then obtained by an inverse
+Legendre transform with respect toΦ, namely
+Σ = Φ + y θ , θ = 1− E
+[Z′
+site
+Zsite
+]
++ d
+2 E
+[Z′
+edge
+Zedge
+]
+,
+where the prime denotes the derivative with respect to the explicit dependence iny of the expressions ofZsite and
+Zedge given above. The 1RSB estimate of the decycling number is then obtained from the criterion of cancellation of
+the complexity Σ. Both the replica symmetric and 1RSB results for a range of values ofT are reported in Table II.
+Extrapolating the 1RSB estimate of the decycling number in the limitT→∞ leads to the values reported in Table I
+in the main text.
+The replica symmetric and 1RSB computations yield improving lower bounds on the decycling number of light-tailed
+random graphs, in the sense thatθRS(q)≤ θ1RSB(q)≤ θdec(q). For some degree distributions q these inequalities
+become equalities (see [27] for details on random regular graphs), for others the 1RSB estimate is strictly tighter
+than the RS one. It is probable that for some choices ofq the 1RSB estimate is not equal to the decycling number,
+whose exact determination would require the use of the so-called full RSB computation. The latter is not tractable
+numerically for models of sparse random graphs, we expect in any case the quantitative diﬀerence between the 1RSB
+and full RSB results to be rather small.
+2. A simple lower bound
+We present here a lower bound on the decycling numberθdec(G) valid for any graphG (a similar reasoning can be
+found in [28]), generalizing the boundθdec(G)≥ d−2
+2(d−1) for d-regular graphs.
+
+===== Page 14 =====
+14
+T θ RS(T ) θ1RSB(T )
+3 0.22714 0.22797
+5 0.20042 0.20077
+9 0.18507 0.18515
+13 0.18046 0.18051
+19 0.17795 0.17797
+30 0.17638 0.17638
+40 0.17590 0.17590
+50 0.17569 0.17569
+TABLE II. TheT-dependence of the RS and 1RSB cavity predictions for the decycling number of Erdös-Rényi random graphs
+of average degreed = 3.5. The decycling numbers reported in table 1 in the main text are obtained by interpolation of the
+1RSB results toT → ∞.
+We denoteki the degree of vertexi and M the number of edges. With
+⟨k⟩ = 1
+N
+∑
+i∈V
+ki (B14)
+the empirical average degree, one hasM = N⟨k⟩
+2 .
+Consider now a subset S of the vertices, and its complement Sc = V \ S. One can divide the edges in three
+categories, with M = M1 + M2 + M3, where M1 is the number of edges between two vertices ofS, M2 counting the
+edges between S and Sc, and M3 the edges insideSc. One has
+∑
+i∈S
+ki = 2M1 + M2 ,
+∑
+i∈Sc
+ki = 2M3 + M2 , (B15)
+and in particular
+M1 + M2≤
+∑
+i∈S
+ki . (B16)
+Suppose now thatS is a decycling set of the graph, in such a way thatSc induces a forest. Hence one has
+M3≤| Sc|− 1 = N−| S|− 1 . (B17)
+Summing these two inequalities, and expressingM in terms of the average degree, yields
+1
+N
+∑
+i∈S
+(ki− 1)≥⟨k⟩
+2 − 1 + 1
+N . (B18)
+This inequality constrains the possible decycling sets. To obtain a simpler lower bound on the size of the decycling sets,
+consider a permutationσ from{1, . . . , N} to V that orders the vertices according to their degrees:kσ(1)≥ kσ(2)≥ . . ..
+The inequality above can then be continued to get
+1
+N
+|S|∑
+i=1
+(kσ(i)− 1)≥⟨k⟩
+2 − 1 + 1
+N . (B19)
+Let us call the left hand side of this inequalityl(θ =|S|/N, G), which is an increasing function ofθ, and deﬁneθlb(G)
+as the smallest value ofθ such that the inequality is fulﬁlled. Then the decycling numberθdec(G) of this graph is
+certainly lower-bounded byθlb(G).
+The shape ofl(θ) can be described in terms of the empirical degree distribution of the graph,
+ˆqk = 1
+N
+∑
+i∈V
+δk,ki . (B20)
+As the graph is ﬁnite so is its maximal degree, let us call itK. One realizes easily thatl(θ, G) is a piecewise linear
+continuous increasing function, starting from 0 inθ = 0, linearly increasing onθ∈ [0, ˆqK] with slopeK−1, then again
+
+===== Page 15 =====
+15
+with a constant slopeK− 2 on the intervalθ∈ [ˆqK, ˆqK + ˆqK−1], and so on and so forth. It is thus more convenient
+to introduce two integrated quantities:
+ˆQk =
+∞∑
+k′=k
+ˆqk′ , ˆTk =
+∞∑
+k′=k
+ˆqk′(k′− 1) , (B21)
+the summations being cut oﬀ atK in this ﬁnite graph case. Indeed for allk one has l( ˆQk, G) = ˆTk, and the function
+l(θ, G) is the linear interpolation between this discrete set of points. One can thus determine its intersection with the
+right hand side of (B19) to compute the lower boundθlb(G).
+In the case of random graphs drawn with a degree distributionq the typical decycling numberθdec(q) can be lower-
+bounded as above by replacing the empirical distributionˆq by q: θlb(q) = l−1
+(
+⟨k⟩
+2 − 1
+)
+, where⟨k⟩ is now averaged
+with respect toqk, and l is deﬁned by replacingˆQk and ˆTk by their counterparts
+Qk =
+∞∑
+k′=k
+qk′ , T k =
+∞∑
+k′=k
+qk′(k′− 1) . (B22)
+The numerical evaluation of this lower bound for a Poissonian random graph of average degreed = 3 .5 yields
+θlb = 0 .141084, not that far from the 1RSB prediction θdec = 0 .175. The lower bound matches the asymptotic
+expansion presented below whend→ 1 (i.e. close to the percolation threshold), while it reaches the limit1/2 when
+d diverges (the larged limit of θdec being 1).
+3. Decycling close to the percolation threshold and for large degrees
+In addition to the numerical results obtained by the cavity method let us state analytical asymptotic expansions for
+the decycling number of Poissonian random graphs with average degree close to the percolation threshold (d = 1 +ϵ)
+or very large (d→∞ ). Close to the percolation a random graph is essentially made of a 3-regular kernel of vertices
+joined by paths of degree 2 nodes; decycling the kernel is suﬃcient to decycle the whole graph, and the decycling
+number of a random 3-regular is known [29], which yields
+θdec(d = 1 + ϵ) = 1
+3 ϵ3 + O(ϵ4) . (B23)
+On the other hand when d is very large the Poissonian random graph behaves like a regular graph (the degree
+distribution being concentrated around its average), an asymptotic expansion in this case was obtained in [27] (in
+agreement with the rigorous bounds of [30]), hence
+θdec(d) = 1− 2 lnd
+d − 2
+d + O
+( 1
+d ln d
+)
+. (B24)
+Appendix C: Algorithms
+1. The Min-Sum algorithm and its implementation
+In this section we derive the Min-Sum (MS) algorithm introduced in eqs. (10a-12f) of the main text, that aims at
+ﬁnding decycling sets of the smallest possible size. As explained in the main text this amounts to ﬁnd the unique
+minimum of the cost function ∑
+i ψi(ti), with ψi (ti) = I [ti = 0] + εi(ti), over the feasible conﬁgurations of the
+activation times{ti}∈{ 0, . . . , T}V. These variables have to fulﬁll the constraint that for all verticesi either ti = 0
+(when i belongs to the decycling set) or it is determined by the adjacent variables according toti = 1+max 2({tj}j∈∂i).
+We recall that theεi(ti) are inﬁnitesimally small random variables that are introduced to ensure the uniqueness of
+the minimum of the cost function, and its closeness to one of the minima of the original cost function. In practice we
+took ϵi to be uniformly random between 0 and10−7.
+It turns out to be easier to study a slight modiﬁcation of this optimization problem, with a relaxed constraint
+ti≥ 1 + max2({tj}j∈∂i) if 0 < t i≤ T (C1)
+that corresponds to a lazy version of the leaf removal algorithm, in which a node can be removed once it became a leaf,
+but it is not necessarily removed as soon as it could be. Thanks to the monotonicity of the leaf removal procedure its
+
+===== Page 16 =====
+16
+ﬁnal outcome, the 2-core of the graph, is independent of the order in which the leaves are removed, and of the parallel
+or sequential character of these updates. Hence the optimization problem with the strict or relaxed constraints are
+completely equivalent ifT≥ N, the maximal number of possible steps of the leaf removal. For smaller values ofT
+this equivalence is not ensured, but the optimum with the relaxed constraints still provides a valid decycling set. It
+will be useful in the following to use the following logical equivalent of (C1),
+∑
+j∈∂i
+I [tj≥ ti]≤ 1 if 0 < t i≤ T . (C2)
+Our goal now is to compute the ﬁeldhi(ti) deﬁned as the minimum of the cost function over feasible conﬁgurations
+with a given value ofti, as indeed the unique minimum can be deduced from the ﬁelds throught∗
+i = argmin hi(ti),
+and then the corresponding decycling set is identiﬁed with the verticesi where t∗
+i = 0. To justify the MS heuristics
+for the approximate computation of the ﬁeldshi on any graph it is simpler to consider ﬁrst a tree graph, on which
+the MS approach is exact for any local cost function. The function under consideration here is the sum of local terms
+ψi(ti) on each vertex,hi(ti) can thus be decomposed as a sum of its own contributionψi and of the contributions of
+the vertices in each of the subtrees rooted at one of its neighborj∈ ∂i. Taking into account the constraint (C2) for
+the positive times, denotedC in the following, it yields
+hi (ti) = ψi (ti) + min
+{tj}j∈∂i :C
+∑
+j∈∂i
+hji (tj, ti) for 0 < t i≤ T , (C3)
+hi (0) = ψi (0) +
+∑
+j∈∂i
+min
+tj
+hji (tj, 0) , (C4)
+where hji(tj, ti) are messages deﬁned on each directed edgej→ i of the graph, that give the minimum cost of the
+variables in the subtree rooted atj and excluding i, over the feasible conﬁgurations with prescribed values oftj and
+ti. Thanks to the recursive structure of a tree these messages obey themselves similar equations,
+hij (ti, tj) = ψi (ti) + min
+{tk}k∈∂i\j :C
+∑
+k∈∂i\j
+hki (tk, ti) for 0 < t i≤ T , (C5)
+hij (0, tj) = ψi (0) +
+∑
+k∈∂i\j
+min
+tk
+hki (tk, 0) . (C6)
+These Min-Sum equations involve O(T 2) quantities for each edge of the graph because of the two time indices of
+the messages hij. Fortunately this quadratic dependence on T can be reduced to a linear one by some further
+simpliﬁcations that we now explain.
+As can be readily seen from (C5) and (C2), the dependence ofhij on tj is only through I [tj < t i]. We will thus
+deﬁne
+hij (ti, tj) =
+{
+h1
+ij (ti) if tj < t i ,
+h0
+ij (ti) if tj≥ ti , (C7)
+which gives a parametrization of each message withO(T ) real numbers.
+CallingT s
+ij ={{tk}k∈∂i\j : ∑
+k∈∂i\j
+I [tk≥ ti] = s}, Eq. (C5) can be rewritten as follows for0 < t i≤ T:
+h0
+ij (ti) = ψi (ti) + min
+T 0
+ij
+∑
+k∈∂i\j
+hki (tk, ti)
+= ψi (ti) +
+∑
+k∈∂i\j
+min
+tk<ti
+hki (tk, ti)
+= ψi (ti) +
+∑
+k∈∂i\j
+min
+tk<ti
+h0
+ki (tk) , (C8)
+as indeed tj≥ ti in the deﬁnition ofh0
+ij all the other removal timestk for k∈ ∂i\ j have to be strictly smaller thanti
+for the condition (C2) to be fulﬁlled. On the other hand in the situation described byh1
+ij at most one of the removal
+
+===== Page 17 =====
+17
+times tk for k∈ ∂i\ j can be greater or equal thanti, hence for0 < t i≤ T:
+h1
+ij (ti) = ψi (ti) + min
+T 0
+ij∪T 1
+ij
+∑
+k∈∂i\j
+hki (tk, ti)
+= ψi (ti) + min
+{ ∑
+k∈∂i\j
+min
+tk<ti
+h0
+ki (tk) , min
+T 1
+ij
+∑
+k∈∂i\j
+hki (tk, ti)
+}
+= ψi (ti) + min
+{ ∑
+k∈∂i\j
+min
+tk<ti
+h0
+ki (tk) , min
+k∈∂i\j
+[
+min
+{
+h0
+ki (ti) , min
+tk>ti
+h1
+ki (tk)
+}
++
+∑
+ℓ∈∂i\j,k
+min
+tℓ<ti
+h0
+ℓi (tℓ)
+]}
+= ψi (ti) +
+∑
+k∈∂i\j
+min
+tk<ti
+h0
+ki (tk) + min
+{
+0, min
+k∈∂i\j
+[
+min
+{
+h0
+ki (ti) , min
+tk>ti
+h1
+ki (tk)
+}
+− min
+tk<ti
+h0
+ki (tk)
+]}
+. (C9)
+The equations (10a-12f) of the main text can now be readily obtained by deﬁning the following quantities:
+Lki (ti) = min
+tk<ti
+h0
+ki (tk) , (C10)
+Rki (ti) = min
+{
+h0
+ki (ti) , min
+tk>ti
+h1
+ki (tk)
+}
+, (C11)
+Mij (ti) = min
+{
+0, min
+k∈∂i\j
+{Rki(ti)− Lki(ti)}
+}
+, (C12)
+(C13)
+in terms of which the equations (C8,C9) can be rewritten
+h0
+ij (ti) = ψi (ti) +
+∑
+k∈∂i\j
+Lki(ti) for 0 < t i≤ T , (C14)
+h1
+ij (ti) = ψi (ti) +
+∑
+k∈∂i\j
+Lki(ti) + Mij (ti) for 0 < t i≤ T , (C15)
+h0
+ij (0) = ψi (0) +
+∑
+k∈∂i\j
+Rki(0) , (C16)
+the last equation corresponding to the unconstrained minimization over the removal times of the neighbors of a vertex
+i included in the decycling set.
+Let us give a more explicit interpretation of the quantitiesL, R and of the last equations.Lki(ti) is the minimum
+feasible cost in the subtree ofG\ i rooted in k with the only condition thattk < t i (see Eq. (C10)). On the other
+hand, in Eq. (C11) we deﬁneRki(ti) to be the minimum feasible cost in the subtree ofG\ i rooted in k with tk≥ ti.
+As the messageh1
+ij (ti) corresponds to a situation in whichj has already been removed at timeti, one of the neighbors
+k∈ ∂i\ j can be removed afteri. It follows that for ti > 0 the minimum feasible cost is given by the costψi (ti)
+plus the minimum between the minimum feasible cost when all neighborsk∈ ∂i\ j is removed beforei and the same
+quantity when one of the neighbors is allowed to be removed at a later time.
+The ﬁeld hi(ti) is then obtained from the messages (see Eqs. (C3,C4)) according to
+hi (ti) = ψi (ti) +
+∑
+k∈∂i
+Lki(ti) + Mi (ti) , (C17)
+hi (0) = ψi (0) +
+∑
+k∈∂i
+Rki(0) , (C18)
+Mi(ti) = min{0, min
+k∈∂i
+{Rki(ti)− Lki(ti)}} . (C19)
+Finally a more eﬃcient implementation can be devised, noting that common quantities can be pre-computed in
+order to obtain thehij for all the outgoing edges around a given vertexi. One indeed obtains an implementation
+
+===== Page 18 =====
+18
+which runs in linear time both inT and in the degreeki of i by deﬁning
+S0
+i (ti) =
+∑
+k∈∂i
+Lki (ti) , (C20)
+S1
+i =
+∑
+k∈∂i
+Rki (0) (C21)
+ki (ti)∈ arg min
+k∈∂i
+{Rki (ti)− Lki (ti)} (C22)
+Qi (ti) = min
+{
+0, min
+k∈∂i\ki(ti)
+{Rki (ti)− Lki (ti)}
+}
+(C23)
+Mij (ti) =
+{
+Mi (ti) if j̸= ki (ti)
+Qi (ti) if j = ki (ti) (C24)
+which can all be computed in timeO (T ki); we can then express the diﬀerent values of the messageshij as
+h0
+ij (ti) = ψi (ti) + S0
+i (ti)− Lji (ti) (C25)
+h1
+ij (ti) = ψi (ti) + S0
+i (ti)− Lji (ti) + Mij (ti) (C26)
+h0
+ij (0) = ψi (0) + S1
+i− Rji (0) (C27)
+which can be also computed in timeO (T ) for each j∈ ∂i. The computation time for a complete iteration on all
+vertices i is thus O (∑
+i kiT ) = O (|E| T ). The computation of the ﬁeldhi (ti) in (C17)-(C18) is similar:
+hi (ti) = ψi (ti) + S0
+i (ti) + Mi (ti) for 0 < t i≤ T , (C28)
+hi (0) = ψi (0) + S1
+i . (C29)
+This derivation of the Min-Sum equations shows that the algorithm is exact on a tree: the recurrence equations on
+hij are guaranteed to converge, and the conﬁgurationt∗
+i obtained from the MS expression ofhi is the unique minimum
+of the cost function over feasible conﬁgurations. One can, however, iterate the recurrence equations onhij for any
+graph, and use the MS formalism as an heuristic algorithm that provides a good approximation to the optimum, in
+particular when there are not many short loops. There are, however, two issues with the convergence of the message
+passing equations onhij:
+• the hij deﬁned above are extensive energies, that would grow indeﬁnitely in presence of loops in the graph.
+This problem is easily cured by adding a constant valueCij to all ﬁelds hij(ti, tj), in such a way to keep the
+maximum entry of this matrix equal to a constant, for instance zero. This does not spoil the validity of the
+algorithm, as we only need informations about the relative energies of conﬁgurations to construct the decycling
+set: the optimumt∗
+i = argmin hi(ti) is obviously invariant by a shift of the reference energy.
+• even with this normalization the message passing equations are not guaranteed to converge. When they did
+not we enforced their convergence by employing a reinforcement procedure, that consists in takingψi (ti) =
+I [ti = 0] + εi (ti) + τ γhi (ti) where hi is the local ﬁeld computed with (C28)-(C29) in the previous iteration,γ
+is a small real value andτ is the iteration time. Typically we use in our simulationγ = 10−3.
+2. T ree-breaking in decycled graphs
+We explain now the second stage of our algorithm, namely the dismantling of the acyclic graph obtained using MS
+in the ﬁrst stage.
+a. Optimal tree breaking
+The computation of theC-dismantling number of a treeG can be performed in a time growing polynomially with
+C and with the sizeN of the graph, by the following dynamic programming approach.
+Let us denoteGi→j the connected component of the vertexi in the graph obtained fromG by removing one of its
+neighbors j, and call Sij (c) the minimum number of vertices to be removed fromGi→j to have that no component
+
+===== Page 19 =====
+19
+of the reduced graph is larger thanC and that the component ofi is no larger thanc. These quantities satisfy the
+following recursion:
+Sij (c) = min
+{ck}k∈∂i\j∑
+k∈∂i\j
+ck≤c−1
+∑
+k∈∂i\j
+Ski (ck) if 0 < c≤ C ,
+Sij (0) = 1 +
+∑
+k∈∂i\j
+Ski (C) .
+Using max-convolutions (see e.g. [31]) these quantities can be computed on all directed edges of the tree in time
+O(N C2). By adding an extra leafi′ attached to a nodei on the tree, the quantitySii′(C) gives the decycling number.
+A small modiﬁcation can be used to also ﬁnd optimal dismantling sets in timeO(N C2). Even though polynomial,
+this complexity is often too expensive in practice even for moderate values ofC. Fortunately we will see below a
+greedy strategy that achieves almost the same performance.
+b. Greedy tree-breaking
+An alternative approach to the dismantling of a forest is to follow a greedy heuristic, removing iteratively the
+node in the largest connected component of the forest (i.e. a tree) that leaves the smallest largest component. This
+procedure is guaranteed toC-dismantle the forest by removingS = N/C vertices or less. This ensures the dismantling
+to a sublinear size of the largest componentC≤ N/ log N by removing a sublinear number of verticesS≤ log N.
+Moreover, it can be implemented in timeO(N(log N + T )) where T is the maximal diameter of the trees inside this
+forest. The worst case in terms of number of removed nodes is reached in the case of a one-dimensional chain, in
+which one needs to removeS = 2k− 1 nodes to obtain components of sizeC(S)≤ N/2k.
+For a given treeG on N vertices, let us callF the subset of verticesi which are optimal in the above sense, namely
+such that the removal ofi from G minimizes the size of the largest component ofG\ i. The elements of F can be
+characterized in a very simple way. Denote byC(i) the size of the largest component ofG\i, soC(i) = maxj∈∂i|Gj→i|
+and F = arg mini∈V C(i). Then i⋆∈ F if and only ifC(i⋆)≤ N/2. Suppose indeed that fori⋆∈ F, C(i⋆) > N/2 and
+take j∈ ∂i suchthat|Gj→i⋆| = C(i⋆). Then, as|Gi⋆→j|+|Gj→i⋆| = N, wehavethat C(j) < max{N/2, C(i⋆)} = C(i⋆)
+which is absurd. Conversely, suppose thatC(i)≤ N/2 and takei⋆∈ F\ i. Consider the unique path(i, k1, . . . , kn, i⋆)
+in G. Then|Gk1→i|≤ C(i), and|Gi→k1|≥ N− C(i)≥ N/2. But Gi→k1⊆ Gkn→i⋆ so C(i⋆)≥ N/2.
+Thischaracterizationof F canbeusedconstructivelytoﬁndan i⋆∈ F eﬃciently. Pickforeachconnectedcomponent
+of the initial forest a “root” vertexi0∈ V. For eachi compute wi =|Gi→j| where j is the unique neighbor ofi on the
+path between i and the rooti0, starting from the leaves and exploiting the relationwi = 1 + ∑
+k∈∂i\j wk; note that
+C(i0) = maxj∈∂i0 wj. Place i0 into a priority queue with priority given by the component sizeK(i0) = 1 +∑
+j∈∂i0 wj.
+Iteratively pick the largest component from the queue. Then construct the sequenceit as follows: for every t, if
+C(it)≤ N/2, theni⋆ = it∈ F andtheprocessstops. Otherwise, iterativelychoose it+1 suchthat wit+1 = C(it) > N/2.
+Once i⋆ is chosen and removed, the component is broken into|∂i⋆| components, each one rooted atk∈ ∂i⋆. From
+these, only the component rooted atit−1 needs to have itsw values updated, as its orientation changed. The only
+needed adjustments are along the pathi0, i1, . . . , it and can computed in time proportional tot, which is bounded by
+the diameter of the tree, which is in turn bounded byT.
+As the cost of the priority queue updates scale asO(log N), the total number of operations for each vertex removal
+is thusO(log N +T ), hence the total number of operations for greedily dismantling a forest scales asO(N·(log N +T )),
+as claimed above.
+We performed an extensive comparison of the optimal and greedy procedure for values ofC suﬃciently small for
+the optimal one to be doable in a reasonable time, using as a benchmark the forest output by the MS algorithm
+applied to an Erdös-Rényi random graph of 78125 nodes and average degree 3.5. As shown in Fig. 5 we found the
+greedy strategy to have very close to optimal performances, therefore we used this much faster procedure in all other
+numerical simulations.
+3. Greedy reintroduction of cycles
+The initial condition for the reverse greedy procedure is the graph obtained after the removal fromG of a setS0 of
+nodes (dismantling set) and characterized by largest connected components of sizeC. Let us consider a target value
+C′ > C for the size of the largest connected components. As long as the size of the largest connected components
+
+===== Page 20 =====
+20
+ 0
+ 50
+ 100
+ 150
+ 200
+ 250
+ 300
+ 350
+ 400
+ 13000  14000  15000  16000  17000  18000  19000  20000
+C
+S
+ 0
+ 200
+ 400
+ 600
+ 800
+ 1000
+ 1200
+ 1400
+ 10000  20000  30000  40000
+C
+S
+greedy
+optimal
+FIG. 5. Comparison between greedy and optimal forest-breaking on the output of the MS algorithm for an Erdös-Rényi random
+graph with 78, 125 vertices and average degree3.5.
+in the graph is smaller thanC′, the removed nodes are reintroduced one at a time by means of the following greedy
+strategy: at each iteration stept, we choose for reinsertion the nodei∈ St (and the edges to vertices inV\ St) such
+that the connected componentV t
+i the node i ends up in is the smallest possible. An eﬃcient implementation of the
+greedy reinsertion is easily obtained by maintaining a priority queue of the removed vertices with priority given by
+the size|V t
+i|. When a vertexi is reintroduced in the graph, the number of connected components that get merged is
+at most equal to the degreeki of the vertex (in the original graphG). The number of elements in the priority queue
+that have to be modiﬁed after the reinsertion ofi is bounded by the number of nodesj∈ St that are connected to
+the new component in the original graphG. As the size of the largest component is at mostC′, this number is at
+most kmaxC′, where kmax is the maximal degree of the graph. The computational cost of reintroducing a vertex in
+the graph is entirely given by the one of updating the queue, which is thus bounded bykmaxC′ log(kmaxC′). In a
+sparse graph, the update cost is thus typically sublinear inN, making the reverse greedy strategy very eﬃcient.
+4. Competing algorithms
+a. Simulated Annealing
+Besides our main algorithm based on the Min-Sum procedure we have studied the network dismantling problem
+using simulated annealing, i.e. building a Monte Carlo Markov Chain that makes a random walk in the space of
+conﬁgurations of the subsetsS⊂ V of removed vertices. We assign an energy to each conﬁguration according to
+E =|S|ν + C, (C30)
+in which|S| is the number of removed nodes,C the size of the largest connected component in the graph obtained
+by removingS, and ν is a free parameter. Note indeed that a setS of removed vertices can be considered “good” for
+two reasons: either because it is small, or because its removal fragments the graph into small components. These two
+ﬁgures of merits obviously contradict each other and cannot be optimized simultaneously,ν thus controls the balance
+between these two frustrating goals.
+As usual in simulated annealing algorithms we introduce an inverse temperatureβ that is slowly increased during
+the evolution of the Markov Chain, and at each time stept we consider a move from the current conﬁgurationSt to
+a new conﬁgurationSnew, that is accepted according to a standard Metropolis criterion, i.e. with probability
+min
+[
+1, e−β[Enew−E t]]
+, (C31)
+whereEnew andE t are the energies of Snew and St respectively. If the move is accepted we set St+1 = Snew,
+E t+1 =Enew, otherwise the Markov Chain remains in the same conﬁguration. The proposed conﬁgurationSnew is
+
+===== Page 21 =====
+21
+constructed in the following way at each time step: a nodei is chosen uniformly at random among all theN vertices
+of the graph, and its status is reversed (ifi∈ St then Snew = St\ i, if i /∈ St then Snew = St∪{ i}). We then need
+to compute the energyEnew of this proposed conﬁguration; the ﬁrst term is easily dealt with as|S| varies by±1
+depending on whether i∈ St or not. We thus only need to compute the sizeCnew of the largest component in the
+new conﬁguration, facing three possible cases:
+1. if i /∈ St and i belongs to the largest component ofG\ St the size Cnew of the largest component is recomputed;
+2. if i /∈ St but i does not belong to the largest component ofG\ St then Cnew = C t does not change;
+3. if i∈ St then it is only necessary to compute the sizeCi of the cluster i belongs to once it is reintroduced in
+the graph and compare the latter with the current largest component, i.e.Cnew = max(C t, Ci).
+The Markov chain is irreducible, recurrent and aperiodic, thus ergodic and the Metropolis criterion ensures de-
+tailed balance, therefore the SA algorithm would sample correctly the probability measure∝ e−βE if run with an
+inﬁnitesimally small annealing velocity. Unlike standard applications of simulated annealing, such as spin systems
+with short-range interactions, in the present problem a single move (node removal/reintroduction) can produce energy
+variations over a large range of scales, with the consequence that there is no natural criterion to choose the annealing
+protocol. We tested several diﬀerent annealing protocols and we adopted one in which the inverse temperatureβ is
+increased linearly fromβmin to βmax (thus concentrating the measure on close to ground-state conﬁgurations), with an
+increment of dβ at each time step (i.e. after each one attempted move). Protocols in which the inverse temperature
+is varied only afterO(N) attempted moves were also considered, with no relevant diﬀerence in the results. Similarly,
+there is no natural choice of the initial conditions. We tested the cases in which the initial setS0 is empty and in
+which nodes are randomly assigned toS0 independently with probability1/2, but for suﬃciently small values ofβmin,
+diﬀerent choices had no relevant eﬀects on the optimization process.
+Fig. 6 displays the minimum energy achieved using the SA algorithm (withν = 0.6) on Erdös-Rényi random graphs
+of average degreed = 3.5 and increasing sizes fromN = 1024 to N = 16384. For comparison we also plot the results
+obtained using the Min-Sum algorithm (horizontal lines). For small sizes, the SA algorithm outperforms Min-Sum
+when the annealing scheme is suﬃciently slow (dβ very small). IncreasingN, the quality of the results obtained with
+SA degrades, as it would require an increasingly slower annealing protocol in order to achieve the same results obtained
+using Min-Sum. These results show that, even though the SA implementation proposed is simple and relatively fast
+even on large networks, the necessity of an increasingly slower annealing protocol prevents SA from reaching optimal
+results in a reasonable computational time.
+The results for simulated annealing presented in Fig. 1 and Fig. 4 of the main text are obtained with parameters
+dβ = 10−8, βmin = 0.5 for both, βmax = 20, ν = 1.2 for Fig. 1, andβmax = 10, ν = 2.0 for Fig. 4.
+ 0.105
+ 0.11
+ 0.115
+ 0.12
+ 0.125
+ 0.13
+ 0.135
+ 0.14
+ 0.145
+ 0.15
+10-9 10-8 10-7 10-6 10-5
+Energy
+dβ
+N=1024
+N=2048
+N=4096
+N=8192
+N=16384
+MS, N=78125
+MS, N=108
+FIG. 6. Energy E as function of the ratedβ used to increaseβ from βmin = 0.5 to βmax = 30 in the SA algorithm (ν = 0.6)
+used to dismantle Erdös-Rényi random graphs of average degreed = 3.5 and increasing size fromN = 1024 (top) toN = 16384
+(bottom). We also report the minimum energy achieved with the Min-Sum (MS) algorithm on the same graphs and for graphs
+of larger sizesN = 78125 (cyan line) andN = 10 8 (orange line).
+
+===== Page 22 =====
+22
+b. Score-based algorithms
+Let us give here more details about the other dismantling algorithms to which we compared our own proposals.
+They all proceed by the (irreversible) removal of nodes from the graphs to be dismantled, the diﬀerences between
+them relying in the choice of a score function that assigns to each vertexi of the graph a scoreei, the vertices being
+removed in the order of decreasing scores (with random choices in case of ties). This quantityei should be an heuristic
+measure of the importance, or centrality, of the vertexi, in the sense that more central nodes should lead to a larger
+decrease in the size of the largest component wheni is removed. We have investigated the following score functions,
+the names corresponding to the key in the ﬁgures:
+• RND, ei = 1 for all i; this leads to a random choice of the removed vertices, i.e. to classical site percolation.
+• DEG, ei = ki the degree of nodei, this corresponds to removing the highest degree nodes ﬁrst.
+• EC, for eigenvector centrality, uses as a score the eigenvectorei associated to the largest eigenvalueλ of the
+adjacency matrix Aij = I[⟨i, j⟩∈ E] of the graph, in other words the solution of the linear system of equations
+λ ei =
+∑
+j∈∂i
+ej . (C32)
+For a connected graph the Perron-Frobenius theorem ensures that this eigenvector is unique and that it can be
+chosen positive.
+• CIℓ, for collective inﬂuence at levelℓ, is a centrality measure introduced by Morone and Makse [15] to provide
+a heuristic measure of the inﬂuence that a node has on the neighbors within a certain distanceℓ from it. The
+collective inﬂuence of nodei at level ℓ is deﬁned as
+CIℓ(i) = (ki− 1)
+∑
+j∈∂B (i,ℓ)
+(kj− 1) (C33)
+where ∂B(i, ℓ) denotes the set formed by all the nodes that are at distanceℓ from node i [15]. The CI value of
+node i takes two contributions, the degree of nodei and the number of edges emerging at distanceℓ from a ball
+surrounding i. On expander graphs, such as random graphs, the number of nodes contained in a ballB(i, ℓ)
+grows exponentially with ℓ, hence the calculation of the collective inﬂuence scores for all nodes of the graph
+becomes computationally demanding already for moderately small distance values (ℓ = 4, 5).
+We also made some tests with the score function deﬁned as the betweenness centrality and as the non-backtracking
+centrality [32], but for the graphs we considered the results we obtained were both qualitatively and quantitatively
+similar (or worse) to those obtained using EC, hence we do not report them.
+For a given score function one can envision diﬀerent ways to implement the dismantling algorithm; the simplest
+wouldbetocomputethescoresforallverticesoftheoriginalgraph, andthentoremovetheverticesintheorderdeﬁned
+by this ranking. We used instead an adaptive version, which gives much better results, that consist in recomputing
+the scores of all remaining vertices after each removal of the node with highest score in the current graph; all the
+results presented in the main text and the Appendices have been obtained in this way. Even if it performs better
+this adaptive strategy is also much more computationally demanding; an intermediate compromise between these
+two extreme strategies would be to recompute the scores only after a ﬁnite fractionx of nodes is removed. Another
+implementation twist consists in recomputing the scores only for the vertices belonging to the currently largest
+connected components, as the removal of a vertex outside it would not decrease the size of the largest component.
+This is useful in particular if one tries to compute the EC scores by the power method (multiplying several times
+an initial guess by the adjacency matrix); instead of the full adjacency matrix one can consider only the submatrix
+corresponding to the vertices in the largest component. By construction this submatrix is irreducible and the power
+method will converge, hence solving the possible convergence issues encountered by the power method in the case of
+coexistence of several connected components in the graph. The restriction to the largest component modiﬁes also the
+behavior of the DEG heuristic, as it avoids the removal of large degree nodes in already small components.
+Appendix D: Other real-world and scale-free graphs
+We already explained in the main text that dismantling a graph by means of the decycling (plus greedy tree
+breaking) is guaranteed to be optimal only for sparse random graphs with locally tree-like structure. Nevertheless,
+
+===== Page 23 =====
+23
+ 0
+ 0.1
+ 0.2
+ 0.3
+ 0.4
+ 0.5
+ 0.6
+ 0.04  0.05  0.06  0.07  0.08
+C/N
+S/N
+MS+RG
+EC
+EC+RG
+SA
+CI4
+CI4+RG
+FIG. 7. Size of the largest component in scale-free random graphs, of sizeN = 10 4 nodes and degree distributionP (d) ∝d−γ
+with γ = 2.5, as function of the fraction of removed nodesS. The nodes are removed using adaptive Eigenvector Centrality
+(EC), adaptive Eigenvector Centrality plus Reverse Greedy (EC+RG), Collective Inﬂuence with diameterℓ = 4 (CI4), the same
+plus Reverse Greedy (CI4+RG), Min-Sum plus Reverse Greedy (MS+RG), and Simulated Annealing (SA) withdβ = 10 −8 and
+βmin = 0.5,β max = 20 (and several values ofν).
+we observed that when the algorithm is complemented by a simple reverse greedy (RG) strategy the ﬁnal result is
+usually very good also on networks in which many small loops are present, such as in the case of the Twitter graph in
+Fig. 4 in the main text. Our way to state the quality of the result is the direct comparison with the other available
+algorithms, that are the Simulated Annealing algorithm and the other heuristics (e.g. EC, CI) also complemented by
+the RG strategy.
+ 0
+ 2000
+ 4000
+ 6000
+ 1200  1700  2200  2700  3200  3700  4200  4700
+C
+S
+p = 0.9MS+RG
+EC
+EC+RG
+SA
+MS+SA
+CI4
+CI4+RG
+ 0
+ 2000
+ 4000
+ 6000C
+p = 0.9
+p = 0.5MS+RG
+EC
+EC+RG
+SA
+MS+SA
+CI4
+CI4+RG
+ 0
+ 2000
+ 4000
+ 6000C
+p = 0.9
+p = 0.5
+p = 0.1
+MS+RG
+EC
+EC+RG
+SA
+MS+SA
+CI4
+CI4+RG
+FIG. 8. Size of the largest component in WS small-world networks with rewiring probabilityp = 0.1, 0.5, 0.9 achieved by remov-
+ing a fraction of nodes using Eigenvector Centrality (EC), Eigenvector Centrality plus Reverse Greedy (EC+RG), Collective
+Inﬂuence with diameterℓ = 4 (CI4), Collective Inﬂuence with diameterℓ = 4 plus Reverse Greedy (CI4+RG), Min-Sum (MS),
+Min-Sum plus Reverse Greedy (MS+RG), Min-Sum plus SA (MS+SA), and Simulated Annealing (SA) withdβ = 10 −8 and
+βmin = 0.5,β max = 20 (and several values ofν).
+
+===== Page 24 =====
+24
+We studied dismantling in the youtube network [26] with1.13 million nodes and concluded that the reverse greedy
+is of immense importance here. Speciﬁcally we obtained that in order to dismantle the network into components
+smaller that C = 1000 nodes the CI methods removes5.12%, the ER removes4.97%, the MS removes5.67% nodes.
+The reverse greedy procedure improves all the these methods and gets dismantling sizes4.03% for CI+RG,4.07% for
+EC+RG, and 3.97% for MS+RG.
+We also studied dismantling on an example of a synthetic scale-free network. Results reported in Fig. 7, are
+qualitatively comparable to the ones for real networks.
+In order to better quantify the eﬀect of a large clustering coeﬃcient on the diﬀerent algorithmic methods under
+study, we considered a well-known class of random graphs with tunable clustering coeﬃcient, the small-world network
+model introduced by Watts and Strogatz [33]. The WS network is generated starting from a one-dimensional lattice
+in which every node is connected withd/2 nearest-neighbors on both sides, then each edge(i, j) with i > j is rewired
+to a randomly chosen nodek̸= j with probability p. Fig. 8 shows the result of dismantling WS networks of size
+N = 10 4, d = 6 and rewiring probability p = 0 .1, 0.5, 0.9. For p = 0 .9 the WS network is topological similar to a
+random graph, with very small clustering coeﬃcient, because almost all edges have been rewired. On this network,
+Min-Sum plus reverse greedy outperforms centrality-based heuristics (EC+RG and CI+RG) and gives results that are
+comparable with the best obtained using SA. Forp = 0.5, MS+RG still gives a very good result, only slightly worse
+than SA. We also replaced the reverse greedy procedure with a reverse Monte Carlo method, in which a dismantling
+set is sought by performing the SA algorithm from the solution of the MS algorithm, by keeping only an optimal
+subset of the nodes already removed. The replacement of the reverse greedy procedure with a Monte Carlo based
+method gives improved results for bothp = 0.9 and p = 0.5. We stress that this could be another useful strategy to
+improve heuristic results even in large networks, because the SA algorithm runs on a fraction of the original graph.
+When p is further decreased, the structure of the WS network signiﬁcantly departs from that of a random graph
+and short loops start to play a very important role, it is clear that we do not expect decycling to be a good strategy
+for dismantling in this regime. In this regime SA performs about 30% better than any other algorithm, even though
+complemented with the reverse greedy strategy. When we perform SA from the solutions obtained using MS, the
+results are improved but still far from the best results obtained using SA alone. This is due to the fact that, in
+clustered networks, the dismantling set obtained by SA is not a subset of the dismantling set obtained using any other
+heuristic strategy, with an overlap that is usually small.
+[1] Boccaletti S, Latora V, Moreno Y, Chavez M, Hwang DU (2006) Complex networks: Structure and dynamics.Physics
+reports424(4):175–308.
+[2] Barrat A, Barthelemy M, Vespignani A (2008)Dynamical processes on complex networks. (Cambridge University Press,
+Cambridge).
+[3] Pastor-Satorras R, Vespignani A (2002) Immunization of complex networks.Phys. Rev. E65(3):036104.
+[4] Cohen R, Havlin S, ben Avraham D (2003) Eﬃcient Immunization Strategies for Computer Networks and Populations.
+Phys. Rev. Lett.91(24):247901.
+[5] Britton T, Janson S, Martin-Löf A (2007) Graphs with speciﬁed degree distributions, simple epidemics, and local vaccina-
+tion strategies. Adv. in Appl. Probab.39(4):922–948.
+[6] Altarelli F, Braunstein A, Dall’Asta L, Wakeling JR, Zecchina R (2014) Containing Epidemic Outbreaks by Message-
+Passing Techniques.Physical Review X4(2):021024.
+[7] Kempe D, Kleinberg J, Tardos E (2003)Maximizing the Spread of Inﬂuence Through a Social Network, KDD ’03. pp.
+137–146.
+[8] Chen N (2008)On the Approximability of Inﬂuence in Social Networks, SODA ’08. pp. 1029–1037.
+[9] Dreyer Jr PA, Roberts FS (2009) Irreversiblek-threshold processes: Graph-theoretical threshold models of the spread of
+disease and of opinion.Discrete Applied Mathematics157(7):1615 – 1627.
+[10] Janson S, Thomason A (2008) Dismantling Sparse Random Graphs.Combinatorics, Probability and Computing17(02):259–
+264.
+[11] Bradonjic M, Molloy M, Yan G (2013) Containing viral spread on sparse random graphs: Bounds, algorithms, and
+experiments. Internet Mathematics9(4):406–433.
+[12] Edwards K, McDiarmid C (1994) New upper bounds on harmonious colorings.Journal of Graph Theory18(3):257–267.
+[13] Edwards K, Farr G (2001) Fragmentability of Graphs.Journal of Combinatorial Theory, Series B82(1):30–37.
+[14] Edwards K, Farr G (2008) Planarization and fragmentability of some classes of graphs.Discrete Mathematics308(12):2396–
+2406.
+[15] Morone F, Makse HA (2015) Inﬂuence maximization in complex networks through optimal percolation. Nature
+524(7563):65–68.
+[16] Albert R, Jeong H, Barabási AL (2000) Error and attack tolerance of complex networks.Nature 406(6794):378–382.
+[17] Callaway DS, Newman MEJ, Strogatz SH, Watts DJ (2000) Network Robustness and Fragility: Percolation on Random
+Graphs. Phys. Rev. Lett.85(25):5468–5471.
+
+===== Page 25 =====
+25
+[18] Cohen R, Erez K, ben Avraham D, Havlin S (2001) Breakdown of the Internet under Intentional Attack.Phys. Rev. Lett.
+86(16):3682–3685.
+[19] Karp RM (1972)Reducibility among Combinatorial Problems, in Complexity of Computer Computations: Proceedings of
+a symposium on the Complexity of Computer Computations, eds. Miller RE, Thatcher JW, Bohlinger JD. (Springer US,
+Boston, MA), pp. 85–103.
+[20] Altarelli F, Braunstein A, Dall’Asta L, Zecchina R (2013) Large deviations of cascade processes on graphs.Phys. Rev. E
+87:062115.
+[21] Altarelli F, Braunstein A, Dall’Asta L, Zecchina R (2013) Optimizing spread dynamics on graphs by message passing.J.
+Stat. Mech.2013(09):P09011.
+[22] Zhou HJ (2013) Spin glass approach to the feedback vertex set problem.The European Physical Journal B86(11):1–9.
+[23] Mugisha S, Zhou HJ (2016) Identifying optimal targets of network attack by belief propagation.Phys. Rev. E94: 012305.
+[24] Mézard M, Parisi G (2001) The Bethe lattice spin glass revisited.Eur. Phys. J. B20:217.
+[25] Mézard M, Montanari A (2009)Information, Physics and Computation. (Oxford University Press).
+[26] Leskovec J, Krevl A (2014) SNAP Datasets: Stanford large network dataset collection (http://snap.stanford.edu/data).
+[27] Guggiola A, Semerjian G (2015) Minimal contagious sets in random regular graphs.J. Stat. Phys.158(2):300–358.
+[28] Beineke LW, Vandell RC (1997) Decycling graphs.Journal of Graph Theory25(1):59–77.
+[29] Bau S, Wormald NC, Zhou S (2002) Decycling numbers of random regular graphs.Random Structures & Algorithms
+21(3-4):397–413.
+[30] Haxell P, Pikhurko O, Thomason A (2008) Maximum acyclic and fragmented sets in regular graphs.Journal of Graph
+Theory 57(2):149–156.
+[31] BaldassiC,BraunsteinA(2015)AMax-Sumalgorithmfortrainingdiscreteneuralnetworks. J. Stat. Mech.2015(8):P08008.
+[32] Martin T, Zhang X, Newman M (2014) Localization and centrality in networks.Physical Review E90(5):052808.
+[33] Watts DJ, Strogatz SH (1998) Collective dynamics of small-world networks.Nature 393(6684):440–442.

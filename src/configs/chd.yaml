@@ -1,0 +1,68 @@
+project: CHD
+llm:
+  model: gpt-5.5
+  reasoning_effort: none
+  temperature: 0.2
+  base_url: https://api.ritelt.com/v1
+budgets:
+  stage1_candidates: 300
+  stage2_llm_calls: 10
+  stage3_candidates: 200
+  candidates_per_llm_call: 1
+  stage3_parent_limit: 24
+  candidate_timeout_s: 90.0
+  delta_credit_mode: root
+ablation_hooks:
+  parent_relative_ablation:
+    delta_credit_mode: parent
+    description: 与主运行使用相同超参数，但用 AUC-cNBI(child) - AUC-cNBI(parent) 为树节点计分
+llm_parallelism:
+  default_workers: 4
+  stage1_candidate_requests: 300
+  stage2_policy_requests: 10
+  stage3_candidate_requests: 200
+datasets:
+  real:
+    - CEnew
+    - Collaboration
+    - condmat
+    - crime
+    - email
+    - Grid
+    - GrQC
+    - hamster
+    - HepPh
+    - PH
+    - Yeast
+  synthetic:
+    - Powerlaw_500
+rates:
+  default: 0.30
+  email: 0.40
+seeds:
+  scaling:
+    - 42
+    - 43
+    - 44
+stage1:
+  name: 成本感知自由搜索
+  root: HDA-original
+  generation: 顺序搜索树扩展
+  credit: root-relative Delta AUC-cNBI + R/GCC + 轻量时间感知得分
+  active_run: historical_root_relative_main_run
+  audit_columns: 主运行只使用 root-relative delta_root_auc_cNBI；parent-relative delta_auc_cNBI 仅作为消融和审计字段保留
+stage2:
+  name: 基于日志归纳边界
+  output: family_policy.json, bounds, failure_patterns, replay_report
+  generates_candidates: false
+stage3:
+  name: 有界引导搜索
+  seed_source: 阶段1最佳家族或阶段1高分候选
+  generation: 顺序有界搜索树扩展
+final_selection:
+  proxy_stage: 阶段3从代理任务 Pareto 前沿中固定 HAST-Final-Q/S
+  validation: 完整验证只评估阶段3固定的 HAST-Final-Q/S，不覆盖阶段3 final 映射
+  selector: Pareto 前沿
+  labels:
+    - HAST-Final-Q
+    - HAST-Final-S

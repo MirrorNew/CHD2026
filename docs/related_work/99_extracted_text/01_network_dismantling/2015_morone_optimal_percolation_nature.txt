@@ -1,0 +1,3272 @@
+
+
+===== Page 1 =====
+Inﬂuence maximization in complex networks through optimal
+percolation
+Flaviano Morone and Hern´ an A. Makse
+Levich Institute and Physics Department,
+City College of New York, New York, NY 10031
+Abstract
+The whole frame of interconnections in complex networks hinges on a speciﬁc set
+of structural nodes, much smaller than the total size, which, if activated, would cause
+the spread of information to the whole network [1]; or, if immunized, would prevent
+the diﬀusion of a large scale epidemic [2, 3]. Localizing this optimal, i.e. minimal,
+set of structural nodes, called inﬂuencers, is one of the most important problems in
+network science [4, 5]. Despite the vast use of heuristic strategies to identify inﬂuential
+spreaders [6–14], the problem remains unsolved. Here, we map the problem onto
+optimal percolation in random networks to identify the minimal set of inﬂuencers,
+which arise by minimizing the energy of a many-body system, where the form of
+the interactions is ﬁxed by the non-backtracking matrix [15] of the network. Big
+data analyses reveal that the set of optimal inﬂuencers is much smaller than the one
+predicted by previous heuristic centralities. Remarkably, a large number of previously
+neglected weakly-connected nodes emerges among the optimal inﬂuencers. These are
+topologically tagged as low-degree nodes surrounded by hierarchical coronas of hubs,
+and are uncovered only through the optimal collective interplay of all the inﬂuencers in
+the network. Eventually, the present theoretical framework may hold a larger degree
+of universality, being applicable to other hard optimization problems exhibiting a
+continuous transition from a known phase [16].
+1
+arXiv:1506.08326v1  [physics.soc-ph]  27 Jun 2015
+
+===== Page 2 =====
+The optimal inﬂuence problem was initially introduced in the context of viral marketing
+[1], and its solution was shown to be NP-hard [4] for a generic class of linear threshold
+models of information spreading [17, 18]. Indeed, ﬁnding the optimal set of inﬂuencers is a
+many-body problem in which the topological interactions between them play a crucial role
+[13, 14]. On the other hand, there has been an abundant production of heuristic rankings to
+identify inﬂuential nodes and ”superspreaders” in networks [6–12, 19]. The main problem
+is that heuristic methods do not optimize a global function of inﬂuence. As a consequence,
+there is no guarantee of their performance.
+Here we address the problem of quantifying node’s inﬂuence by ﬁnding the optimal (i.e.
+minimal) set of structural inﬂuencers. After deﬁning a uniﬁed mathematical framework for
+both immunization and spreading, we provide its optimal solution in random networks by
+mapping the problem onto optimal percolation. In addition, we present CI (which stands
+for Collective Inﬂuence), a scalable algorithm to solve the optimization problem in large
+scale datasets. The thorough comparison with competing methods (Methods Section I [20])
+ultimately establishes the major performance of our algorithm. By taking into account
+collective inﬂuence eﬀects, our optimization theory identiﬁes a new class of strategic inﬂu-
+encers, called weak-nodes, which outrank the hubs in the network. Thus, the top inﬂuencers
+are highly counterintuitive: low degree nodes play a major broker role in the network, and
+despite being weakly connected, can be powerful inﬂuencers.
+The problem of ﬁnding the minimal set of activated nodes [17, 18] to spread information
+to the whole network [4] or to optimally immunize a network against epidemics [11] can be
+exactly mapped onto optimal percolation (see Methods Section II B). This mapping provides
+the mathematical support to the intuitive relation between inﬂuence and the concept of
+cohesion of a network: the most inﬂuential nodes are the ones forming the minimal set
+that guarantees a global connection of the network [5, 9, 10]. We call this minimal set the
+“optimal inﬂuencers” of the network. At a general level, the optimal inﬂuence problem can
+be stated as follows: ﬁnd the minimal set of nodes which, if removed, would break down
+the network in many disconnected pieces. The natural measure of inﬂuence is, therefore,
+the size of the largest (giant) connected component as the inﬂuencers are removed from the
+network.
+We consider a network composed of N nodes tied with M links with arbitrary degree
+distribution P (k). Let us suppose we remove a certain fraction q of the total number
+2
+
+===== Page 3 =====
+of nodes. It is well known from percolation theory [21] that, if we choose these nodes
+randomly, the network undergoes a structural collapse at a certain critical fraction where
+the probability of existence of the giant connected component vanishes,G = 0. The optimal
+inﬂuence problem corresponds to ﬁnding the minimum fraction qc of inﬂuencers to fragment
+the network: qc = min{q∈ [0, 1] : G(q) = 0}.
+Let the vector n = (n1,...,n N) represents which node is removed ( ni = 0, inﬂuencer)
+or left ( ni = 1, the rest) in the network ( q = 1− 1/N ∑
+ini), and consider a link from
+i→ j. The order parameter of the inﬂuence problem is the probability that i belongs to
+the giant component in a modiﬁed network where j is absent, νi→j [22, 23]. Clearly, in the
+absence of a giant component we ﬁnd{νi→j = 0} for all i→j. The stability of the solution
+{νi→j = 0} is controlled by the largest eigenvalue λ(n;q) of the linear operator ˆM deﬁned
+on the 2M× 2M directed edges asMk→ℓ,i→j≡ ∂νi→j
+∂νk→ℓ
+⏐⏐⏐
+{νi→j=0}
+. We ﬁnd for locally-tree like
+random graphs (see Fig. 1a and Methods Section II):
+Mk→ℓ,i→j =niBk→ℓ,i→j (1)
+whereBk→ℓ,i→j is the non-backtracking matrix of the network [15, 24]. The matrix Bk→ℓ,i→j
+has non-zero entries only when ( k→ℓ,i→j) form a pair of consecutive non-backtracking
+directed edges, i.e. (k→ℓ,ℓ→j) with k̸=j. In this case Bk→ℓ,ℓ→j = 1 (Eq. S13). Powers
+of the matrix ˆB count the number of non-backtracking walks of a given length in the network
+(Fig. 1b) [24], much in the same way as powers of the adjacency matrix count the number of
+paths [5]. Operator ˆB has recently received a lot of attention thanks to its high performance
+in the problem of community detection [25, 26]. Below, we show its topological power in
+the problem of optimal percolation.
+Stability of the solution{νi→j = 0} requires λ(n;q)≤ 1. The optimal inﬂuence problem
+for a given q (≥qc) can be rephrased as ﬁnding the optimal conﬁguration n that minimizes
+the largest eigenvalue λ(n;q) (Fig. 1c). The optimal set n∗ of Nqc inﬂuencers is obtained
+when the minimum of the largest eigenvalue reaches the critical threshold:
+λ(n∗;qc) = 1. (2)
+The formal mathematical mapping of the optimal inﬂuence problem to the minimization of
+the largest eigenvalue of the modiﬁed non-backtracking matrix for random networks, Eq.
+(2), represents our ﬁrst main result.
+3
+
+===== Page 4 =====
+An example of non-optimized solution corresponds to choosing ni at random and decou-
+pled from the non-backtracking matrix [23, 27] (random percolation [21], Methods Section
+II D). In the optimized case we seek to derandomize the selection of the set ni = 0 and
+optimally choose them to ﬁnd the best conﬁguration n∗ with the lowest qc according to Eq.
+(2). The eigenvalue λ(n) (from now on we omit q in λ(n;q)≡ λ(n), which is always kept
+ﬁxed) determines the growth rate of an arbitrary vectorw0 with 2M entries afterℓ iterations
+of the matrix ˆM:|wℓ(n)| = ⟨wℓ|wℓ⟩1/2 =| ˆMℓw0| = ⟨w0|( ˆMℓ)† ˆMℓ|w0⟩1/2∼ eℓ logλ(n).
+The largest eigenvalue is then calculated by the Power Method:
+λ(n) = lim
+ℓ→∞
+[|wℓ(n)|
+|w0|
+]1/ℓ
+. (3)
+Equation (3) is the starting point of an (inﬁnite) perturbation series which provides
+the exact solution to the many-body inﬂuence problem in random networks and therefore
+contains all physical eﬀects, including the collective inﬂuence. In practice, we minimize the
+cost energy function of inﬂuence |wℓ(n)| in Eq. (3) for a ﬁnite ℓ. The solution rapidly
+converges to the exact value at ℓ→∞ ; the faster the larger the spectral gap. We ﬁnd for
+ℓ≥ 1 as a leading order in 1 /N (Methods Section II E):
+|wℓ(n)|2 =
+N∑
+i=1
+(ki− 1)
+∑
+j∈∂Ball(i,2ℓ−1)
+
+ ∏
+k∈P2ℓ−1(i,j)
+nk
+
+ (kj− 1) , (4)
+where Ball(i,ℓ ) is the set of nodes inside a ball of radius ℓ (deﬁned as the shortest path)
+around node i,∂Ball(i,ℓ ) is the frontier of the ball andPℓ(i,j ) is the shortest path of length
+ℓ connecting i and j (Fig. 1d).
+The ﬁrst collective optimization in Eq. (4) is ℓ = 1. We ﬁnd|w1(n)|2 = ∑N
+i,j=1Aij(ki−
+1)(kj− 1)ninj (Eq. S39). This term is interpreted as the energy of an antiferromagnetic
+Ising model with random bonds in a random external ﬁeld at ﬁxed magnetization, which
+is an example of a pair-wise NP-complete spin-glass whose solution is found in Methods
+Section III with the cavity method [28].
+Forℓ≥ 2, the problem can be mapped exactly to a statistical mechanical system with
+many-body interactions which can be recast in terms of a diagrammatic expansion, Eqs.
+S41-S49. For example,|w2(n)|2 leads to 4-body interactions (Eq. S45), and, in general, the
+energy cost |wℓ(n)|2 contains 2ℓ-body interactions. As soon as ℓ≥ 2, the cavity method
+becomes much more complicated to implement and we use another suitable method, called
+4
+
+===== Page 5 =====
+extremal optimization (EO) [29] (Methods Section IV). This method estimates the true
+optimal value of the threshold by ﬁnite size scaling following extrapolation to ℓ → ∞
+(Extended Data Fig. 4). However, EO is not scalable to ﬁnd the optimal conﬁguration in
+large networks. Therefore, we develop an adaptive method, which performs excellently in
+practice, preserves the features of EO, and is highly scalable to present-day big-data.
+The idea is to remove the nodes causing the biggest drop in the energy function Eq. (4).
+First, we deﬁne a ball of radius ℓ around every node (Fig. 1d). Then, we consider the
+nodes belonging to the frontier ∂Ball(i,ℓ ) and assign to node i the collective inﬂuence (CI)
+strength at levelℓ following Eq. (4) (see Methods Section V for implementation and Section
+V A for minimizing G(q)̸= 0):
+CIℓ(i) = ( ki− 1)
+∑
+j∈∂Ball(i,ℓ)
+(kj− 1) . (5)
+We notice that, while Eq. (4) is valid only for odd radii of the ball, CI ℓ(i) is deﬁned also for
+even radii. This generalization is possible by considering an energy function for even radii
+analogous to Eq. (4), as explained in Methods Section II G. The case of one-body interaction
+with zero radius ℓ = 0 (Eq. S59) leads to the high-degree (HD) ranking (Eq. S62) [10].
+The collective inﬂuence Eq. (5) is our second and most important result since it is the
+basis for the highly scalable and optimized CI-algorithm which follows. In the beginning all
+the nodes are present: ni = 1 for all i. Then, we remove node i∗ with highest CIℓ and set
+ni∗ = 0. The degrees of its neighbours are decreased by one, and the procedure is repeated to
+ﬁnd the new top CI node to remove. The algorithm is terminated when the giant component
+is zero. By increasing the radius ℓ of the ball we obtain better and better approximations
+of the optimal exact solution at ℓ→∞ (for ﬁnite networks, ℓ does not exceed the network
+diameter).
+The collective inﬂuence CI ℓ for ℓ≥ 1 has a rich topological content, and consequently
+can tell us more about the role played by nodes in the network than the non-interacting
+high-degree hub removal strategy at ℓ = 0, CI 0. The augmented information comes from
+the sum in the r.h.s, which is absent in the naive high-degree rank. This sum contains the
+contribution of the nodes living on the surface of the ball surrounding the central vertex i,
+each node weighted by the factor kj− 1. This means that a node placed at the center of
+a corona irradiating many links— the structure hierarchically emerging at diﬀerent ℓ-levels
+as seen in Fig. 1e— can have a very large collective inﬂuence, even if it has a moderate or
+5
+
+===== Page 6 =====
+low degree. Such “weak-nodes” can outrank nodes with larger degree that occupy mediocre
+peripherical locations in the network. The commonly used word ’weak’ in this context sounds
+particularly paradoxical. It is, indeed, usually used as a synonymous for a low-degree node
+with an additional ”bridging” property, which has resisted a quantitative formulation. We
+provide this deﬁnition through Eq. (5), according to which weak nodes are, de facto, quite
+strong. Paraphrasing Granovetter’s conundrum [30], Eq. (5) quantiﬁes the “strength of
+weak nodes”.
+The CI-algorithm scales as ∼O(N logN) by removing a ﬁnite fraction of nodes at each
+step (Methods Section V B). This high scalability allows us to ﬁnd top inﬂuencers in current
+big-data social media and optimal immunizators in large-scale populations at the country
+level. The applications are investigated next.
+Figure 2a shows the optimal threshold qc for random Erd¨ os-R´ enyi (ER) network [5]
+(marked by the vertical line) obtained by extrapolating the EO solution to inﬁnite size,
+N →∞ , and ℓ→∞ (Methods Section IV). In the same ﬁgure we compare the optimal
+threshold against the heuristic centrality measures: high-degree (HD) [9], high-degree adap-
+tive (HDA), PageRank (PR) [7], closeness centrality (CC) [6], eigenvector centrality (EC)
+[6], and k-core [12] (see Methods Section I for deﬁnitions). Methods Section VI and VII show
+the comparison with the remaining heuristics [6, 11] and the Belief Propagation method of
+[14], respectively, which have worst computational complexity (and optimality), and cannot
+be applied to the network sizes used here. Remarkably, at the optimal value qc predicted
+by our theory, the best among the heuristic methods (HDA, PR and HD) still predict a
+giant component∼ 50%− 60% of the whole original network. Furthermore, the inﬂuencer
+threshold predicted by CI approximates very well the optimal one, and, notably, CI outper-
+forms the other strategies. Figure 2b compares CI in scale-free (SF) network [5] against the
+best heuristic methods, i.e. HDA and HD. In all cases, CI produces smaller threshold and
+smaller giant component (Fig. 2c).
+As an example of information spreading network, we consider the web of Twitter users
+(Methods Section VIII [19]). Figure 3a shows the giant component of Twitter when a fraction
+q of its inﬂuencers is removed following CI. It is surprising that a lot of Twitter users with
+a large number of contacts have a mild inﬂuence on the network, as witnessed by the fact
+that, when CI (at ℓ = 5) predicts a zero giant component (and so it exhausts the number
+of optimal inﬂuencers), the scalable heuristic ranks (HD, HDA, PR and k-core) still give a
+6
+
+===== Page 7 =====
+pretty big giant component of the order of 30-70% of the entire network, and, inevitably, ﬁnd
+a remarkably larger number of (fake) inﬂuencers which is 50% larger than that predicted by
+CI (Fig. 3b and Methods Section VIII). One cause for the poor performance of the high-
+degree rank is that most of the hubs are clustered (rich-club eﬀect), which gives a mediocre
+importance to their contacts. As a consequence, hubs are outranked by nodes with lower
+degree surrounded by coronas of hubs (shown in the detail of Fig. 3c), i.e. the weak-nodes
+predicted by the theory (Fig. 1e).
+Finally, we simulate an immunization scheme on a personal contact network built on
+the phone calls performed by 14 million people in Mexico (Methods Section IX). Figure 3d
+shows that our method saves a large amount vaccines stockpile or, equivalently, ﬁnd the
+smallest possible set of people to quarantine outranking the scalable heuristics in large real
+networks as well. Thus, while the mapping of the inﬂuencer identiﬁcation problem onto
+optimal percolation is strictly valid for locally tree-like random networks, our results may
+apply also for real loopy networks, provided the density of loops is not excessively large.
+Our solution to the optimal inﬂuence problem shows its importance in that it helps
+to unveil hitherto hidden relations between people, as witnessed by the weak-node eﬀect.
+This, in turn, is the byproduct of a broader notion of inﬂuence, lifted from the individual
+non-interacting point of view [6–12, 19, 20] to the collective sphere: inﬂuence is an emer-
+gent property of collectivity and top inﬂuencers arise from the optimization of the complex
+interactions they stipulate.
+7
+
+===== Page 8 =====
+[1] Domingos P. & Richardson, M. Mining knowledge-sharing sites for viral marketing. Proc. 8th
+ACM SIGKDD Intl. Conf. on Knowledge Discovery and Data Mining , p61-70 (2002).
+[2] Pastor-Satorras R. &, Vespignani, A. Epidemic spreading in scale-free networks. Phys. Rev.
+Lett. 86, 3200-3203 (2001).
+[3] Newman, M. E. J. Spread of epidemic disease on networks. Phys. Rev. E 66, 016128 (2002).
+[4] Kempe, D., Kleinberg, J. & Tardos, E. Maximizing the spread of inﬂuence through a social
+network. Proc. 9th ACM SIGKDD Intl. Conf. on Knowledge Discovery and Data Mining ,
+p137-143 (2003). doi: 10.1145/956750.956769
+[5] Newman, M. E. J. Networks: An Introduction (Oxford University Press, Oxford, 2010).
+[6] Freeman, L. C. Centrality in social networks: conceptual clariﬁcation. Social Networks 1,
+215-239 (1979).
+[7] Brin, S. & Page, L. The anatomy of a large-scale hypertextual web search engine. Comput.
+Networks ISDN 30, 107-117 (1998).
+[8] Kleinberg, J. Authoritative sources in a hyperlinked environment. Proc. 9th ACM-SIAM Sym-
+posium on Discrete Algorithms (1998). Extended version in J. of ACM 46, 604-632 (1999).
+[9] Albert, R., Jeong, H. & Barab´ asi, A.-L. Error and attack tolerance of complex networks.
+Nature 406, 378-382 (2000).
+[10] Cohen, R., Erez, K., ben-Avraham & D., Havlin, S. Breakdown of the Internet under inten-
+tional attack. Phys. Rev. Lett. 86, 3682-3685 (2001).
+[11] Chen, Y., Paul, G., Havlin, S., Liljeros, F. & Stanley, H. E. Finding a better immunization
+strategy. Phys. Rev. Lett. 101, 058701 (2008).
+[12] Kitsak, M., Gallos, L. K., Havlin, S., Liljeros, F., Muchnik, L., Stanley, H. E. & Makse, H. A.
+Identiﬁcation of inﬂuential spreaders in complex networks. Nature Phys. 6, 888-893 (2010).
+[13] Altarelli, F., Braunstein, A., Dall’Asta, L. & Zecchina, R. Optimizing spread dynamics on
+graphs by message passing. J. Stat. Mech. P09011 (2013).
+[14] Altarelli, F., Braunstein, A., Dall’Asta, L., Wakeling, J. R. & Zecchina, R. Containing epi-
+demic outbreaks by message-passing techniques. Phys. Rev. X 4, 021024 (2014).
+[15] Hashimoto, K. Zeta functions of ﬁnite graphs and representations of p-adic groups. Adv. Stud.
+Pure Math. 15, 211-280 (1989).
+8
+
+===== Page 9 =====
+[16] Coja-Oghlan, A., Mossel, E. & Vilenchik, D. A spectral approach to analyzing Belief Propa-
+gation for 3-Coloring. Combinatorics, Probability and Computing 8, 881-912 (2009).
+[17] Granovetter, M. Threshold models of collective behavior. Am. J. Sociol. 83, 1420-1443 (1978).
+[18] Watts, D. J. A simple model of global cascades on random networks. Proc. Natl. Acad. Sci.
+U.S.A. 99, 5766-5771 (2002).
+[19] Pei, S., Muchnik, L., Andrade, J. S. Jr., Zheng, Z. & Makse, H. A. Searching for superspreaders
+of information in real-world social media. Sci. Rep. 4, 5547 (2014).
+[20] Pei, S. & Makse, H. A. Spreading dynamics in complex networks, J. Stat. Mech. P12002
+(2013).
+[21] Bollob´ as, B. & Riordan, O.Percolation (Cambridge Univ. Press, Cambridge, 2006).
+[22] Bianconi, G. & Dorogovtsev, S. N. Multiple percolation transitions in a conﬁguration model
+of network of networks. Phys. Rev. E 89, 062814 (2014).
+[23] Karrer, B., Newman, M. E. J. & Zdeborov´ a, L. Percolation on sparse networks. Phys. Rev.
+Lett. 113, 208702 (2014).
+[24] Angel, O., Friedman, J. & Hoory, S. The non-backtracking spectrum of the universal cover of
+a graph. Trans. Amer. Math. Soc. 367 4287-4318 (2015).
+[25] Krzakala, F., Moore, C., Mossel, E., Neeman, J., Sly, A., Zdeborov´ a, L. & Zhang, P. Spectral
+redemption in clustering sparse networks. Proc. Natl. Acad. Sci. U.S.A. 110, 20935-20940
+(2013).
+[26] Newman, M. E. J. Spectral methods for community detection and graph partitioning. Phys.
+Rev. E 88, 042822 (2013).
+[27] Radicchi, F. Predicting percolation thresholds in networks. Phys. Rev. E 91, 010801(R) (2015).
+[28] M´ ezard, M. & Parisi, G. The cavity method at zero temperature. J. Stat. Phys. 111, 1-34
+(2003).
+[29] Boettcher, S. & Percus, A. G. Optimization with extremal dynamics. Phys. Rev. Lett. 86,
+5211-5214 (2001).
+[30] Granovetter, M. The strength of weak ties. Am. J. Sociol. 78, 1360-1380 (1973).
+Acknowledgments
+This work was funded by NIH-NIGMS 1R21GM107641 and NSF-PoLS PHY-1305476.
+Additional support was provided by ARL. We thank L. Bo, S. Havlin and R. Mari for
+discussions and Grandata for providing the data on mobile phone calls.
+9
+
+===== Page 10 =====
+Author contributions
+Both authors contributed equally to the work presented in this paper.
+Additional information
+The authors declare no competing ﬁnancial interests. Supplementary information accom-
+panies this paper on www.nature.com/nature. Correspondence and requests for materials
+should be addressed to H.A.M. (hmakse@lev.ccny.cuny.edu).
+10
+
+===== Page 11 =====
+FIG. 1. Non-backtracking (NB) matrix and weak-nodes . a, The largest eigen-
+valueλ of ˆM exempliﬁed on a simple network. The optimal strategy for immunization and
+spreading minimizes λ by removing the minimum number of nodes (optimal inﬂuencers)
+that destroys all the loops. Left panel: The action of the matrix ˆM is on the directed
+edges of the network. The entry M2→3,3→5 =n3B2→3,3→5 =n3 encodes node 3’s occupancy
+(n3 = 1) or vacancy (n3 = 0). In this particular case, the largest eigenvalue is λ = 1. Center
+panel: Not-optimal removal of a leaf, n4 = 0, which does not decrease λ. Right panel:
+Optimal removal of a loop, n3 = 0, which decreases λ to zero. b, A NB walk is a random
+walk that is not allowed to return back along the edge that it just traversed. We show a
+NB open walk ( ℓ = 3), a NB closed walk with a tail ( ℓ = 4), and a NB closed walk with
+no tails (ℓ = 5). The NB walks are the building blocks of the diagrammatic expansion to
+calculate λ. c, Representation of the global minimum over n of the largest eigenvalue λ of
+ˆM vs q. When q≥qc, the minimum is at λ = 0. Then, G = 0 is stable (still, non-optimal
+conﬁgurations exist with λ> 1 for which G> 0). When q <qc, the minimum of the largest
+eigenvalue is alwaysλ> 1, the solution G = 0 is unstable, and then G> 0. At the optimal
+percolation transition, the minimum is at n∗ withλ(n∗,qc) = 1. For q = 0, we ﬁndλ =κ−1
+(κ =⟨k2⟩/⟨k⟩) which is the largest eigenvalue of ˆB for random networks [25] with all nodes
+present (ni = 1). When λ = 1, the giant component is reduced to a tree plus one single
+loop (unicyclic graph), which is suddenly destroyed at the transition qc to become a tree,
+causing the abrupt fall of λ to zero. d, Ball(i,ℓ ) of radiusℓ around node i is the set of nodes
+contained in the grey region and ∂Ball is the set of nodes on the boundary. The shortest
+path from i toj is colored in red. e, Example of a weak-node: a node with a small number
+of connections surrounded by hierarchical coronas of hubs at diﬀerent ℓ-levels.
+FIG. 2. Exact optimal solution and performance of CI in synthetic networks.
+a, G(q) in ER network (N = 2× 105,⟨k⟩ = 3.5, error bars are s.e.m. over 20 realizations)
+for the true optimal solution with EO ( ×), CI, HDA, PR, HD, CC, EC and k-core. The
+other methods are not scalable and perform worst than HDA and are treated in Methods
+Sections VI and VII. CI is close to the optimal qopt
+c ∼ 0.193 obtained with EO in Methods
+Section IV. Note that EO can estimate the extrapolated optimal value of qc, but it cannot
+provide the optimal conﬁguration for large systems. Inset: qc (obtained at the peak of the
+second largest cluster) for the three best methods vs⟨k⟩. b,G(q) for SF network with degree
+exponentγ = 3, maximum degreekmax = 103 andN = 2×105 (error bars are s.e.m. over 20
+11
+
+===== Page 12 =====
+realizations). Inset: qc vsγ. The continuous blue line is the HD analytical result computed
+in Methods Section II G. c, SF network with γ = 3 after the removal of the 15% of nodes,
+using the three methods. CI produces a much reduced giant component (red nodes).
+FIG. 3. Performance of CI in large-scale real social networks. a, Giant com-
+ponent G(q) of Twitter users [19] ( N = 469, 013) computed using CI, HDA, PR, PR and
+k-core strategies (other heuristics have prohibitive running times for this system size). b,
+Percentage of fake inﬂuencers or false positives (PFI, Eq. S120) in Twitter as a function
+of q, deﬁned as the percentage of non-optimal inﬂuencers identiﬁed by HD algorithm in
+comparison with CI. Below qCI
+c , PFI reaches as much as∼ 40% indicating the failure of HD
+in optimally ﬁnding the top inﬂuencers. Indeed, to obtain G = 0, HD has to remove a much
+larger number of fake inﬂuencers, which at qHD
+c reaches PFI∼ 48%. c, Example out of the
+many weak-nodes found in Twitter; the crucial inﬂuencer missed by all heuristic strategies.
+d, G(q) for a social network of 1 .4× 107 mobile phone users in Mexico representing an
+example of big-data to test the scalability and performance of the algorithm. CI immunizes
+this social network using half a million less people than the best heuristic strategy (HDA),
+saving∼35% of vaccine stockpile.
+12
+
+===== Page 13 =====
+Extended Data Fig. 1. HD high-degree threshold. a, HD inﬂuence threshold qc
+as a function of the degree distribution exponent γ of scale-free networks in the ensemble
+with kmax = mN 1/(γ−1) and N→∞ . The curves refer to diﬀerent values of the minimum
+degree m: 1 (red), 2 (blue), 3 (black). The fragility of SF networks (small qc) is notable
+for m = 1, the case calculated in [10]. In this case, the network contains many leaves, and
+reduces to a star at γ = 2 which is trivially destroyed by removing the only single hub,
+explaining the general fragility in this case. Furthermore, in this case, the network becomes
+a collection of dimers with k = 1 when γ→∞ , which is still trivially fragile. This explains
+why qc→ 0 as γ→∞ , as well. Therefore, the fragility in the case m = 1 has its roots in
+these two limiting trivial cases. Removing the leaves ( m = 2) results in a 2-core, which is
+already more robust. For the 3-core m = 3, qc≈ 0.4− 0.5 provides a quite robust network,
+and has the expected asymptotic limit to a non-zero qc of a random regular graph with
+k = 3 as γ→∞ , qc→ (k− 2)/(k− 1) = 0.5. Thus, SF networks become robust in these
+more realistic cases and the search for other attack strategies becomes even more important.
+b, HD inﬂuence threshold qc as a function of the degree distribution exponent of scale-free
+networks with minimum degree m = 2 in the ensemble where kmax is ﬁxed and does not
+scale with N. The curves refer to diﬀerent values of the cut-oﬀ kmax: 10 2 (red), 103 (green),
+105 (blue), 108 (magenta), and kmax =∞ (black), and show that for typical kmax degree of
+103, for instance in social networks, the network is fairly robust with qc≈ 0.2 for all γ.
+Extended Data Fig. 2. RS estimation of the maximum eigenvalue. Main panel:
+the eigenvalue λRS
+1 (q) obtained by minimizing the energy function E(s) with the RS cavity
+method. The curve was computed on a Erd¨ os-R´ enyi graph ofN = 10, 000 nodes and average
+degree⟨k⟩ = 3.5 and then averaged over 40 realizations of the network. Inset: Comparison
+between the cavity method and extremal optimization for an ER graph of ⟨k⟩ = 3.5 and
+N = 128. The curves are averaged over 200 realizations (error bars are s.e.m.).
+Extended Data Fig. 3. EO estimation of the maximum eigenvalue. Eigenvalue
+λ(q) obtained by minimizing the energy function E(n) with τEO, plotted as a function of
+the fraction of removed nodes q. The panels are for diﬀerent orders of the interactions. The
+curves in each panel refer to diﬀerent sizes of Erd¨ os-R´ enyi networks with average connectivity
+⟨k⟩ = 3.5. Each curve is an average over 200 instances (error bars are s.e.m.). The value qc
+where λ(qc) = 1 is the threshold for a particular N and many-body interaction.
+Extended Data Fig. 4. Estimation of optimal threshold qopt
+c with EO. a, Critical
+13
+
+===== Page 14 =====
+thresholdqc as a function of the system size N obtained with EO from from Extended Data
+Fig. 3 of ER networks with ⟨k⟩ = 3.5 and varying size. The curves refer to diﬀerent orders
+of the many-body interactions. The data show a linear behaviour as a function of N−2/3,
+typical of spin glasses, for each many-body interaction ρ. The extrapolated value q∞
+c (ρ)
+is obtained at the y-intercept. b, Thermodynamical critical threshold q∞
+c (ρ) as a function
+of the order of the interactions ρ from a. The data scale linearly with 1 /ρ. From the y-
+intercept of the linear ﬁt we obtain the thermodynamical limit of the inﬁnite-body optimal
+valueqopt
+c =q∞
+c (ρ→∞ ) = 0.192(9).
+Extended Data 5. Comparison of the CI algorithm for diﬀerent radius ℓ of the
+Ball(ℓ). We use ℓ = 1, 2, 3, 4, 5, on a ER graph with average degree ⟨k⟩ = 3.5 and N = 105
+(the average is taken over 20 realizations of the network, error bars are s.e.m.). For ℓ = 3
+the performance is already practically indistinguishable from ℓ = 4, 5. The stability analysis
+we developed to minimize qc is strictly valid only when G = 0, since the largest eigenvalue
+of the modiﬁed NB matrix controls the stability of the solution G = 0, and not the stability
+of the solution G >0. In the region where G >0 we use a simple and fast procedure to
+minimize G explained in Section V A. This explains why there is a small dependence on ℓ
+having a slightly larger G for larger ℓ, when G> 0 in the region q≈ 0.15.
+Extended Data Fig. 6. Illustration of the algorithm used to minimize G(q) for
+q < qc. Starting from the completely fragmented network at q = qc, nodes are reinserted
+with the following criterion: each node is assigned and index c(i) given by the number of
+clusters it would join if it were reinserted in the network. For example, the red node has
+c(red) = 2, while the blue one has c(blue) = 3. The node with the smallest c(i) is reinserted
+in the network: in this case the red node. Then the c(i)’s are recalculated and the new
+node with the smallest c(i) is found and reinserted. The algorithm is repeated until all the
+removed nodes are reinserted in the network.
+Extended Data Fig. 7. Test of the decimation fraction . Giant component as a
+function of the removed nodes using CI, for an ER network of N = 105 nodes and average
+degree⟨k⟩ = 3.5. The proﬁles of the curves are drawn for diﬀerent percentages of nodes
+ﬁxed at each step of the decimation algorithm.
+Extended Data Fig. 8. Comparison of the performance of CI, BC, and EGP .
+We also include HD, HDA, EC, CC, k-core, and PR. We use a scale-free network with degree
+exponentγ = 2.5, average degree⟨k⟩ = 4.68, and N = 104. We use the same parameters as
+14
+
+===== Page 15 =====
+in Ref. [11].
+Extended Data Fig. 9. Comparison with BP. a, Fraction of infected nodes f as
+a function of the fraction of immunized nodes q in SIR from BP solution. We use a ER
+random graph of N = 200 nodes and average degree ⟨k⟩ = 3.5. The fraction of initially
+infected nodes is p = 0.1 and the inverse temperature β = 3.0. The proﬁles are drawn for
+diﬀerent values of the transmission probability w: 0.4 (red curve), 0.5 (green), 0.6 (blue),
+0.7 (magenta). Also shown are the results of the ﬁxed density BP algorithm (open circles).
+b, Chemical potential µ as a function of the immunized nodes q from BP. We use a ER
+random graph of N = 200 nodes and average degree ⟨k⟩ = 3.5. The fraction of the initially
+infected nodes is p = 0.1 and the inverse temperature β = 3.0. The proﬁles are drawn for
+diﬀerent values of the transmission probability w: 0.4 (red curve), 0.5 (green), 0.6 (blue),
+0.7 (magenta). Also shown are the results of the ﬁxed density BP algorithm (open circles)
+for the region where the chemical potential is non convex. c, Comparison between the giant
+components obtained with CI, HDA, HD and BP. We use an ER network of N = 103 and
+⟨k⟩ = 3.5. We also show the solution of CI from Fig. 2a for N = 10 5. We ﬁnd in order
+of performance: CI, HDA, BP, and HD. (The average is taken over 20 realizations of the
+network, error bars are s.e.m.) d, Comparison between the giant components obtained with
+CI, HDA, HD and BPD. We use a SF network with degree exponent γ = 3.0, minimum
+degree kmin = 2, and N = 104 nodes.
+Extended Data Fig. 10. Fraction of infected nodes f(q) as a function of the
+fraction of immunized nodes q in SIR from BP. We use the following parameters:
+initial infected people p = 0.1, and transmission probability w = 0.5. We use an ER
+network ofN = 103 nodes and⟨k⟩ = 3.5. We compare CI, HDA and BP. All strategies give
+similar performance due to the large value of the initial infection p which washes out the
+optimization performed by any sensible strategy, in agreement with the results of [14], Fig
+12a.
+15
+
+===== Page 16 =====
+λ(1,1,0,1,1,1)=0
+n 3 = 0
+λ(1,1,1,0,1,1)=1
+n =04
+λ(1,1,1,1,1,1)=1
+n3
+n1
+n2
+n4
+n5
+n6
+1
+0 qc
+q
+λ
+κ-1
+ℓ=3
+ℓ=4
+ℓ=5
+A
+B C
+D E
+∂Ball
+ℓ
+Ball(i,	ℓ)
+i
+j
+℘ℓ (i,	j)
+3n ℬ2→3,	3→5
+ℓ=2
+ℓ=3
+ℓ=1
+: weak node
+FIG. 1.
+16
+
+===== Page 17 =====
+G(q)
+q q
+G
+HD HDA CI
+a b
+G(q)
+c
+0.1 0.2 0.30
+0
+0.2
+0.4
+0.6
+0.8
+1
+Erdős-Rényi
+〈k〉=  3.5
+CI
+HDA
+PR
+HD
+CC
+EC
+k-core
+Optimal
+〈k〉
+qc
+0.1
+0.2
+0.3
+0.4
+1 2 3 4
+0〈k〉
+qc
+0.1
+0.2
+0.3
+0.4
+1 2 3 4
+0
+CI
+HDA
+HD
+Scale-free
+γ=3 
+0
+0.2
+0.4
+0.6
+0.8
+1
+0.20 0.1
+HD analytic
+γ
+qc
+0.1
+0.15
+0.2
+0.25
+0.05
+2 3 4 5
+FIG. 2.
+17
+
+===== Page 18 =====
+G(q)
+q
+0
+10
+20
+30
+40
+50
+60
+0.02 0.04 0.06 0.08 0.10
+q
+% of fake influencersq c
+CI q c
+HD
+a b
+c
+weak node
+Twitter
+0.02 0.04 0.06 0.08 0.100
+0.2
+0.4
+0.6
+0.8
+1
+CI 
+HDA
+PR
+HD
+k-core
+G(q)
+q
+d
+0.04 0.08 0.120
+0
+0.2
+0.4
+0.6
+0.8
+1
+Phone calls
+					
+					
+					
+FIG. 3.
+18
+
+===== Page 19 =====
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+1.5 2 2.5 3 3.5 4 4.5 5
+qc
+m =1
+m =2
+m =3
+a
+γ
+0
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+1.8 2 2.2 2.4 2.6 2.8 3
+qc
+km ax=102
+km ax=103
+km ax=105
+km ax=108
+km ax= ∞
+b
+γ
+FIG. 1. Extended Data
+19
+
+===== Page 20 =====
+ 0
+ 0.5
+ 1
+ 1.5
+ 2
+ 2.5
+ 3
+ 3.5
+ 4
+ 0  0.1  0.2  0.3  0.4  0.5  0.6
+λ
+RS
+q
+κ-1
+qc = 0.248
+ 0.8
+ 1
+ 1.2
+ 0.2  0.25  0.3
+λ
+q
+N = 128
+RS
+EO
+FIG. 2. Extended Data
+20
+
+===== Page 21 =====
+ 0
+ 0.5
+ 1
+ 1.5
+ 2
+ 0  0.1  0.2  0.3  0.4  0.5  0.6
+λ(q)  vs  q
+2-body
+ 
+N = 25
+ 
+N = 26
+ 
+N = 27
+ 
+N = 28
+ 
+ 0
+ 0.5
+ 1
+ 1.5
+ 2
+ 0  0.1  0.2  0.3  0.4  0.5  0.6
+3-body
+ 
+ 
+ 
+ 
+ 0
+ 0.5
+ 1
+ 1.5
+ 2
+ 0  0.1  0.2  0.3  0.4  0.5  0.6
+4-body
+ 
+ 
+ 
+ 
+ 0
+ 0.5
+ 1
+ 1.5
+ 2
+ 0  0.1  0.2  0.3  0.4  0.5  0.6
+5-body
+ 
+ 
+ 
+ 
+FIG. 3. Extended Data
+21
+
+===== Page 22 =====
+0.2
+0.22
+0.24
+0.26
+0.28
+0.3
+0.32
+0.34
+0 0.02 0.04 0.06 0.08 0.1 0.12
+qc(N)
+1/N2/3
+2-body
+fit
+3-body
+fit
+4-body
+fit
+5-body
+fit
+a
+0.18
+0.21
+0.24
+0.27
+0.3
+0 0.2 0.4 0.6 0.8 1
+qc
+∞(ρ)
+1/ρ
+1-body (HD)
+qc
+opt =0.310
+2-body
+qc
+opt =0.251
+3-body
+qc
+opt =0.233
+qc
+opt =0.222
+4-body
+5-body
+qc
+opt =0.216
+∞ -body
+qc
+opt =0.193
+fit
+b
+FIG. 4. Extended Data
+22
+
+===== Page 23 =====
+ 0
+ 0.1
+ 0.2
+ 0.3
+ 0.4
+ 0.5
+ 0.6
+ 0.7
+ 0.8
+ 0.9
+ 1
+ 0  0.05  0.1  0.15  0.2
+G
+q
+ER
+<k> = 3.5
+CI1
+CI2
+CI3
+CI4
+CI5
+FIG. 5. Extended Data
+FIG. 6. Extended Data
+23
+
+===== Page 24 =====
+ 0
+ 0.2
+ 0.4
+ 0.6
+ 0.8
+ 1
+ 0  0.05  0.1  0.15  0.2  0.25  0.3
+G
+q
+ER
+N = 105
+<k> = 3.5
+ 
+one by one
+ 
+0.05 %
+ 
+0.1 %
+ 
+0.2 %
+ 
+0.25 %
+FIG. 7. Extended Data
+ 0
+ 0.2
+ 0.4
+ 0.6
+ 0.8
+ 1
+ 0  0.05  0.1  0.15  0.2
+G
+q
+SF γ = 2.5
+CI
+HDA
+pagerank
+HD
+CC
+EC
+kcore
+EGP
+BC
+FIG. 8. Extended Data
+24
+
+===== Page 25 =====
+0
+0.2
+0.4
+0.6
+0.8
+1
+0 0.1 0.2 0.3 0.4
+f
+q
+β=3.0
+ER
+N =200
+p =0.1 w =0.4
+p =0.1 w =0.5
+p =0.1 w =0.6
+p =0.1 w =0.7
+fixed densit y BP
+fixed densit y BP
+fixed densit y BP
+a
+0
+1
+2
+3
+4
+0 0.1 0.2 0.3 0.4
+µ
+q
+β=3.0
+ER
+N =200
+p =0.1 w =0.4
+p =0.1 w =0.5
+p =0.1 w =0.6
+p =0.1 w =0.7
+fixed densit y BP
+fixed densit y BP
+fixed densit y BP
+b
+0
+0.2
+0.4
+0.6
+0.8
+1
+0 0.1 0.2 0.3
+G
+q
+ER
+< k>=3.5
+N =1000
+CI - N =105
+CI - N =103
+HDA
+HD
+BP
+BP adp
+Opt im al
+c
+0
+0.2
+0.4
+0.6
+0.8
+1
+0 0.05 0.1 0.15 0.2 0.25 0.3
+G
+q
+SF =3.0
+CI
+HDA
+HD
+BPD
+γ
+d
+FIG. 9. Extended Data
+25
+
+===== Page 26 =====
+ 0
+ 0.2
+ 0.4
+ 0.6
+ 0.8
+ 1
+ 0  0.2  0.4  0.6  0.8  1
+f
+q
+ER
+N = 1000
+<k> = 3.5
+ 
+CI
+ 
+HDA
+ 
+BP
+FIG. 10. Extended Data
+26
+
+===== Page 27 =====
+METHODS
+Inﬂuence maximization in complex networks through optimal percolation
+Flaviano Morone & Hern´ an A. Makse
+CONTENTS
+References 8
+I. Heuristic methods used to identify inﬂuential spreaders in complex networks 29
+II. Collective Theory of Optimal Inﬂuence 31
+A. Optimal Percolation 33
+B. Mapping of optimal immunization and spreading problems onto optimal
+percolation 38
+C. Limit of applicability of the theory of inﬂuence 41
+D. Random inﬂuence 42
+E. Derivation of the main formula: cost energy function of inﬂuence, Eq. (4) 43
+F. Interpretation in terms of NB walks and generalization to 2 ℓ-body interactions 47
+G. Odd (2ℓ + 1)-body interactions 50
+H. HD attack at ℓ = 0 one-body problem 50
+III. Optimization with the Cavity Method 53
+IV. Minimization with Extremal Optimization (EO) 59
+A. τ-EO with multibody interactions 62
+V. CI Algorithm 64
+A. Optimization for G(q)̸= 0 65
+B. Scalability of the CI algorithm 68
+C. Eﬀect of the percentage of ﬁxed nodes during adaptive CI 68
+VI. Comparison with other heuristic methods 69
+VII. Comparison with Belief Propagation algorithm of Altarelli et al. [14] 69
+A. BP adaptive 73
+27
+
+===== Page 28 =====
+B. Comparison 74
+1. First comparison 74
+2. Second comparison 75
+VIII. A new paradigm of inﬂuence in social media: Twitter 78
+IX. Halting epidemics: Mobile phone call network 80
+References 81
+28
+
+===== Page 29 =====
+I. HEURISTIC METHODS USED TO IDENTIFY INFLUENTIAL SPREADERS
+IN COMPLEX NETWORKS
+In this section we describe the existing heuristic algorithms in the literature that have
+been used to identify inﬂuential spreaders and superspreaders in networks. We use these
+heuristics to compare with our collective theory of inﬂuence. A common feature of the
+heuristic methods is that they are not designed from ﬁrst principles and therefore do not
+necessarily optimize an inﬂuence measure. Instead, they are based on intuitive ideas about
+what is an inﬂuencer. Besides, the heuristics constitute ranking of nodes lacking the collec-
+tive inﬂuence arising from considering all the inﬂuencers at once. On the other hand, the
+theoretical framework for maximizing the spread of inﬂuence of Kempe et al. [4] and the
+Belief Propagation theory for the optimal immunization problem of Altarelli et al. [14, 48]
+contain the necessary optimization of inﬂuence. The greedy algorithm considered in [4] has
+prohibitive running time for all the networks considered in our work. Detailed comparison
+with the Belief Propagation is done in Methods Section VII.
+High-Degree (HD) [2, 9, 10]. In the HD method nodes are ranked by degree, and
+sequentially removed starting from the node of highest degree. One of the limitations of
+this method is the fact that hubs may form tightly-knit groups called“rich-clubs” [31, 32].
+Strategies based on high-degree will highly rank these rich-club hubs. On the other hand, an
+optimized scheme will target only one of them to avoid overlap between the already attacked
+areas in the network. High Degree Adaptive (HDA) is the adaptive version where the
+degree of the remaining nodes is recomputed after each node removal.
+PageRank (PR) [7]. This is the famous Google’s algorithm for ranking websites. It was
+proposed for ﬁrst time in [7] to “condensing every page in the World Wide Web into a single
+number, its PageRank. PageRank is a global ranking of all web pages, regardless of their
+content, based solely on their location in the Web’s graph structure.” PR can be thought
+of as the most successful rank, ever. At its heart, it is another eigenvector centrality. It
+computes the probability that, if someone follows links on the web at random, performing
+a random walk of clicks, he/she eventually hits your website. The higher this chance, the
+higher the PR of the website. Therefore, sites that get linked more are considered reputable,
+and, linking to other websites, they pass that reputation along. Thus, the shortcoming with
+PR comes from the fact that PR takes node’s score into account when calculating other’s
+29
+
+===== Page 30 =====
+scores. In other words, a high-PR site may confer a much higher score to otherwise unpopular
+sites it happens to link. Notice that in our algorithm using the non-backtracking operator
+this problem is cured nicely, since the inﬂuence is computed by ”ignoring” the node you
+come from.
+K-core [12]. K-core ranking is based on the k-shell decomposition of the network. Each
+node is assigned the k-shell number, kS, i.e. the order of the shell it belongs to. In k-
+shell decomposition, we ﬁrst remove all nodes with degree k = 1 and continue pruning the
+network iteratively until there is no node with k = 1. These removed nodes belong to the
+peripheric k-shell with index kS = 1. Similarly, the next k-shells are deﬁned until all nodes
+are pruned and we get to the kcore of the network. The rank based on kcore produces good
+results in identifying single spreaders individually, but has a poor performance for multiple
+spreaders (the case considered in the present manuscript), because putting spreaders in the
+same k-shell gives a marginal or null advantage, as recognized in [12]. That is, ranking
+the spreaders one by one, one may ﬁnd that the best of them are located in the core.
+However, when considering the maximization of inﬂuence of all spreaders at the same time,
+collective eﬀects coming from interactions between the spreaders via overlap of their spheres
+of inﬂuence are crucial: even if the top spreader is in the core, the next spreader most
+probably will not be in the core, because the core is already infected by the ﬁrst spreader.
+Indeed, these interactions between spreaders are what makes the problem hard to solve
+(NP-hard as shown in [4]). Thus, even if the best individually-ranked spreaders might be
+located in the kcore, their collective inﬂuence is determined by their full set of interactions.
+Therefore, for multiple spreaders, the kshell ranking is not optimal, although, choosing core
+nodes separated by a distance increases their optimality as already shown in [12].
+Eigenvector Centrality (EC) [33]. It is the eigenvector corresponding to the largest
+eigenvalue of the adjacency matrix. Node rank is the corresponding entry of the eigenvector.
+Nodes are removed starting from the highest rank. This method is not very powerful,
+especially for the case of SF networks, where most of the weight may be carried by few
+nodes (hubs), while the others have vanishingly small weights, and thus they are not properly
+ranked.
+Closeness Centrality (CC) [34]. Closeness centrality measures how close a vertex is
+to all other vertices in the graph. More precisely CC at node i is the inverse of the average
+distance to all other nodes. Nodes are ranked according to their CC from the highest to
+30
+
+===== Page 31 =====
+the lowest score, and removed accordingly. A property of CC is that it tends to give high
+scores to individuals who are near the center of local clusters (i.e. network communities),
+and hence it over-allocates spreaders (or immunized nodes) next to each other. Moreover,
+it comes with a high computational cost that prevents the application to large networks.
+Methods Section VI compares results with betweenness centrality [35] and equal-
+graph-partitioning [11] which present prohibitive running times for the large-scale net-
+works used here and present worst performance than other heuristics.
+II. COLLECTIVE THEORY OF OPTIMAL INFLUENCE
+Nodes forming complex networks play diﬀerent roles, depending on the process in which
+they participate [5]. Their inherent strength and weakness emerge collectively from the
+pattern of interactions with the other components. Nonetheless, it is a common practice
+to quantify node’s importance in a network [5, 8], for example social rank order [32], by
+individual node’s attributes such as the amount of its connections [2, 9, 10], betweenness
+and eigenvector centralities [6], or its closeness to the core [12]. This attitude is, nowadays,
+ampliﬁed by the augmented reality provided by virtual social networks. This idea has also
+permeated to other ﬁelds and it is common to strategies of immunization [2, 11], viral
+spreading of information and marketing in social media [1, 19], as well as targeted attack
+schemes to infrastructure networks [9, 10]. However, individual node ranking is an ambiguous
+deﬁnition of node’s inﬂuence, for it considers the inﬂuencers as isolated entities and not in
+interaction with each other. Yet, there has been an abundant production on the subject
+of identifying most inﬂuential nodes and ”superspreaders” using such rankings [6, 7, 9–
+12, 19, 20]. The main problem is that all these methods do not optimize an objective
+global function of inﬂuence. Instead, they are based on assumptions about the importance
+of individual properties of the node [20] and, inevitably, they fail to take into account the
+collective inﬂuence of the whole set of nodes. As a consequence, there is no guarantee of
+their performance.
+On the other hand, a theoretical framework taking into account a global maximization
+of inﬂuence was outlined by Kempe et al. [4] in the form of a discrete global optimization
+problem for diﬀusion of information models such as the Linear Threshold Model (LTM)
+of Granovetter [17] and other variants [18], whose solution is proved to be NP-hard and is
+31
+
+===== Page 32 =====
+approximated by a greedy algorithm [4]. This approach makes leverage on a special attribute
+of the function of inﬂuence to be optimized, called submodularity, which express the decrease
+in the gain in the output of the process after an increment of the input factors. This
+”diminishing return” property is often lost in many optimization problems. In particular,
+submodularity does not apply, in general, to the giant connected component in optimal
+percolation problem, which is the function we minimize. It should be said that for some
+LTMs, of the type treated in [4], the objective function of inﬂuence to be maximized can
+be proven to be submodular. However, this does not hold true in general for other classes
+of LTMs, for example in the case of a ﬁxed choice of the thresholds, as explicitly stated
+in [4], and which represents the type of problem studied in this paper. As a consequence
+even the greedy algorithm does not provide a stable approximation to the optimal solution.
+Furthermore, greedy searches are not scalable and therefore not applicable to current day
+big data in social media and population immunization problems. In our case we face these
+diﬃculties.
+Another pioneering approach to the problem of inﬂuence optimization and immunization
+is outlined in Refs. [13, 14]. In particular, in Ref. [14], the authors use a very interest-
+ing and principled method, based on Belief Propagation (BP), to minimize the expected
+infection outbreak in an epidemic process (modeled as susceptible-infected-recovered, SIR,
+or susceptible-infected-susceptible, SIS) for a given number of immunized nodes, and for
+a given choice of the parameters of the model, i.e., transmission probability w and initial
+fraction of infected individuals, p. While the method is able to ﬁnd nearly optimal solutions
+to the problem, it becomes unfeasible when p→ 0, which corresponds to the optimal inﬂu-
+ence problem treated here, because the time complexity of the algorithm diverges as p−3 for
+p→ 0. A full comparison between our theory and BP is performed in Methods Section VII.
+From the theoretical standpoint, our main result is the discovery of a method to map
+the problem of optimal inﬂuence onto the computation of the minimal set of nodes that
+minimizes the largest eigenvalue of the Non-Backtracking matrix of the network. This
+operator has recently received a lot of attention thanks to its high performance in the
+problem of community detection [25, 26]. We show its formidable topological power in the
+problem of optimal inﬂuence. The problem we set up is, in its most general formulation,
+intractably hard. We present a perturbative solution along with a very fast algorithm, that
+we use to simulate an optimized immunization/quarantine and superspreading protocol on
+32
+
+===== Page 33 =====
+very large real networks. The naive strategy, corresponding to the lowest approximation,
+is given by the attack on the high degree nodes. The ﬁrst non-trivial attack strategy is
+equivalent to ﬁnd the ground state of a spin-glass like system, i.e., an anti-ferromagnetic Ising
+model with random bonds in a random external ﬁeld at ﬁxed magnetization. Higher order
+approximations produce superior performance compared to previous heuristic strategies.
+Furthermore, the algorithm is highly scalable with running time O(N logN).
+A. Optimal Percolation
+A network is a set of N nodes tied together by M edges. The vector n = (n1,...,n N)
+represents which node is present and which one is removed. We adopt the convention that
+ni = 1 if node i is present, and ni = 0 if node i is removed (corresponding to an inﬂuencer).
+The total fraction of removed nodes is denoted with q:
+q = 1− 1
+N
+N∑
+i=1
+ni≡ 1−⟨n⟩ . (6)
+We call G(q) the fraction of occupied sites belonging to the giant (largest) connected
+component (in the limit N→∞ represents the probability of existence of the giant compo-
+nent). The optimal percolation problem is ﬁnding the minimum fraction qc of nodes to be
+removed such that G(qc) = 0:
+qc = min{q∈ [0, 1] : G(q) = 0} . (7)
+For q ≥ qc, the network consists of a collection of clusters of nodes whose sizes are
+subextensive. Alternatively, for a ﬁxed fraction q < qc, we search for the conﬁguration of
+removed nodes that provides the minimal non-zero giant connected component.
+A given node i can be disconnected from the giant component G, either because it is
+directly removed, or because it is indirectly detached by the removal of other nodes. In the
+former case ni = 0, while in the second one ni = 1. Thus, we see that ni cannot tell us
+whether nodei belongs toG or not. We then need another variable encoding the information
+that node i belongs or not to G. This variable is the probability of node i to belong to the
+giant connected component, νi, and we agree to set νi = 1 if i∈ G, and νi = 0 otherwise.
+The fraction of nodes in the giant component, upon removing q of them from the network,
+33
+
+===== Page 34 =====
+is then given by:
+G(q) = 1
+N
+N∑
+i=1
+νi . (8)
+In principle, optimal percolation minimizes the giant component over the conﬁgurations
+n. However an explicit functional form of G(n) is not feasible. Our approach is to transform
+the problem into the minimization over n of the largest eigenvalue controlling the stability
+of the percolation solution, which can be written explicitly in terms of n. We ﬁrst derive
+the relation between the vector ν= (ν1,...,ν N) and the vector n = (n1,...,n N). This can
+be easily done using a message passing approach [22, 23, 36].
+Let us consider two connected nodes i andj and orient the corresponding edge from i to
+j. Now let us suppose to ”virtually” remove j (create a “cavity” atj) from the network and
+ask ourselves if node i belongs to G or not. This information can be stored in an auxiliary
+quantity νi→j = 1, 0 representing the probability of i to belong to the giant connected
+component in the absence of j. The advantage of using the variables νi→j, instead of νi
+is the fact that they satisfy a closed set of equations. Clearly νi→j = 0 if ni = 0. So the
+interesting case is when ni = 1. Recalling that j is momentarily absent from the network,
+the chance thati belongs toG is determined by the event ”at least one among the neighbours
+ofi diﬀerent from j, belongs to G wheni itself is virtually removed from the network”. For
+a locally tree-like network this statement can be mathematically translated in the following
+message passing formula [22, 23]:
+νi→j = ni
+
+1 −
+∏
+k∈∂i\j
+(1 − νk→i)
+
+ , (9)
+where ∂i\j is set of nearest neighbours of i minus j. We can ﬁnally put back j in the
+network and get the real information νi as:
+νi = ni
+[
+1 −
+∏
+k∈∂i
+(1 − νk→i)
+]
+. (10)
+The system deﬁned by Eq. (9) always admits the solution {νi→j = 0} for all i→ j
+(regardless of the values of ni), as can be veriﬁed by inspection.
+As a consequence also {νi = 0} for all i, which in turn gives G = 0. This solution
+is stable, provided that the largest eigenvalue of the linear operator represented by the
+2M× 2M matrix deﬁned on the directed links k→ℓ,i→j:
+34
+
+===== Page 35 =====
+Mk→ℓ,i→j = ∂νi→j
+∂νk→ℓ
+⏐⏐⏐
+{νi→j=0}
+(11)
+is less than one. We call λ(n;q) the largest eigenvalue of ˆM, which depends on the vector
+n and we add also a parametric dependence on the fraction of removed nodes q. Thus, the
+stability of a solution set n of G = 0 is determined by the condition λ(n;q)< 1.
+For a ﬁxed fraction q there exist, in general, very many possible conﬁgurations n that
+satisfy Eq. (6). When q < qc each conﬁguration n gives λ(n;q) > 1, since it is impossible
+to ﬁnd a set of nodes to remove such that G(q) = 0, and this corresponds to the instability
+of the solution {νi→j = 0} signaled by a value of λ(n;q) larger than one. On the contrary,
+when q > qc, we have two diﬀerent possibilities: there exist conﬁgurations n such that
+λ(n;q) > 1, which corresponds to nonoptimal node removals unable to destroy the giant
+component (G(q)> 0); on the other hand, there can be found other conﬁgurations for which
+λ(n;q) < 1, which corresponds to a fragmented network with G(q) = 0. As we approach
+qc from above, q→ q+
+c , the number of conﬁgurations n such that λ(n;q) < 1 (and hence
+G(q) = 0) decreases and eventually vanishes at qc. This situation is exempliﬁed in Fig. 1c.
+We ﬁnd that the matrix ˆM is given in terms of the Non-Backtracking (NB) matrix ˆB
+[15, 24] for a locally-tree like random network via the equation:
+Mk→ℓ,i→j = niBk→ℓ,i→j (12)
+where
+Bk→ℓ,i→j =
+
+
+
+1 if ℓ =i and j̸=k ,
+0 otherwise.
+(13)
+The modiﬁed NB operator ˆM is represented by a 2 M× 2M matrix on the 2 M directed
+edges of the network. For example, for the simple following graph with N = 6 andM = 6:
+4
+6
+1
+3
+2
+5
+(14)
+35
+
+===== Page 36 =====
+the corresponding ˆM matrix is a 12×12 matrix that reads (the associated non-backtracking
+matrix ˆB is obtained by setting ni = 1):
+1→ 2 2 → 1 2 → 3 2 → 5 3 → 2 3 → 4 3 → 5 4 → 3 5 → 2 5 → 3 5 → 6 6 → 5
+1→ 2 0 0 n2 n2 0 0 0 0 0 0 0 0
+2→ 1 0 0 0 0 0 0 0 0 0 0 0 0
+2→ 3 0 0 0 0 0 n3 n3 0 0 0 0 0
+2→ 5 0 0 0 0 0 0 0 0 0 n5 n5 0
+3→ 2 0 n2 0 n2 0 0 0 0 0 0 0 0
+3→ 4 0 0 0 0 0 0 0 0 0 0 0 0
+3→ 5 0 0 0 0 0 0 0 0 n5 0 n5 0
+4→ 3 0 0 0 0 n3 0 n3 0 0 0 0 0
+5→ 2 0 n2 n2 0 0 0 0 0 0 0 0 0
+5→ 3 0 0 0 0 n3 n3 0 0 0 0 0 0
+5→ 6 0 0 0 0 0 0 0 0 0 0 0 0
+6→ 5 0 0 0 0 0 0 0 0 n5 n5 0 0
+.
+(15)
+The largest eigenvalue of the NB matrix ˆB is positive and simple, as a consequence of the
+Perron-Frobenius theorem [24], and the corresponding eigenvector is such that all compo-
+nents are positive.
+The NB matrix ˆB has recently received a lot of attention in context of detectability
+of communities in complex networks [25, 26]. In that problem the interesting eigenvalue
+is the second largest, since the corresponding eigenvector can be used to label the nodes
+in diﬀerent communities. This can be easily understood for the case of two communities.
+Since the eigenvector corresponding to the second largest eigenvalue has both positive and
+negative components, one can assign to one community all the nodes corresponding to the
+positive entries of the eigenvector, and to the other community all the nodes labeled with
+the negative components (the eigenvector corresponding to the largest eigenvalue does not
+work to deﬁne communities since it has all positive components, so that it is insensitive to
+the community structure of the network). This clustering method can be also generalized to
+the case of multiple (i.e. more than two) communities. This kind of community detection
+protocol can be implemented also using other matrices, e.g. the adjacency and the Laplacian
+matrices. What is crucial is the fact that the NB operator has the optimal performance, in
+36
+
+===== Page 37 =====
+the sense that it is able to detect communities down to the detectability threshold, while
+the other spectral methods fail much before.
+The NB matrix ˆB also intervenes when one linearizes the belief propagation equations,
+and it was ﬁrst used to detect the location of the phase transition in Ref. [16] for the
+3-coloring problem.
+In our problem we are interested in the largest eigenvalue of the matrix ˆM (not of
+ˆB), which is indeed a suitable modiﬁcation of the NB matrix via optimal removal of ni.
+That is, ˆM is a NB matrix on a modiﬁed network where some nodes are removed in an
+optimal way (ni = 0). According to the Perron-Frobenius theorem, the largest eigenvalue
+of the matrix ˆB is a strictly decreasing function of ˆB, that is if ˆM≤ ˆB (meaning that the
+inequality holds entry by entry of the matrices) and ˆM̸ = ˆB, then λ( ˆM) < λ( ˆB). In our
+case the matrix ˆM can be obtained from the matrix ˆB by setting one or some of the ni = 0.
+Therefore the optimization problem for a given q can be rephrased as ﬁnding the optimal
+inﬂuencer conﬁguration n∗ that minimizeλ(n;q) over all possible conﬁgurations n satisfying
+⟨n⟩ = 1−q. Calling λ(n∗;q) this minimum, we write:
+λ(n∗;q) ≡ min
+n:⟨n⟩=1−q
+λ(n;q) . (16)
+The optimal threshold qc is the solution of the equation:
+λ(n∗;qc) = 1 . (17)
+Still, this equation is hard to solve, since there is no explicit formula for λ(n;q) as
+a function of n. To tackle this problem we propose a sequence of approximations to the
+largest eigenvalue (and associated eigenvector) which is based on the Power Method iterative
+scheme that we ﬁnd quickly convergent to the exact solution of the problem. We stress that
+the optimal exact solution forℓ→∞ holds only under the assumption that the graph under
+consideration is locally-tree like.
+Before to conclude this section, we notice that for the network depicted in (14), the
+modiﬁed NB matrix does not depend on n1,n 4,n 6, i.e., it does not depend on the variables
+outside the loop. As a consequence, its largest eigenvalue does not depend on those variables
+as well: λ = λ(n2,n 3,n 5). Therefore, removing the nodes at the end of the dangling edge
+does not reduce the eigenvalue λ, which is one for the considered network: λ(1, 1, 1) = 1.
+On the contrary, by removing a node belonging to the loop, e.g. nodes 2, 3 or 5, the network
+37
+
+===== Page 38 =====
+becomes a tree, and the eigenvalue is zero: λ(0, 1, 1) = λ(1, 0, 1) = λ(1, 1, 0) = 0. In
+general, the largest eigenvalue of a tree-network is equal to zero. For networks with one
+loop (unicyclic graph), the largest eigenvalue is equal to one, and for networks with many
+loops λ is larger than 1. Thus we see that the result of minimizing the largest eigenvalue of
+the modiﬁed NB matrix is a way to attack the loops in the network. When the eigenvalue
+reaches the critical value one (λ = 1) the network consists of a single loop, that is suddenly
+destroyed by the removal of a single node, causing the sharp drop of the eigenvalue from one
+to zero. When the giant component is reduced to a tree-like topology, it can be considered
+as completely fragmented, since any tree can be destroyed with a subextensive number of
+node removals. Thus, our theory suggests that the best attack strategy is to destroy the
+loops. This process is illustrated in Fig. 1c.
+B. Mapping of optimal immunization and spreading problems onto optimal per-
+colation
+Here we map exactly the problems of optimal immunization and spreading to the problem
+of minimizing the giant component of a network, ie, optimal percolation.
+In the immunization case, the quantity νi represents the probability of node i to be
+infected. Therefore minimizing the sum ∑
+iνi is equivalent to minimize the size of the
+disease outbreak, which is obtained by optimally choosing the immunizator nodes. These
+immunizators are exactly the nodes we need to remove to fragment the network. Precisely,
+ni = 0 if node i is an optimal immunizator, and ni = 1 if not. Note that we can also
+slightly modify the equations to include the case of a transmission probability of the disease
+w smaller than one (the case treated explicitly in our paper corresponds tow = 1). Including
+w, the main equation reads:
+νi→j = ni
+
+1−
+∏
+k∈∂i\j
+(1−wνk→i)
+
+ . (18)
+In this case the optimal immunizators can be still identiﬁed by minimizing the largest eigen-
+value of the modiﬁed NB operator ˆM. The only diﬀerence is that the critical threshold qc
+is deﬁned by the following equation:
+λ(n∗;qc) = 1 /w. (19)
+38
+
+===== Page 39 =====
+It should be noted, though, that the quantity N−1 ∑
+iνi, which quantiﬁes the total fraction
+of infected individuals, is diﬀerent from the giant component G when w <1.
+The case of optimal spreaders is the dual of the optimal immunizators. The optimized
+spreading problem [4] consists of ﬁnding the minimum number of nodes to ”activate” in
+such a way that the information percolates the network following, for instance, the Linear
+Threshold Model (LTM) dynamics [17, 18]. The LTM simulates a spreading of information
+process where an individual adopts an opinion or information under “peer pressure”, that
+is, it becomes activated only after a given number of its neighbors are [17, 18, 37, 38]. The
+optimal inﬂuence threshold represents the minimum fraction of spreader nodes we need to
+activate to spread the information all over the network. The mathematical formulation of
+the problem is the following. Let us deﬁne νi→j as the probability that, in the information
+spreading process, node i is eventually NOT activated in absence of node j. Moreover, we
+assign to each node the number ni, which, in this case, equals zero, ni = 0, if i is an initial
+spreader, and ni = 1 if not. We note that in the case of immunization, ni = 0 corresponds
+to an immunized node. Following the Linear Threshold Model (LTM) [17] of information
+spreading, in order for node i to be activated in absence of node j, the neighbouring nodes
+such thatk∈∂i\j must be activated. In the Linear Threshold Model [17, 18], this situation
+corresponds to considering uniform weights wij = 1 for each edge ( i,j ), and threshold of
+activation θi = ki− 1 for each node with degree ki, such that a node i becomes activated
+if the number of active neighbors is at least θi. The optimal spreading problem under the
+LTM is to ﬁnd the minimum set of initially activated spreaders, qc, which will percolate
+the information to the entire network, as deﬁned in Kempe et al. [4]. On the other limit,
+the optimal immunizator problem corresponds to setting θi = 1, further showing the dual
+relation between the immunization and spreading problem.
+The probabilities νi→j for spreading can be computed self-consistently through the fol-
+lowing message passing equations [22, 23, 36] in analogy to Eq. (9):
+νi→j = ni
+
+1−
+∏
+k∈∂i\j
+(1−νk→i)
+
+ . (20)
+The total probability νi that i is not activated is obtained from Eq. (20) by including
+the contribution of νj→i as well:
+39
+
+===== Page 40 =====
+νi = ni
+[
+1−
+∏
+k∈∂i
+(1−νk→i)
+]
+, (21)
+and the total fraction of nodes not activated in the spreading process is:
+G = 1
+N
+N∑
+i=1
+νi . (22)
+The optimization problem in spreading under the LTM consists in minimizing the fraction
+of inactive nodes G, or equivalently, maximizing the spreading over the network. We notice
+the dual nature of G in immunization and spreading. In the former, G represents the
+fraction of inactive nodes, which we want to minimize to maximize spreading. In the later,
+G represents the connected component of individuals who would get infected if the epidemic
+starts in a single node. In this case, we also want to minimize G to reduce the spread of
+the epidemic. This is the basic reason why we are able to bring the two problems under the
+same framework of optimal percolation.
+In activated spreading, the minimization of G is achieved by optimally placing the initial
+spreadersni = 0. Equations (20) and (21) are formally identical to the equations of optimal
+inﬂuence (9), (10). To summarize, in spreading, the giant component G represents the
+fraction of inactivated nodes. Therefore, by minimizing the giant component in spreading
+we are eﬀectively maximizing the spreading of information. This completes the mapping
+between the immunization and spreading problem to optimal percolation.
+We notice that the mapping of the optimal LTM problem to optimal percolation is done
+for a thresholdθi =ki−1. For θi = 1, we recover the optimal immunization problem. These
+two problems can be solved by studying the local stability of the solution G = 0 in both
+cases. This is possible since at qc the transition is of second order, and thus a local stability
+theory is applicable. For other intermediate values of the threshold θi =ki− 2,ki− 3,... 2,
+the transition at qc is of ﬁrst order, of the type of bootstrap percolation [39]. In these
+regimes, a local stability criterion cannot be applied, and the optimal spreading problem in
+these cases needs to be considered independently. That is, the largest eigenvalue of the NB
+operator is not guaranteed to provide the optimal set when the transition is of ﬁrst order.
+Nevertheless, we could expect that the proposed CI algorithm may work as well in this
+regime of discontinuous transition. Another interesting generalization of the present study
+is the case of randomly chosen heterogeneous threshold θi in the LTM [18] or a ﬁx threshold
+40
+
+===== Page 41 =====
+[38].
+A further interesting optimization problem is to ﬁnd the optimal spreaders under the SIR
+or SIS models [12]. In general, this problem cannot be translated into an optimal percolation
+problem, because it does not have a transition from G = 0 to G >0. Therefore, it cannot
+be treated under our stability theory. However, as for the LTM with intermediate values
+of the threshold, the spreaders identiﬁed by the CI algorithm could still be expected to be
+close to optimal.
+To conclude this section, we notice that for all optimization problems on locally tree-like
+random networks that can be mapped onto an optimal percolation problem, with a second
+order transition separating the phases with G = 0 and G >0, our theory holds true, and
+the CI algorithm can be used accordingly.
+In the next sections, we show that the optimal percolation set is obtained as a (inﬁnite)
+sequence of optimized “attacks” expressed as successive approximations to the minimization
+of the largest eigenvalue of the modiﬁed non-backtracking matrix. At the most trivial level,
+we obtain the random attack of the network corresponding to random percolation, Eq. S28.
+The zero-order naive strategy corresponding to the lowest approximation of the theory is
+given by the attack on the high degree nodes, Eq. S70. The ﬁrst non-trivial collective
+attack strategy is equivalent to ﬁnd the ground state of a two-body spin-glass like system,
+i.e., an anti-ferromagnetic Ising model with random bonds in a random external ﬁeld at
+ﬁxed magnetization, Eq. S78. Higher-order approximations consist of increasing many-
+body problems, Eq. S53, and produce increasingly better performance compared to previous
+heuristic strategies.
+C. Limit of applicability of the theory of inﬂuence
+The mapping of the optimal inﬂuence problem onto the optimal percolation problem
+developed so far is strictly valid for locally tree-like networks: in the message passing for-
+mulation Eq. (9), the probabilities νk→i are assumed to be independent. This includes the
+thermodynamic limit of the class of random networks of Erd¨ os-R´ enyi, scale-free networks
+[5] and the conﬁguration model (the maximally random graphs with a given distribution
+[40]) which are locally tree-like and contains loops that grow as logN [41]. Nonetheless, it is
+generally accepted, and conﬁrmed by many works, that results obtained for tree-like graphs
+41
+
+===== Page 42 =====
+apply quite well also for loopy networks, provided the density of loops is not excessively
+large [14, 25, 36]. Wherever the number of such topological structures (loops) is abundant
+(e.g., to ﬁnite dimensional lattices), the quality of the results obtained for tree-like networks
+deteriorates. Indeed, the locally tree-like approximation has been successfully used for a
+plethora of other problems, like spin glass models on random graphs, coloring, matching,
+bisection and maximum cut of graphs, and many other constraint satisfaction problems [36].
+D. Random inﬂuence
+The trivial case corresponds to random removal of nodes (random percolation). It is
+obtained by taking the ni at random from the distribution P (n;q) such that the removal is
+decoupled from the non-backtracking matrix:
+P (n;q) =
+N∏
+i=1
+(1−q)niq1−ni . (23)
+Taking the expectation of the matrix M over n, and exploiting the fact that P (n;q) is
+factorized over the sites, Eq. (12) becomes:
+EnMi→j,k→ℓ = (1 −q)Bi→j,k→ℓ . (24)
+Therefore, the eigenvalue λ(n;q), averaged over n, is given by:
+λ(q) = (1−q)λ ˆB, (25)
+where λ ˆB is the largest eigenvalue of the NB matrix ˆB for a random network. It is well
+known that the largest eigenvalue of the NB matrix is equal to [25]:
+λ ˆB =κ− 1, (26)
+with κ equals to the ratio of the ﬁrst two moments of the degree distribution:
+κ =⟨k2⟩/⟨k⟩. (27)
+The condition λ(qc) = 1 is nothing but the famous result for random percolation [21] which
+has been obtained using the NB matrix in [23, 27], i.e.:
+qran
+c = 1− (κ− 1)−1. (28)
+42
+
+===== Page 43 =====
+Thus, when n is decoupled with the NB matrix, the largest eigenvalue of NB captures
+the random percolation threshold for random networks. This result has been previously
+obtained in [23] using similar ideas as used in the present derivation. The largest eigenvalue
+of the NB matrix in case of random removal of nodes is true only when the original graph
+is random. For a generic graph, the largest eigenvalue can be very diﬀerent and not related
+to the ﬁrst and second moment of the degree distribution. On the other hand, the optimal
+threshold arises by coupling the removal of nodes with the NB matrix, a case that is treated
+next.
+E. Derivation of the main formula: cost energy function of inﬂuence, Eq. (4)
+Next, we derive Eq. (4) which holds only on very large locally tree-like graphs. From
+now on we omit q in λ(n;q)≡ λ(n), which is always kept ﬁxed. For a given conﬁguration
+n, the eigenvalue λ(n) determines the growth rate of an arbitrary nonzero vector w0 after
+ℓ iterations of the matrix ˆM, provided that w0 has nonzero projection onto the eigenvector
+corresponding to λ(n). Denoting with wℓ(n) the vector at the ℓ-th iteration,
+wℓ(n) = ˆMℓw0, (29)
+we can write according to Power Method [42]:
+λ(n) = lim
+ℓ→∞
+[|wℓ(n)|
+|w0|
+]1/ℓ
+, (30)
+where
+|wℓ(n)|2 =⟨wℓ(n)|wℓ(n)⟩ =⟨w0|( ˆMℓ)† ˆMℓ|w0⟩. (31)
+For ﬁniteℓ we deﬁne the ℓ-dependent approximant λℓ(n) as:
+λℓ(n) =
+[|wℓ(n)|
+|w0|
+]1/ℓ
+, (32)
+so that we have:
+λ(n) = lim
+ℓ→∞
+λℓ(n). (33)
+We now derive the analytical expression of λℓ(n).
+We start by computing the ﬁrst approximant ℓ = 1:
+|w1(n)⟩ = ˆM|w0⟩. (34)
+43
+
+===== Page 44 =====
+In order to do this, it is convenient to embed the matrix ˆM, whose dimension is 2M× 2M,
+in a larger space of dimension N×N×N×N. In this enlarged space ˆM is given by:
+Mijkℓ = nkAijAkℓδjk(1−δiℓ) , (35)
+where each index runs from 1 to N: i,j,k,ℓ = 1,...,N , and Aij is the adjacency matrix.
+Practically, we have represented ˆM on the nodes of the network, rather than on the directed
+edges. The Kronecker deltas guarantee the non-backtracking nature of the NB walks.
+As starting 2M-dimensional vector|w0⟩ =|1⟩ in the space of links, we choose the vector
+with all components equal one; the optimal solution is independent of this selection. The
+components of the analogous N×N vector,|w0⟩ in the enlarged space of nodes are given
+by|w0⟩ij =Aij.
+The right vector|w1(n)⟩ is computed as:
+|w1(n)⟩ij =
+∑
+kℓ
+Mijkℓ|w0⟩kℓ =njAij(kj− 1) , (36)
+while the left vector⟨w1(n)| is given by:
+ij⟨w1(n)| =
+∑
+kℓ
+kℓ⟨w0|Mkℓij =niAij(ki− 1) . (37)
+The factor ki− 1 will appear frequently in the following, so it is worth to set the residual
+degree:
+zi ≡ki− 1 . (38)
+The norm|w1(n)|2 is:
+|w1(n)|2 =
+∑
+ij
+ij⟨w1(n)|w1(n)⟩ij =
+∑
+ij
+Aijzizjninj. (39)
+Since the norm of|w0⟩ is simply:|w0|2 = ∑
+iki = 2M, we can write the ﬁnal expression
+for λ1(n) from Eq. (32) as:
+λ1(n) =
+[
+1
+2M
+∑
+ij
+Aijzizjninj
+]1/2
+. (40)
+It is useful to give a graphical representation of the previous formula in terms of a dia-
+grammatic expansion, which becomes indispensable for higher orders of the iteration. The
+44
+
+===== Page 45 =====
+interaction term in the sum in the numerator on the r.h.s of Eq. (40) can be represented
+as
+Aij(ki− 1)(kj− 1)ninj = ni nj
+zi zj (41)
+The meaning of the diagram is the following: each time a straight line connects two sites
+i and j, the variables ni and nj are multiplied by each other (the meaning of the arrow is
+explained later in Methods Section II F in terms of NB walks; for the moment it can be
+thought of as an undirected line). The wiggly lines on the nodes means a multiplication
+by the factor zi = ki− 1. The diagram is then equal to ninjzizj. The number of variables
+appearing in the diagram gives the order of the interaction. In this case, corresponds to
+a pair-wise interaction. Thus, the ﬁrst optimization order ℓ = 1 corresponds to a 2-body
+problem. We will see that, in general, the ℓ-order term in the approximant describes a
+2ℓ-body problem.
+Let us compute for ℓ = 2,|w2(n)⟩:
+|w2(n)⟩ij =
+∑
+kℓ
+Mijkℓ|w1(n)⟩kℓ =njAij
+∑
+ℓ
+Ajℓnℓzℓ(1−δiℓ), (42)
+and also⟨w2(n)|:
+ij⟨w2(n)| =
+∑
+kℓ
+kℓ⟨w1(n)|Mkℓij =niAij
+∑
+k
+Aiknkzk(1−δkj) . (43)
+The norm|w2(n)|2 is given by:
+|w2(n)|2 =
+∑
+ijkℓ
+AijAjkAkℓ(1−δik)(1−δjℓ)zizℓninjnknℓ. (44)
+There are two types of interactions in the sum on the r.h.s of Eq. (44): a 4-body and a
+3-body interaction. The graphical representation of the former is:
+AijAjkAkℓzizℓninjnknℓ =
+nj nk
+ni nℓ
+zi zℓ
+(45)
+The diagram for the 3-body interaction is:
+AijAjkAki(zi)2ninjnk =
+ni
+nj nk
+zizi (46)
+45
+
+===== Page 46 =====
+Then, the ℓ = 2 approximant of the eigenvalue, λ2(n), is given by:
+λ2(n) =
+[
+1
+2M
+∑
+ijkℓ
+AijAjkAkℓ(1−δik)(1−δjℓ)zizℓninjnknℓ
+]1/4
+. (47)
+In the next order ℓ = 3,|w3(n)|2 there appears a term with 6-body interactions:
+AijAjkAkℓAℓmAmpzizpninjnknℓnmnp =
+= , (48)
+terms with 5-body interactions:
+terms with 4-body interactions:
+and a term with 3-body interaction:
+j i
+(49)
+We see that the series expansion of the maximum eigenvalue can be written in terms of
+a systematic diagrammatic expansion of increasing levels of many-body interactions. The
+generalization is treated next.
+46
+
+===== Page 47 =====
+F. Interpretation in terms of NB walks and generalization to 2ℓ-body interactions
+Nodes entering in each type of interaction given by |w1(n)|2,|w2(n)|2, and|w3(n)|2 are
+the same nodes visited by a non-backtracking walk of length 1 , 3, 5, respectively (with the
+possibility of traversing an edge multiple times). In general, the diagrammatic expansion of
+the term|wℓ(n)|2 will then contain all the possible graphs that can be built using the nodes
+traversed by a NB-walk of length 2 ℓ− 1. This is the reason why we put an arrow in the
+diagrammatic schematization of the interaction terms: emphasizing the connection with NB
+walks.
+The NB graphs in the expansion are built in the following way: (a) For a given ℓ we
+construct all NB walks of 2 ℓ− 1 steps starting at one node i (with degree ki) and ending
+in node j (with degree kj). The initial and ending point are indicated by a wiggly line
+indicating their degree minus one. (b) The initial and ﬁnal node of the NB walk do not need
+to be necessarily diﬀerent. (c) Loops are allowed in the NB walk. Thus, the shortest path
+betweeni and j might be smaller than the 2ℓ− 1 steps of the walk. (d) We recall that the
+condition for a NB random walk is only that it cannot come back through the same link
+that it just came on, yet, it can visit the same node several times. (e) As well, the NB walks
+are allowed to travel through the same links multiple times. (f) The number of nodes of the
+NB walk is the order of the interaction. (g) The dominant graph is always a direct path
+(line) of length 2ℓ− 1 and 2ℓ nodes, where the shortest path between the initial and ending
+node is 2ℓ− 1; we will see that all the other diagrams with loops are negligible for sparse
+locally tree-like random graphs.
+For instance, in the case ℓ = 2, we obtain two graphs representing NB walks of length
+2ℓ− 1 = 3. The graph (45) represents a NB walk of length 3 which traverses 4 distinct
+nodes, and thus it is a 4-body dominant interaction. The graph (46) also represents a NB
+walk of length 3, but this time the NB walk starts and ends in the same node i, rule (b) and
+(c), so this term contributes with a factor z2
+i .
+In the case ℓ = 3, the leading interaction is graph (49) of 6-body interactions and 5 NB
+steps. The 3-body interaction (49) is a NB walk of 5 steps that starts at the node i on the
+right and traverses two links twice, rule (e), to end up in node j, resulting in a triangular
+3-body problem.
+Next, we show that, in a sparse random network, all the NB graphs with loops can be
+47
+
+===== Page 48 =====
+neglected toO(1/N), in accordance with the assumption of locally-tree like structure. Thus,
+the main equation (4) takes into account only the leading 2ℓ-body interaction for eachℓ-level
+in the diagrammatic expansion to O(1/N). This situation is translated to the CI algorithm
+where the ball is deﬁned by a radius ℓ deﬁned as the shortest path between two nodes in
+the network.
+It is important to note that, for locally tree-like graphs and for very large system sizes
+N, the terms containing one or more loops are suppressed by powers of 1 /N. This can be
+understood through the following argument. Let us consider, for the sake of simplicity, an
+ER random graph, where each edge is present with probability z/N, where z is the average
+degree (in ER the average degree is the same as the average residual degree). The total
+number of loops in ER of given length ℓ is given on average by (the ﬁnal formula is valid
+for general sparse random graphs [40], the quantity z being in general the average residual
+degree):
+N (ℓ) =
+(z
+N
+)ℓ 1
+2ℓ N(N− 1)... (N−ℓ + 1)∼ zℓ
+2ℓ , (50)
+where the factor 1 /2ℓ comes from the fact that: i) anyone of the ℓ nodes in the loop can
+be taken as starting point; ii) the loop can be traveled in two directions. Therefore, the
+probabilityp(ℓ) for a node to belong to a loop of length ℓ is:
+p(ℓ) =N (ℓ)
+N = zℓ
+2ℓN , (51)
+and thus it is of order O(1/N). The quantity N (ℓ) enumerates the number of non self-
+intersecting closed walks. Self-intersecting closed walks have a probability of orderO(1/N2),
+since the self-intersection is encountered, on average, in a fraction 1/N2 of the total number
+of nodes. Thus, loops with many self-intersections are suppressed by higher power of 1 /N.
+This argument can be generalized to random graph ensembles other than ER, provided they
+have a locally tree-like structure in the limit N→∞ .
+As a consequence, for very large network, the leading term of |wℓ(n)|2 for a given ℓ (i.e.,
+the one containing a number of nodes exactly equal to 2 ℓ, for instance the diagram (48)
+in the expression of |w3(n)|2) is already a good approximation, which becomes exact for
+N →∞ . However, for small networks all the terms should be considered. In Methods
+Section IV, we will minimize the eigenvalue λℓ(n) by taking into account all the possible
+interactions.
+48
+
+===== Page 49 =====
+Since, in the limitN→∞ , loops do not contribute to the assessment of the norm|wℓ(n)|,
+the equation for|wℓ(n)| simpliﬁes considerably, because we can take into account only the
+terms with exactly 2 ℓ-body interactions; the remaining ones with loops decay as 1 /N or
+faster.
+The analytical expression for |w1(n)|2 and|w2(n)|2 given by Eqs. (39), (44) can be
+generalized to any|wℓ(n)|2. We get
+|wℓ(n)|2 =
+∑
+i1i2...i2ℓ
+Ai1i2Ai2i3...A i2ℓ−1i2ℓ(1−δi1i3)(1−δi2i4)... (1−δi2ℓ−2i2ℓ)zi1zi2ℓni1ni2...n i2ℓ.
+(52)
+Each term of the sum in Eq. (52) can be associated to a non backtracking walk of length
+2ℓ− 1, where edges may be crossed multiple times. To each node visited by the NB walk is
+attached a variableni, and the extreme nodes of the walk have the extra factorszi1 (starting
+point) and zi2ℓ (end point). When NB walks containing loops are neglected in Eq. (52), the
+formula simpliﬁes considerably, since the only remaining walks are the ones of length 2ℓ− 1
+where each one of the 2ℓ nodes is visited only once. For example, let us consider a loop free
+NB walk of length 2ℓ− 1 starting from a given node, say node i. It visits all nodes up to a
+distance 2ℓ− 1, and stops at the ﬁnal node, say node j. The total number of nodes visited
+by this NB walk is 2ℓ.
+Notice that, when loops are neglected, we can approximate the local environment around
+any node by a tree, in line with the original locally-tree like assumption of the whole ap-
+proach. A simple way to implement the tree-like approximation is to consider only the NB
+walks of length 2ℓ− 1 that start from a given node i and end on nodes j, in such a way that
+these NB walks coincide with the shortest paths between i and those nodes j. Moreover,
+these NB walks contain the products ni1ni2...n i2ℓ with all niα diﬀerent from each other.
+Hence, we can ﬁnally write down the expression for the leading term of |wℓ(n)|2 as:
+|wℓ(n)|2 =
+N∑
+i=1
+zi
+∑
+j∈∂Ball(i,2ℓ−1)
+
+ ∏
+k∈P2ℓ−1(i,j)
+nk
+
+zj , (53)
+where Ball(i,ℓ ) is the set of nodes inside a ball of radius ℓ around node i, where the radius
+is deﬁned taking the shortest path as the distance, ∂Ball(i,ℓ ) is the frontier of the ball and
+Pℓ(i,j ) is the set of nodes belonging to the shortest path of length ℓ connecting i and j.
+This is the cost energy function of inﬂuence Eq. (4) given in the main text.
+49
+
+===== Page 50 =====
+G. Odd (2ℓ + 1)-body interactions
+The energy (or cost) function Eq. (53) contains only even 2 ℓ-body interactions. It is
+possible to interpolate with odd interactions by considering an analogous Power Method
+expansion of the eigenvalue in terms of the matrix elements ⟨wℓ(n)| ˆM|wℓ(n)⟩. Indeed, the
+eigenvalueλ(n) can be also computed using another series expansion in the Power Method
+[42] as:
+λ(n) = lim
+ℓ→∞
+[
+⟨wℓ(n)| ˆM|wℓ(n)⟩
+⟨w0|w0⟩
+]1/(2ℓ+1)
+. (54)
+The explicit expression of⟨wℓ(n)| ˆM|wℓ(n)⟩ can be computed similarly to|wℓ(n)|2, following
+the same steps outlined in Methods Section II E. As an example, for ⟨w1(n)| ˆM|w1(n)⟩ we
+get:
+⟨w1(n)| ˆM|w1(n)⟩ =
+∑
+ijk
+AijAjk(1−δik)zizkninjnk . (55)
+The asymptotic expression for N→∞ (i.e. the one neglecting loops) is similar to Eq. (53),
+and, for ℓ≥ 1, reads:
+⟨wℓ(n)| ˆM|wℓ(n)⟩ =
+N∑
+i=1
+zi
+∑
+j∈∂Ball(i,2ℓ)
+
+ ∏
+k∈P2ℓ(i,j)
+nk
+
+zj , (56)
+while for ℓ = 0 we ﬁnd:
+⟨w0| ˆM|w0⟩ =
+N∑
+i=1
+ki(ki− 1)ni . (57)
+We can introduce the equivalent of the approximant λℓ(n) in Eq. (32), that we call λ′
+ℓ(n):
+λ′
+ℓ(n) =
+[
+⟨wℓ(n)| ˆM|wℓ(n)⟩
+⟨w0|w0⟩
+]1/(2ℓ+1)
+. (58)
+H. HD attack at ℓ = 0 one-body problem
+It is interesting to consider the ℓ = 0 term, λ′
+0(n), since it reproduces exactly the high-
+degree (HD) strategy attacking the hubs calculated by Cohen et al. [10]. This term repre-
+sents the one-body interaction where the inﬂuencers are considered in isolation, only aﬀected
+by the external ﬁeld, and therefore this strategy lacks the collective inﬂuence eﬀects found
+50
+
+===== Page 51 =====
+for ℓ≥ 2. It reads:
+λ′
+0(n) = ⟨w0| ˆM|w0⟩
+⟨w0|w0⟩ =
+∑
+iki(ki− 1)ni∑
+iki
+. (59)
+The sum on the numerator on the r.h.s represents the energy of a gas of free particles in
+an external (site-dependent) ﬁeld hi = ki(ki− 1). This ﬁeld is always nonnegative hi≥ 0.
+Therefore, in order to minimize λ′
+0(n) it is suﬃcient to sort the nodes according to the
+external ﬁeld, and then removing the ones corresponding to the highest Nq ﬁelds. Since
+the ﬁeld hi is monotonic increasing with the degree, the minimization corresponds exactly
+to the removal of the high degree nodes one by one. It is also easy to see that the stability
+condition imposed on λ′
+0(n),
+min
+n:⟨n⟩=1−qc
+λ′
+0(n) = 1 , (60)
+gives exactly the threshold qc expected from HD as calculated by Cohen et al. [10]. Indeed,
+putting the expression for λ′
+0(n) in Eq. (60), we have,
+min
+n:⟨n⟩=1−qc
+∑
+iki(ki− 1)ni∑
+iki
+= 1 . (61)
+As we said, the minimization of the numerator in the l.h.s. is achieved by setting ni = 0
+for the ﬁrst Nqc highest degree node, and ni = 1 for the remaining ones. Therefore we can
+rewrite Eq. (61) as:
+1−qc
+⟨k⟩
+(
+⟨k2⟩′−⟨k⟩′)
+= 1 , (62)
+where the average ⟨·⟩′ is performed using a modiﬁed degree distribution P′(k;qc), which
+depends on qc and represents the degree distribution in the network with the removed hubs.
+To derive the explicit form of P′(k;qc), let us consider ﬁrst the relation between qc and the
+original P (k). The fraction qc of nodes to be removed is
+∞∑
+k=ζ
+P (k) = qc , (63)
+where ζ is the lowest degree of the removed nodes compatible with qc.
+The distribution P′(k;qc) is the degree distribution of the remaining nodes (i.e. the ones
+for which ni = 1) and is given by:
+P′(k;qc) = 1
+1−qc
+P (k)θ(ζ−k) . (64)
+We now solve Eq. (61) in the case of scale free network with degree distribution P (k)∼
+k−γ, degree exponent γ, minimum degree m and maximum degree kmax. We also work in
+51
+
+===== Page 52 =====
+the continuum limit, so that we can use integrals in place of the sums. The variable ζ as a
+function of qc reads:
+qc =
+∫ kmax
+ζ
+P (k) k dk = ζ1−γ−k1−γ
+max
+m1−γ−k1−γ
+max
+. (65)
+The average⟨k⟩′ is given by:
+⟨k⟩′ = 1
+1−qc
+∫ ζ
+m
+P (k) k dk = 1
+1−qc
+γ− 1
+γ− 2
+m2−γ−ζ2−γ
+m1−γ−k1−γ
+max
+, (66)
+and⟨k2⟩′ by:
+⟨k2⟩′ = 1
+1−qc
+γ− 1
+γ− 3
+m3−γ−ζ3−γ
+m1−γ−k1−γ
+max
+. (67)
+Putting these expressions in Eq. (62) we ﬁnd the following implicit equation for qc:
+γ− 2
+γ− 3
+m3−γ−ζ3−γ
+m2−γ−k2−γ
+max
+− m2−γ−ζ2−γ
+m2−γ−k2−γ
+max
+= 1 . (68)
+Equation (68) simpliﬁes considerably when kmax→∞ . Indeed (for γ≥ 2), we ﬁnd the same
+result as in [10]:
+γ− 2
+γ− 3
+(
+m− ζ3−γ
+m2−γ
+)
++ ζ2−γ
+m2−γ = 2 . (69)
+Considering the ensemble where kmax = mN 1/(γ−1), when N→∞ then kmax→∞ , the
+relation between ζ and qc is ζ =m q1/(1−γ)
+c , and we ﬁnally ﬁnd:
+q(2−γ)/(1−γ)
+c = 2 +γ− 2
+γ− 3m
+(
+q(3−γ)/(1−γ)
+c − 1
+)
+, (70)
+which is the known result for the HD attack [10]. The solution is shown in Extended Data
+Fig. 1a.
+Forγ = 2, Eq. (70) predicts a zero critical qc for any m, and this is interpreted as an
+extreme fragility of scale-free networks when the degree exponent is close to 2. Indeed, for
+γ = 2, the network is essentially a star-graph, which is trivially destroyed by removing the
+central hub. This in turn is a consequence of the fact that the natural cut-oﬀ kmax diverges
+linearly with the system size for γ = 2, i.e., kmax∼N (see Extended Data Fig. 1a).
+Nonetheless the situation changes a lot for other network ensembles, where the cut-oﬀ
+can be very large but ﬁnite (which is the case of all networks, both real and synthetic ones).
+Indeed, Eq. (68) for a ﬁnite cut-oﬀ kmax and for γ→ 2 gives:
+ζ = m + log
+(ζkmax
+m2
+)
+. (71)
+52
+
+===== Page 53 =====
+By expressing ζ as a function of qc via the equation:
+ζ = mkmax
+m +qc(kmax−m) , (72)
+we ﬁnd the equation for qc as a function of the cut-oﬀ kmax:
+mkmax
+m +qc(kmax−m) = m + log k2
+max
+m2 +mqc(kmax−m) . (73)
+The solution to Eq. (73) is shown in Extended Data Fig. 1b. For kmax→∞ , the asymptotic
+behaviour of the threshold qc is given by :
+qc ∼ m
+log(kmax) for kmax→∞ . (74)
+Therefore, qc still vanishes when kmax→∞ but as the inverse of the logarithm of the cut-
+oﬀ. This very slow convergence makes questionable the claim that scale free networks are
+extremely fragile under hubs removal. Indeed, as can be seen in Extended Data Fig. 1b,
+even for kmax of the order of hundred millions, qc is still of order 0 .1. For more realistic
+kmax = 103, which is typical of social networks, qc≈ 0.2 for all γ. In these situations, the
+search for other attack strategies becomes important.
+III. OPTIMIZATION WITH THE CAVITY METHOD
+The eigenvalueλ(n) can be minimized by using the cavity method from spin glass theory
+[28] since we work with sparse graphs. The method can be applied in practice to the ﬁrst
+order approximation to the eigenvalue ℓ = 1, which is a pair-wise interaction, i.e., Eq. S40:
+λ1(n) = |w1(n)|
+|w0| . (75)
+For higher order many-body interactions, the cavity method becomes much more involved
+and we will pursue other solving strategies.
+The analytical Replica Symmetry (RS) solution obtained with the cavity method for this
+pairwise model allows us to compare with the solution given by EO. This is a very useful
+check of the correctness of the problem solution, since both method are mathematically not
+rigorous. An improvement over the RS solution can be obtained by applying the so called
+1step replica symmetry breaking cavity method (1RSB) [28, 36], which should be compared
+as well with the EO solution. This will be done in a future work. Here we only note that,
+53
+
+===== Page 54 =====
+as far as the assessment of the ground state energy is concerned, the diﬀerence between the
+RS and the 1RSB estimations is, typically, very small (for example it is less than 2% for
+spin glass models on random graphs [36]). We expect that the same scenario holds true also
+for the model deﬁned here. Furthermore, a deeper physical insight can be obtained when
+we recast the problem in terms of spin glass theory as we show next.
+The energy (cost) function of the problem is, Eq. S39:
+E(n) ≡ |w1(n)|2 =
+∑
+ij
+Aij(ki− 1)(kj− 1)ninj . (76)
+The physics of this system is made more transparent when the problem is formulated in
+terms of Ising spin variables si =±1. The translation of the problem in the language of
+statistical mechanics will turn the optimization problem to one of ﬁnding the ground state
+of a spin-glass system. The relation between si and ni is given by
+si≡ 2ni− 1. (77)
+Note that the state ni = 0, meaning that node i is removed (inﬂuencer), corresponds to
+the spin down state si =−1. On the other hand the state ni = 1 (node i not removed)
+corresponds to spin up si = 1. Using these new variables the energy function takes the more
+familiar form of an Ising model:
+E(s) = −
+∑
+⟨ij⟩
+siJijsj −
+∑
+i
+Hisi + C , (78)
+where the ﬁrst sum on the r.h.s is over the pairs ⟨ij⟩ of nearest neighbours sites in the
+network. The coupling constants Jij represent the interactions between the spins and they
+depend on the details of the network. Explicitly they read:
+Jij = −1
+2Aij(ki− 1)(kj− 1) . (79)
+The local ﬁeld Hi depends also on the topology and is given by:
+Hi = −1
+2ki(ki− 1)(knn
+i − 1) , (80)
+where knn
+i is the average nearest neighbors degree of vertex i, deﬁned as:
+knn
+i ≡k−1
+i
+∑
+j∈∂i
+kj. (81)
+54
+
+===== Page 55 =====
+The constantC does not depend on the spin variables and can be ignored in the minimization
+problem (but must be included in the evaluation of the energy E(s)).
+We introduce also the magnetization,
+m≡
+∑
+i
+si/N, (82)
+of the conﬁguration s, which is related to the number of removed nodes q by the equation
+m≡ 1− 2q. (83)
+Note thatE(m =−1) = 0, andE(m = +1) =⟨k⟩(κ−1)2 (for uncorrelated networks), where
+κ =⟨k2⟩/⟨k⟩.
+The physical system deﬁned by the energy function (78) is a disordered antiferromagnet
+(Jij≤ 0) in a random external magnetic ﬁeld. Remarkably, the disorder in the model, Jij,
+comes from the randomness in the network via the adjacency matrix Aij, even if for a given
+instance of the problem both the couplings and the magnetic ﬁeld are deterministic (i.e.
+ﬁxed by the topology of the underlying network and the degree).
+The problem we have to solve is tantamount to ﬁnd the ground state of the system with
+energy function (78). More precisely, we want to ﬁnd the ground state for a ﬁxed value
+of the magnetization m, which corresponds to keep ﬁxed the number of removed nodes
+q. This problem represents a quite novel system for spin glass theory since the coupling
+Jij depends explicitly on the contact network via Eq. S79. This coupling between the
+underlying network and the disorder is a quite unique feature of the optimal percolation
+problem at the ℓ = 1 pair-wise level. The problem becomes spin-glass when the system is
+forced to satisfy a given magnetization, i.e., a given fraction of inﬂuencers, which is a global
+constraint. This additional constraint of constant magnetization represents a problem for
+the cavity method, since it cannot be enforced locally. Nevertheless the problem can be
+circumvented by introducing an external ﬁeld H that is chosen self-consistently to ﬁx the
+desired value of the magnetization as done in [43]. In practice, we introduce the Legendre
+transform of the energy function E(s), deﬁned as
+EH(s) = E(s) − MH ,
+∂EH
+∂H = −M ,
+(84)
+whereM = ∑
+isi is the global magnetization. At this point we have to minimize the function
+EH(s) under the global constraint deﬁned by the equation∂E/∂H =−M. This can be done
+55
+
+===== Page 56 =====
+by properly gauging the external ﬁeld H during the iteration of the cavity equations, as we
+will explain below.
+The cavity equations for the system deﬁned by the energy function EH(s) are a set of
+equations for the cavity ﬁelds hi→j and the cavity bias ui→j, one for each directed edge of
+the graph. These variables can be interpreted as messages exchanged by the nodes: the bias
+ui→j represents the incoming message into node j traveling along the edge connecting i and
+j; the ﬁeldhi→j is the outgoing message from nodei towards nodej. Outgoing messages are
+computed from the incoming ones in a self-consistent way. The cavity ﬁeld hi→j quantiﬁes
+the tendency of spin i to be +1 or −1, when the spin on node j has been pruned from
+the network (whence the name cavity). The cavity bias ui→j is determined by optimizing
+between the interaction Jij and the cavity ﬁeld hi→j. More precisely, the cavity equations
+for cavity bias and cavity ﬁelds at zero temperature read:
+hi→j = H(M) +Hi +
+∑
+k∈∂i\j
+uk→i ,
+uk→i = 1
+2sign(Jikhk→i) min(|Jik|,|hk→i|) .
+(85)
+Once a solution of the cavity equations (85) has been found, the total local eﬀective ﬁeld hi
+acting on spin i can be computed through the formula:
+hi = H(M) +Hi +
+∑
+k∈∂i
+uk→i (86)
+The main hypothesis of the cavity method is the existence of a single pure state, which can
+be rephrased as a hypothesis on the uniqueness of the solution of the cavity equations (85).
+This is called the replica-symmetric (RS) cavity method. It is also possible to generalize the
+method to incorporate multiple solutions (the so called cavity method at the level of 1step
+Replica Symmetry Breaking, 1RSB [28]). The analysis of this second method will come in
+a follow-up work. Here we limit ourselves to the RS cavity method.
+The cavity equations (85) can be interpreted as updating rules for a message passing
+algorithm, and therefore they can be solved iteratively starting from a random initial con-
+dition. In practice we add a ”time” label t to the cavity ﬁelds and we rewrite Eqs. (85) as
+dynamical message passing equations:
+h(t)
+i→j =H(M) +Hi +
+∑
+k∈∂i\j
+u(t−1)
+k→i . (87)
+56
+
+===== Page 57 =====
+Since the magnetization M has to be kept ﬁxed, the external ﬁeld H(M) also needs to be
+updated at each step of the iteration. Therefore, after a total update of the cavity ﬁelds
+h(t)
+i→j, the ﬁeld H(M)≡H(t)(M) is recomputed by solving the equation:
+∑
+i
+sign
+(
+H(t)(M) +Hi +
+∑
+k∈∂i
+u(t)
+k→i
+)
+= M. (88)
+The solution of the Eqs. (85) corresponds to the ﬁxed point of the map deﬁned by Eqs.
+(87) and (88).
+Once the solution of the cavity equations has been found, the RS estimate of ground
+state energy ERS
+H is given by:
+ERS
+H =
+∑
+i
+ϵi
+H −
+∑
+(ij)
+ϵij , (89)
+where the site and link energies ϵi
+H and ϵij are given, respectively, by
+ϵi
+H = − max
+(
+H(M) +Hi +
+∑
+k∈∂i
+|hk→i +Jik|,
+−H(M)−Hi +
+∑
+k∈∂i
+|hk→i−Jik|
+)
+,
+ϵij = − max (hi→j +Jij +hj→i, hi→j−Jij−hj→i,
+−hi→j−Jij +hj→i,−hi→j +Jij−hj→i) .
+(90)
+From the knowledge of the functionERS
+H we can compute the energyERS
+M by inverting the
+Legendre transform:
+ERS
+M = ERS
+H + MH (M) , (91)
+where H(M) is the external ﬁeld which produces the desired value of the magnetization
+M, given by the ﬁxed point of Eq. (88). The value of ERS
+M is all we need to compute the
+optimized eigenvalue. Since|w0| =
+√
+N⟨k⟩, we ﬁnally ﬁnd:
+λRS
+1 (m) =
+√
+ϵRS(m)
+⟨k⟩ , (92)
+where ϵRS(m) =ERS
+M /N is the (intensive) energy per spin.
+We observed that the message passing equations (87) never converge to a stable ﬁxed
+point. This is a consequence of the existence of very many solutions to the cavity equations
+57
+
+===== Page 58 =====
+(85), which implies that the replica symmetry is broken for this system. Nevertheless, the
+non-converged messages can still be used to estimate the energy ϵRS(m). In practice we run
+the algorithm for a maximum number of Tmax = 10 6 iteration. Then we use the current
+value of the cavity ﬁelds {hi→j} to compute the energy of the system, and we average the
+energy on Tmax more iterations.
+In Extended Data Fig. 2 we show the optimized eigenvalue λRS
+1 as a function of the
+removed nodesq = 1−2m, computed for an Erd¨ os-R´ enyi network with mean degree⟨k⟩ = 3.5
+and size N = 104. We ﬁnd the transition point at this 2-body interaction approximation to
+be qc = 0.248.
+The continuous transition from the phase with λRS
+1 = 0 to the phase with λRS
+1 > 0
+observed in Extended Data Fig. 2 is an artifact of the 2-body interaction considered here.
+Indeed the real optimal eigenvalue (i.e. the eigenvalue including ∞-body interactions) has
+to jump from zero to one discontinuously at qc as depicted in Fig. 1c. The reason is
+that the largest eigenvalue of the non-backtracking matrix of a tree-graph is zero, while
+the largest eigenvalue for a tree plus one single loop is one. Adding more loops increases
+the eigenvalue. Since there are no other possible networks between a tree and a unicyclic
+graph, the largest eigenvalue of the non-bactracking matrix cannot take values in the interval
+(0, 1). As a consequence it has to jump discontinuously from 1 to zero at qc. In the 2-body
+approximation this jump is smoothed by a continuous line. By considering higher order
+interactions the eigenvalue would remain zero closer and closer to the critical threshold qc.
+This is evident, for example, in the problem with 3 , 4 and 5 interactions, that we solve
+using extremal optimization next. We expect that adding more and more interactions the
+eigenvalue has several (continuous) transitions, when departing from zero, for smaller and
+smaller values of q and eventually for interactions of inﬁnite order it jumps discontinuously
+from zero to one exactly at qc.
+In the inset of Extended Data Fig. 2 we show also a comparison between the RS cavity
+method and extremal optimization done in the next section. As can be seen the diﬀerence
+is very small, and we believe that they are actually very close to the true optimal result.
+The size of the ER network in this case is N = 128, for which EO gives the actual ground
+state. In favor of this conjecture we can also say that the 1RSB estimate, which is in general
+more correct that the RS one, is anyway very close to the latter, and would lie in between
+of the two curves shown in the inset of Extended Data Fig. 2. The eigenvalue estimated
+58
+
+===== Page 59 =====
+with RS is anyway slightly smaller. This is a typical feature of the RS cavity method, in
+the sense that it gives a lower bound (and not an upper bound) to the ground state energy
+of the system. On the contrary, EO provides an upper bound to the optimal threshold.
+As the inset of Extended Data Fig. 2 shows, both the lower bound (RS) and the upper
+bound (EO) are very close to each other, and therefore to the true optimum. Therefore, we
+observe that there can be diﬀerent ways to analytically assess the location of the optimal
+threshold. Conversely, this does not mean that diﬀerent methods are equally able to ﬁnd the
+actual conﬁguration of optimal inﬂuencers, even if they give similar analytical estimation
+for the threshold. A more important issue in any NP problem, perhaps the most relevant
+for any practical purpose, is ﬁnding a scalable algorithm which approximates the optimal
+conﬁguration as better as possible and can be used for very large networks. This is the main
+reason why our CI algorithm was designed for.
+To conclude this section we want to observe that the antiferromagnetic nature of the
+optimal percolation problem is not totally unexpected. Indeed, the antiferromagnetic in-
+teractions between nodes reﬂect the intuitive idea that immunizing contiguous nodes is less
+eﬃcient than immunizing them in a staggered way.
+IV. MINIMIZATION WITH EXTREMAL OPTIMIZATION (EO)
+In this section we describe another method for the minimization of the eigenvalue λ(n),
+called Extremal Optimization (EO) [29], which has the advantage, with respect to the cavity
+method, to be easily implemented for higher ℓ-order of |wℓ(n)|. However, EO is still not
+scalable for large networks, for which we will implement CI. Nevertheless, EO makes use
+of the full energy function, including loops, and can be used to extrapolate the solution
+for large networks where EO is not applicable anymore. Indeed, the EO algorithm is an
+eﬃcient method to ﬁnd nearly optimal solutions. It was used successfully to ﬁnd the ground
+state energy of spin glass models on random graphs, where it was shown to be practically
+identical to the best available analytical prediction [29]. We believe that also in our case
+τ-EO is very close to the optimum when extrapolated to large systems. In Extended Data
+Figs 3 and 4 we estimate the optimal solution for large networks using a ﬁnite size scaling
+analysis extrapolating to the inﬁnite size limit and ℓ→∞ , as explained next.
+To explain the method in the simplest way let us consider again the lowest non trivial
+59
+
+===== Page 60 =====
+approximation to the eigenvalue λ(n)∼ |w1(n)|
+|w0(n)| and the corresponding cost function E(n):
+E(n) ≡ |w1(n)|2 =
+∑
+ij
+Aij(ki− 1)(kj− 1)ninj. (93)
+We now assign to each variable ni the ﬁtness bi:
+bi = ( ki− 1)
+∑
+j
+Aij(kj− 1)nj , (94)
+so that we can rewrite the energy function (93) as
+E(n) =
+∑
+i
+bini . (95)
+Notice that this is similar to the form we adopt to deﬁne CI in Eq. (5). The CI-algorithm
+is an adaptive version of the EO algorithm, in a sense that will be explained in Sec. V. The
+EO algorithm being the exact minimization of the largest eigenvalue of the NB matrix,
+which can only be achieved for small systems.
+Each node in the state ni = 0 (removed) gives zero contribution to the energy, while
+nodes for which ni = 1 give a contribution equals to their ﬁtness. Therefore, to minimize
+the energy E(n) we have to ﬁnd the set of nodes with the lowest ﬁtness, under the usual
+constraint ∑
+ini =N(1−q). Note that the ﬁtness bi of node i depends on the states nj of
+its neighbours j.
+The aim of EO is to explore the space of states looking for the conﬁgurations with the
+smallest ﬁtness. Let now explain how it works. For a ﬁxed q, in the beginning the variables
+ni are assigned at random into two sets: set S0 containing the qN nodes to be removed
+ni = 0, and set S1 containing (1−q)N nodes with ni = 1:
+S1 ≡ {i :ni = 1} ,
+S0 ≡ {i :ni = 0} ,
+(96)
+with the constraints |S0| = Nq , and |S0| +|S1| = N. The initial separation of the nodes
+in these two groups is made arbitrarily. Then the ﬁtness bi corresponding to this initial
+conﬁguration C0 are evaluated and sorted separately for the two groups. The ﬁrst move
+consists in exchanging the variable ni in S1 with the largest ﬁtness, with the variable nj in
+S0 with the lowest one. In other words, we set ni = 0 and nj = 1. This move does not
+change the sizes of S1 and S0 and hence the global constraint ∑
+ini = N(1−q) remains
+60
+
+===== Page 61 =====
+satisﬁed. The energy function (95) corresponding to this new conﬁguration C1 is evaluated
+and ifE(C1) <E(C0) the conﬁguration C1 is stored together with the value of its energy.
+The process is repeated by recomputing the new ﬁtness and swapping the variable with the
+highest value of bi from S1 with the variable corresponding to the lowest one in S0. Note
+that the moves are accepted unconditionally at each step and only the best conﬁguration
+found so far is saved. The algorithm is terminated after a maximum number of iteration is
+reached.
+What we have described so far is the basic EO algorithm. It can be improved by intro-
+ducing a tunable parameter, called τ, so that we will refer to it as τ-EO. In this version of
+the algorithm, the choice of the variables to be swapped is not performed deterministically
+by selecting the ones with the largest and smallest ﬁtness, but, instead, they are picked
+up using a random selection. This may look counterintuitive at ﬁrst sight, since we would
+not expect any improvement by randomizing the choice. Actually this is not true, and an
+improvement can be achieved, provided that the random rule is chosen judiciously.
+In the τ-EO algorithm, we sort the ﬁtness in the two sets S0 and S1, in increasing order
+in S1 and decreasing order in S0:
+bΠ(1)≥bΠ(2)≥···≥ bΠ(|S1|) ,
+bΛ(1)≤bΛ(2)≤···≤ bΛ(|S0|) ,
+(97)
+where Π and Λ are two permutations of the labelsi of the variables inS1 andS0 respectively.
+The worst variable in S1 (the one with the highest ﬁtness) is nΠ(1), that we want to change
+with the worst variable in S0, i.e., nΛ(1) (the one with the lowest ﬁtness). In the simple EO
+algorithm this is exactly what we were doing: exchanging nΠ(1) andnΛ(1). Now we rank the
+variables according to their ﬁtness.
+For the variables inS1 the worst variable isnΠ(1), which has rank 1, while the best variable
+isnΠ(|S1|), which is of rank|S1|. For the variables in S0 the variable of rank 1 is nΛ(1), while
+nΛ(|S0|) has rank|S0|. Then we consider the following probability distribution over the ranks
+r:
+P (r) ∝ r−τ , (98)
+with r∈ [1,|S1|] or r∈ [1,|S0|] for the ranks of variables in S1 or S0, respectively. At each
+update, we draw two numbers r1 and r0 from P (r) and then we swap the variables nΠ(r1)
+and nΛ(r0). Then the algorithm proceeds as in the original EO. Note that for τ→∞ , we
+61
+
+===== Page 62 =====
+recover the deterministic EO algorithm, swapping only the worst variables. The idea behind
+the choice of the scale free distribution P (r) is to ensure that no variable gets excluded from
+changing set, while giving higher priority to the variables with worst ﬁtness. The random
+selection of the variables has the advantage, over the deterministic process, to make possible
+global reconﬁgurations of the system, thus climbing over the energy barriers and ﬁnd better
+minima. In our problem we found that a value of τ = 1.7 gives the best results.
+As an application of this method, we perform the minimization of the energy function
+E(n) on an Erd¨ os-R´ enyi network with average degree⟨k⟩ = 3.5. We considered diﬀerent
+system sizesN = 25, 26, 27, 28. For each sizeN we took the average of the ground state energy
+over 100 realizations. For each instance we performed N 3 updates of the τEO routine. The
+results for the eigenvalue λ(q) =
+√
+E(q)/N⟨k⟩ are shown in Extended Data Fig. 3.
+We observe that the ﬁnite size scaling of the optimal inﬂuence threshold qc, which is the
+solution of λ(qc) = 1, is consistent with the scaling law:
+qc(N) = qc(∞) + AN−2/3 , (99)
+where A is a coeﬃcient independent from the size N. This scaling form is the same of
+the ﬁnite size correction to the thermodynamical energy density of a spin glass system
+with pairwise interactions (e.g. the SK model) at and below the de Almeida-Thouless line.
+Actually this scaling form is observed also for other interesting thermodynamic quantities,
+like the second cummulant of the overlap distribution [44]. In that case the anomalous
+scaling (as opposed to the more natural 1 /N correction expected from the central limit
+theorem) is due to the existence of inﬁnitely many zero modes, whose volume grows asN 1/3.
+In the language of our model, these zero modes represent the inﬁnitely many way to choose
+the set of optimal inﬂuencers. It would be very interesting then to interpret what kind of
+hidden symmetry relates all these set of optimal inﬂuencers.
+A. τ-EO with multibody interactions
+In the general case the energy function we want to minimize is:
+E(n) = |wℓ(n)|2 (100)
+62
+
+===== Page 63 =====
+which involves at most 2ℓ-body interactions. To treat systems with at most a (odd) number
+of (2ℓ + 1)-body interactions, we consider the energy function:
+E′(n) = ⟨wℓ(n)| ˆM|wℓ(n)⟩ . (101)
+In order to apply the EO algorithm to systems with many-body interactions, all that we
+have to do is to change the deﬁnition of the ﬁtness bi. For example, in the case of a system
+with 4-body interactions, described by |w2(n)|2, we set bi as:
+bi =
+∑
+jkℓ
+AijAjkAkℓ(1−δik)(1−δjℓ)zizℓnjnknℓ, (102)
+where zi =ki− 1.
+After that, the algorithm can be applied exactly in the same way as we did for the
+system with two body interactions. We use the algorithm to minimize the energy function
+of a system with 3, 4, 5-body interactions as shown in Extended Data Fig. 3. Two comments
+are in order. Firstly, we note that the eigenvalue is zero for a larger interval of values of q
+with respect to the one computed in the system with 2-body interactions. This observation
+corroborates the idea that in the limit of inﬁnitely many interactions the eigenvalue jumps
+at qc from zero to one.
+In Extended Data Fig. 4a we show the threshold qc(N) as a function of the system
+size for diﬀerent values of the order of the many-body interactions ρ. The thermodynamic
+limit for each many-body interaction q∞
+c (ρ) is obtained by N→∞ (the y-intercept in the
+ﬁgure). The value at ρ = 1 represents the system with one-body interaction (equivalent to
+HD). The value ρ = 2 represents the system with 2-body interactions and energy function
+|w1(n)|2; ρ = 3 corresponds to the system with (at most) 3-body interactions and energy
+⟨w1(n)|M|w1(n)⟩, as summarized in the following Table for the ﬁrst three levels.
+Even interactions Odd interactions
+Energy function Eℓ(n) =|wℓ(n)|2 E′
+ℓ(n) =⟨wℓ(n)| ˆM|wℓ(n)⟩
+Order of Interactions ρ = 2ℓ ρ = 2ℓ + 1
+Leading diagram for ℓ = 0 one-body
+Leading diagram for ℓ = 1 two-body three-body
+Leading diagram for ℓ = 2 four-body ﬁve-body
+63
+
+===== Page 64 =====
+In Extended Data Fig. 4b, we extrapolate the inﬁnite size threshold q∞
+c (ρ) to the limit
+of∞-body interactions, i.e., for ρ→∞ . The scaling of q∞
+c with 1/ρ is well consistent with
+a linear behaviour. We obtain the ρ =∞ limit of q∞
+c (ρ =∞)≡ qopt
+c from a least-squares
+ﬁt. For ER networks with average degree ⟨k⟩ = 3.5 studied here, we ﬁnd qopt
+c = 0.192(9).
+This is the value of the optimal threshold shown in Fig. 2a in the main text.
+V. CI ALGORITHM
+We have shown so far that the problem of ﬁnding the optimal set of inﬂuencers can be
+solved by minimizing the following cost function which is the leading order approximation
+in 1/N:
+Eℓ(n) =
+N∑
+i=1
+zi
+∑
+j∈∂Ball(i,ℓ)
+
+ ∏
+k∈Pℓ(i,j)
+nk
+
+zj , (103)
+whereEℓ(n) =|w(ℓ+1)/2|2 forℓ odd (corresponding to the energy functionE(n) in Eq. S100),
+andEℓ(n) =⟨wℓ/2| ˆM|wℓ/2⟩ forℓ even (corresponding toE′(n) in Eq. S101). We recall that
+zi =ki− 1. We deﬁne the collective inﬂuence strength at level ℓ, of node i as:
+CIℓ(i) = zi
+∑
+j∈∂Ball(i,ℓ)
+
+ ∏
+k∈Pℓ(i,j)
+nk
+
+zj , (104)
+and we can rewrite Eq. (103) as:
+Eℓ(n) =
+N∑
+i=1
+CIℓ(i) . (105)
+Notice that CIℓ(i) is basically the same as the ﬁtness bi of the EO algorithm, and precisely:
+CIℓ(i) =bini. A fast and eﬃcient way to minimize the cost function Eℓ(n) is to adaptively
+remove the nodes with the highest collective inﬂuence CIℓ(i). When all the nodes are present,
+corresponding to n = 1, CIℓ(i) evaluates:
+CIℓ(i) = zi
+∑
+j∈∂Ball(i,ℓ)
+zj . (106)
+This is the expression of CI ℓ(i) given in the main text Eq. (5). By computing this
+quantity for each node, we can ﬁnd the one with the largest collective inﬂuence and then
+remove it. We stress that the frontier of the Ball: ∂Ball(i,ℓ ) consists of all the nodes j that
+64
+
+===== Page 65 =====
+are at a distance ℓ from i, the distance is measured as the minimum path between i and j.
+This deﬁnition is consistent with the fact that we have neglected the NB walks with loops
+in the deﬁnition of the energy functional Eq. S53 for large networks, and therefore also in
+CIℓ(i) Eq. S106, since they scale as O(1/N) in random networks as discussed in Section
+II F.
+After the removal, the network consists of N− 1 nodes, and we can proceed as before,
+looking for the next node with the largest CIℓ. Since the removal of the ﬁrst node changes the
+degree of its neighbours, we need to decrease their degrees by one before recomputing their
+CIℓ. Removing one by one the nodes according to this adaptive principle we can destroy
+the network in a nearly optimal and very fast way. Besides, we can signiﬁcantly speed up
+the algorithm by decimating a ﬁnite fraction of nodes at each step (see Section V B). The
+algorithm’s performance increases by using larger values of the radius ℓ of the Ball(i,ℓ ). In
+Extended Data Fig. 5 we show the results for diﬀerent values of ℓ. We observe that already
+for ℓ = 3, 4 the algorithm reaches the top performance.
+When ℓ becomes larger than the network diameter, then CI ℓ(i) = 0. In this situation
+diﬀerent nodes are not distinguishable by the algorithm, and thus, the method is basically
+indistinguishable from a random one. Thus, the parameter ℓ should not exceed in practice
+the original network diameter. We also notice that dangling ends give zero contribution
+by CI, and hence they are ignored by the algorithm. This is expected since dangling ends
+should have zero inﬂuence in the network.
+The CI algorithm Eq. (5) is based on Eq. (4) which contains the many-body collective
+interactions that we refer to as “collective inﬂuence”. The CI algorithm incorporates the
+collective eﬀects by considering the adaptive nature of the algorithm. The adaptiveness of
+the CI algorithm, usually called decimation in the spin glass literature [36], is a collective
+way to select inﬂuential nodes, since the removal of each node depends heavily on the history
+of the process.
+A. Optimization for G(q)̸= 0
+The theory we developed for the optimal fragmentation of networks allows us to compute
+the optimal inﬂuence threshold qc, i.e. the smallest number of nodes to remove such that
+G(qc) = 0, together with the corresponding conﬁguration n∗.
+65
+
+===== Page 66 =====
+When q <qc the giant component is nonzero, a consequence of the fact that the system
+of Eqs. (9) has another stable solution diﬀerent from {νi→j} identically zero. Therefore,
+for q < qc the stability of the new solution G(q)̸= 0 is no more controlled by the non-
+backtracking operator, but a more complicated operator comes into play that depends on
+the form of the solution itself. To ﬁnd the spectrum (or even the largest eigenvalue) of this
+new matrix we have necessarily to know the solution of the problem. This circumstance
+depauperates the method of its power in q <qc, since we need the solution to the problem
+to solve the problem itself. In the regime q >qc, where G(q) = 0, this solution can be easily
+guessed, as we did, but for q <qc no simple ansatz can be adopted.
+What can we do in the regime q <qc to minimize the size of the giant component?
+We know that the conﬁguration n∗ corresponds to a zero giant component. Assuming
+that this conﬁguration is the optimal one (this hypothesis is not crucial in what follows
+and can be relaxed by saying that n∗ is the best approximation to the true optimum), then
+the optimal trajectory in the conﬁguration space, starting from the point n = (1, 1, 1,..., 1)
+corresponding toq = 0 andG(0) = 1, must end up at the pointn∗ atq =qc whereG(qc) = 0.
+So far we know the ﬁnal point n∗ and we would like to travel back the optimal trajectory
+up to the initial point n = 1. In order to do that, let us suppose to decrease inﬁnitesimally
+the fraction of removed nodes q from its critical value qc, that is q = qc−dq [dq can be
+taken equal to 1/N, so that Ndq =O(1)]. This amounts to explore a neighborhood of the
+conﬁguration n∗, consisting of a collection of conﬁgurations n′ in which a number Ndq of
+components n′
+i = 0 is turned into n′
+i = 1. Here we are making the crucial hypothesis that
+the optimal trajectory is continuous, in the sense that in going from q→ q−dq only a
+numberNdq of components ni is changing state. Under this assumption the trajectory can
+be followed adiabatically up to the point n = 1.
+Mathematically, this can be expressed by saying that the Hamming distance between
+two neighbouring optimal conﬁgurations x and y: d(x, y) = ∑N
+i=1|xi−yi|, is equal to
+d(x, y) = Ndq . This hypothesis may not hold in the case where the optimal conﬁguration
+x corresponding to Nq removed nodes, and the one y corresponding to N(q−dq) have an
+Hamming distance much larger than Ndq . In this case the optimal trajectory has disconti-
+nuities, jumping from one point to another which are not close to each other. Physically this
+correspond to the fact that the optimal state y cannot be obtained from the optimal state x
+by ﬂipping a ﬁnite number of componentsni, but requires a global rearrangement of the sys-
+66
+
+===== Page 67 =====
+tem, which amounts to change the state of much more variables ni, whose number scales as
+Nα with exponentα∈ (0, 1]. This situation takes place in spin-glass systems with Full-RSB
+thermodynamics, where this chaotic behaviour is observed as a function of the temperature
+[45] (or as a function of other control parameters like the bond strengths and the magnetic
+ﬁeld). In that case, when the system is cooled from a temperature T to T−dT (with T
+below the critical point: T <Tc), the Gibbs state corresponding to the higher temperature
+does not survive after the cooling, but, instead, a completely new equilibrium state appears
+at T−dT (i.e. if we sample a typical equilibrium conﬁguration at temperature T , this will
+be very distant, in the Hamming sense, from a conﬁguration sampled at T−dT ).
+It is highly plausible that the same situation (a chaotic trajectory) is realized also in
+our problem. To keep things simple, we don’t explore this scenario, and analyze only the
+consequences deriving from the hypothesis of a smooth optimal trajectory from n∗ back to
+1. This approach will give us a very eﬃcient algorithm to minimize the giant component
+in all the interval q∈ [0,qc), at no additional computational cost. Therefore we take this
+performance as a practical justiﬁcation of the main assumption, leaving to a future work
+the treatment of the more complicated chaotic scenario.
+To take up the threads of our discussion, let us assume that optimal conﬁgurations lie
+close to each other. Knowing the optimal conﬁguration at the fraction q, we should be able
+to ﬁnd the new optimal one at q−dq by changing the state of few variables, and actually
+only one if we take dq = 1/N. Practically we have to ﬁnd the new optimal conﬁguration by
+changing the state of a single variable from 0 to 1. Practically we proceed in the following
+way. At q = qc, we have G(qc) = 0. The corresponding conﬁguration n∗ contains Nqc
+variablesni = 0 (removed nodes), and N(1−qc) variables ni = 1 (nodes that are present).
+At this point we start to add back to the network the nodes using the following algorithm.
+We assign to each removed node ni = 0 an index c(i), which is calculated as the number of
+clusters that node i would join if it were reinserted in the network, independently of their
+sizes. Then we put back in the network nodei∗ such thati∗ = argminni:ni=0c(i), by changing
+n∗
+i = 0 inton∗
+i = 1 (see Extended Data Fig. 6). The idea behind this method is the fact that
+we want to keep a maximally fragmented network after each reinsertion of nodes. We keep
+on reinserting nodes using the same criterion, until no node is left for which ni = 0. After
+each reinsertion the indexesc(i) are recalculated, and then the new node with minimum c(i)
+is chosen.
+67
+
+===== Page 68 =====
+The running time of this algorithm is O(MN logN), where M is the number of edges.
+Indeed,O(M) operations are needed to assign the indexesc(i) andO(N logN) to sort them.
+As we did for the case of the main CI algorithm, the time complexity of this algorithm can
+be reduced to O(N logN) (if M =O(N)), by reinserting a ﬁnite fraction of nodes at time.
+B. Scalability of the CI algorithm
+The time complexity needed to compute the quantity CIℓ(i) is proportional to the number
+of edges inside the ball Ball( i,ℓ ). Since the radius ℓ is taken ﬁnite, this calculation takes
+a time O(1) for each node (even if the prefactor increases with ℓ). Thus, to compute
+the CIℓ(i) for all i requires O(N) operations. Sorting the CI ℓ(i)’s takes O(N logN). The
+algorithm is terminated when a number Nqc of nodes is removed. Therefore, removing the
+nodes one-by-one, the total time complexity would be O(N 2 logN). Actually we can keep
+the computational complexity to O(N logN) without losing any performance, by simply
+removing a ﬁnite fraction of nodes at each step (with a prefactor depending on the percentage
+of nodes ﬁxed at time). In the next Section we explore the performance of the CI algorithm
+for diﬀerent adaptive/decimation steps.
+C. Eﬀect of the percentage of ﬁxed nodes during adaptive CI
+In this section we show the performance of CI as a function of the percentage of removed
+nodes at each step of the adaptive algorithm. Indeed, removing a ﬁnite fraction of nodes at
+time reduces the time complexity from N 2 logN (corresponding to the one-by-one removal)
+toN logN. In Extended Data Fig. 7 we show the eﬀect of the percentage of ﬁxed nodes at
+each adaptive step on an ER network ofN = 105 nodes and average degree⟨k⟩ = 3.5. As the
+ﬁgure shows, the performance of CI is practically unaﬀected by the removal of up to 0 .25%
+of nodes at time (i.e. 250 nodes for the considered network) compared to the one-by-one
+removal.
+68
+
+===== Page 69 =====
+VI. COMPARISON WITH OTHER HEURISTIC METHODS
+In the main text Fig. 2 we compare our solution with heuristics: high-degree and high-
+degree adaptive [9, 10], PageRank [7], kcore [12], eigenvector [33] and closeness [34] central-
+ities. We also compare in Fig. 3, for Twitter and Mobile Networks, CI with HDA, HD, PR
+and k-core which are the only heuristics that are scalable to these large-scale datasets. It
+remains to compare our results with other popular heuristics which do not scale well with
+system size, and therefore we use smaller systems of 10 4 nodes: betweenness centrality [35]
+and equal-graph-partitioning [11]. We use the same size and parameters of the scale-free
+network used in [11]. The ﬁnal comparison is with BP [14] and it will be done in the next
+section.
+Betweenness centrality (BC) [35]. Betweenness centrality of nodei is the sum of the
+fraction of all-pairs shortest paths that pass throughi. BC is a very popular tool for network
+analysis, which has applications in diﬀerent ﬁelds, from community detection to the human
+brain. However, it comes with a high computational cost that prevents the examination
+of large graphs of interest. The best algorithm for BC computations has O(NM ) time
+complexity for unweighted networks with N nodes and M vertices. It is not fast enough,
+for example, to handle our 10+ million people network. Extended Data Fig. 8 shows its
+performance. It does not outperform other centralities.
+Equal-graph-partitioning (EGP) [11]. This method aims at dividing the network
+in clusters of equal size. It can behave well for homogeneous networks, like random regular
+graph, where an equal partition could be expected to destroy the network eﬃciently, but
+loses a lot of performance for heterogeneous networks, like scale-free networks, as we can see
+from Extended Data Fig. 8. Notice that we have used the same network parameters, size,
+and deﬁnition of EGP as given in [11] in the comparison of Extended Data Fig. 8. In fact,
+we reproduce the same curve and qc as found for EGP in [11].
+VII. COMPARISON WITH BELIEF PROPAGATION ALGORITHM OF ALTARELLI
+ET AL. [14]
+The comparison with the Belief Propagation (BP) method proposed in Ref. [14] to
+optimally immunize a network deserves particular care, because this method does not apply
+69
+
+===== Page 70 =====
+directly to the problem we are treating here. This is due to the fact that the parameter
+p in the work of Ref. [14] (which is noted as q in [14]) refers to the fraction of initially
+infected individuals. In our work the fraction p is assumed to be zero, because in epidemic
+outbreaks the number of initiators of the epidemic is very small, and typically of order O(1)
+[46]. For instance, Sierra Leone’s explosion of Ebola cases in 2014 appeared to stem from
+one traditional healer’s funeral at which a single source infected 14 women; or the SARS
+outbreak in 2003 started when one doctor from China infected nine other guests in a Hong
+Kong hotel who then spread the virus throughout the city and to Vietnam and Canada
+(source- NY Times August 29, 2014, page A7, “Outbreak in Sierra Leone Is Tied to Single
+Funeral Where 14 Women Were Infected.”). Another example is the patient zero-hypothesis
+in the AIDS epidemics [47].
+On the other hand the model of Ref. [14] is valid for p >0, in particular, the results of
+Ref. [14] are illustrated for p = 0.1. The case p = 0.1 would imply an epidemic starting
+with 10% of the entire population infected independently at the same time. This would
+imply, for instance, 0.6 million people in Sierra Leone spontaneously and independently
+being infected at the same time, which would make any targeted immunization intervention
+perform equally well in practice. This result was shown by Ref. [14] in Fig. 12a: when
+p >0 any reasonable targeted immunization method gives the same result for the fraction
+of infected nodes vs immunized nodes. [Fig. 12a in [14] treats the case of p = 10%, noted as
+q = 0.1 in the notation of [14], and compares BP with greedy, HDA, eigenvector centrality
+and simulating annealing; all showing the same performance].
+Therefore, the results of our paper are illustrated for p = 0. That being said, next,
+we compare our results with the BP algorithm in the closest possible regime to ours when
+p→ 0, and also for p = 0.1. In the limit p→ 0, BP becomes unfeasible because the time
+complexity of the BP algorithm diverges as p−3 forp→ 0, as we explain below. The results
+are shown in Extended Data Figs 9c and 10 and we observe that BP does not perform better
+than CI. Furthermore, the poor scalability of BP makes it prohibitive for the real networks
+of 10+ million people used in our work.
+To perform a comparison, we need to brieﬂy recall the approach of Ref. [14] and set
+the notation. The formulation of the problem is based on the long time limit of the SIR
+dynamics, which is described by the set of variables{νi},i = 1,...,N , giving the probability
+for each node to be infected after the epidemic outbreak (in Ref. [14] the variable νi is called
+70
+
+===== Page 71 =====
+mi, but we prefer to use νi to make contact with our notation). These variables satisfy the
+following equations:
+νi = p + (1−p)
+[
+1−
+∏
+k∈∂i
+(1−wνk→i)
+]
+, (107)
+where the parameterp is the probability for nodei to be initially infected;w is the probability
+that a given neighbor k of node i transmits the disease to i; and the product on the r.h.s.
+is over all neighbours k of node i. The variable νk→i (named mk→i in Ref. [14]) is the
+probability that node k is infected in a modiﬁed network where node i is absent. Each νi→j
+is associated with a directed edge i→j of the graph, and satisﬁes the following equation:
+νi→j = p + (1−p)
+
+1−
+∏
+k∈∂i\j
+(1−wνk→i)
+
+ . (108)
+To include the eﬀect of immunization, the authors of Ref. [14] introduce a binary variableσi
+for each nodei, taking valuesσi = +1 if nodei is immunized, andσi =−1 if not. Equations
+(107) and (108) then become:
+νi = 1−σi
+2
+{
+p + (1−p)
+[
+1−
+∏
+k∈∂i
+(1−wνk→i)
+]}
+≡ Fi(σi,{νk→i}k∈∂i) ,
+νi→j = 1−σi
+2
+
+
+p + (1−p)
+
+1−
+∏
+k∈∂i\j
+(1−wνk→i)
+
+
+
+
+≡ Fi→j(σi,{νk→i}k∈∂i\j) .
+(109)
+To ﬁnd the optimal immunization set, Ref. [14] minimizes the following cost (energy) func-
+tion E(σ,ν ):
+E(σ,ν ) =
+N∑
+i=1
+νi + µ
+N∑
+i=1
+1 +σi
+2 ≡
+N∑
+i=1
+e(σi,νi) , (110)
+where µ is a chemical potential controlling the fraction of immunized nodes. At this point,
+Ref. [14] applies the cavity method to estimate the single site marginal Pi(σi), which gives
+the probability that node i is immunized. Approximating the network with a tree rooted
+on node i, the authors of Ref. [14] derive the following equation to assess the probability
+distribution Pi(σi):
+Pi(σi) ≃
+∫ ( ∏
+k∈∂i
+dνk→idνi→kQk→i(νk→i,νi→k)
+)
+e−βe(σi,νi)
+∏
+k∈∂i
+δ [νi→k−Fi→k] , (111)
+whereβ is the inverse temperature, and the functions Qk→i(νk→i,νi→k) satisfy the following
+71
+
+===== Page 72 =====
+BP equations:
+Qi→j(νi→j,νj→i)≃
+∑
+σi
+∫ 
+ ∏
+k∈∂i\j
+dνk→idνi→kQk→i(νk→i,νi→k)
+
+ e−βe(σi,νi)
+∏
+k∈∂i
+δ [νi→k−Fi→k] .
+(112)
+Next, we iterate the BP equations to perform a comparison with our approach. These
+equations do not have an analytical solution, so that, following Ref. [14], we solve them
+numerically by discretizing the function Qi→j(νi→j,νj→i) in a number Nbin of bins. The
+computational cost to update each message Qi→j is of order O(Nki−1), where ki is the
+degree of node i. This makes the algorithm practically unfeasible on networks having nodes
+with large degree (think e.g. to scale free graphs). To overcome this problem, the authors of
+Ref. [14] use a convolution trick, which reduces the computational cost to O((ki− 1)N 3
+bin).
+Using the convolution method of Ref. [14], Eq. (112) reads:
+Qi→j(νi→j,νj→i) ≃ e−βµ
+
+ ∏
+k∈∂i\j
+∫
+dνk→i Qk→i(νk→i, 0)
+
+ δ(νi→j) +
++ 1
+1−p M (ki−1)
+(1−νi→j
+1−p , (1−wνj→i)1−νi→j
+1−p
+)
+e−β[1−(1−νi→j)(1−wνj→i)] Θ(νi→j−p) ,
+(113)
+where the function M (n)(x,y ) is deﬁned iteratively by the convolution:
+M (n)(x,y ) =
+∫ 1
+0
+dx1dx2 δ(x−x1x2) M (n−1)(x1,y ) M (1)(x2,y ) ,
+M (1)(x,y ) =
+∫ 1
+0
+dν δ[x− (1−wν)] Q
+(
+ν, 1− (1−p) y
+1−wν
+)
+.
+(114)
+In all the following numerical results we will always use the eﬃcient form (113) of the BP
+equations.
+From the knowledge of the functionsQi→j(νi→j,νj→i), Ref. [14] computes the probability
+distributionQi(νi) that node i has been infected during the epidemics [ νi is deﬁned in the
+ﬁrst line of Eq. (109)], which is given by:
+Qi(νi)≃ e−βµ
+[∏
+k∈∂i
+∫
+dνk→i Qk→i(νk→i, 0)
+]
+δ(νi) + e−βνi
+1−p M (ki)
+(1−νi
+1−p, 1−νi
+1−p
+)
+Θ(νi−p).
+(115)
+Moreover, they estimate the single spin marginal Pi(σi) as:
+Pi(σi)≃ e−βµ
+[∏
+k∈∂i
+∫
+dνk→i Qk→i(νk→i, 0)
+]
+δ(σ−1) +
+[∫
+dx e−β[1−(1−p)x] M (ki)(x,x )
+]
+δ(σ+1).
+(116)
+72
+
+===== Page 73 =====
+Once the authors of Ref. [14] obtained the probability distributions Qi(νi) and Pi(σi), they
+can compute the average fraction of infected nodes f:
+f = 1
+N
+N∑
+i=1
+∫
+dνi νiQi(νi) , (117)
+and the average fraction of immunized nodes q:
+q = 1
+N
+N∑
+i=1
+1 +⟨σi⟩
+2 = 1
+N
+N∑
+i=1
+1
+2
+(
+1 +
+∑
+σi
+σi Pi(σi)
+)
+. (118)
+A. BP adaptive
+Before we compare BP with our method, we need to illustrate the BP method on a
+ER network to clarify some technical issues. We consider a small ER random graph of
+N = 200 nodes, where BP can be studied, and average degree ⟨k⟩ = 3.5. We use the
+following values of the parameters: fraction of initially infected nodes p = 0.1, inverse
+temperature β = 3.0, and transmission probabilities w = 0.4, 0.5, 0.6, 0.7. The results are
+shown in Extended Data Fig. 9a, where we plot the fraction of infected nodes f versus the
+fraction of immunized nodes q. As already noticed in Ref. [14], we observe that, while for
+w = 0.4 the curve is continuous in the whole range of values of q, for larger values of w the
+curves get interrupted at a certain value of q. This is due to the fact (as mentioned by the
+authors of Ref. [14]) that the free-energy is non-convex in that region of values of q, and
+the chemical potential is ﬂat as shown in Extended Data Fig. 9b. Therefore, all values of
+q in that region cannot be explored using the normal BP method. Physically, the fact that
+the thermodynamical potential becomes non-convex is the signature of a phase transition
+happening at a certain value of w. To overcome this problem, the authors of Ref. [14]
+suggest the following technique. One adds an extra magnetic ﬁeld H to the energy function
+E(σ,ν ) in Eq. (110), which is then adjusted at each update of the BP equations to keep ﬁxed
+the value of immunized nodes q. We implemented this adaptive BP method (called ’ﬁxed
+density BP’ in Extended Data Fig. 9a), and we found that the missing part of the curve can
+be eﬀectively reconstructed for some values of w larger than w = 0.4. Nonetheless, for even
+bigger values ofw, we found that the missing part of the curve cannot be fully reconstructed,
+since the adaptive algorithm does not converge anymore. Usually the non-convergence of
+the BP algorithm is associated to the existence of a phase transition (diﬀerent from the
+73
+
+===== Page 74 =====
+aforementioned one), marking the limit of validity of the replica-symmetric cavity method.
+We then expect that for those values ofq, where reconstruction is impossible, a diﬀerent BP
+method has to be used, in order to deal with the phenomenon of replica symmetry breaking.
+In the next Section we compare BP with CI in two diﬀerent settings. The ﬁrst case is
+the closest one to the regime where CI is deﬁned (i.e. when p→ 0 and w→ 1). The second
+type of comparison is the case where p> 0 and the BP method can be used for all values of
+q∈ [0, 1].
+B. Comparison
+1. First comparison
+Here, we compare BP in the closest possible regime to CI, i.e. for p→ 0 and w→ 1.
+Solving numerically the BP equations requires to discretize the functions Qi→j(νi→j,νj→i)
+in a numberNbin of bins of the orderNbin∼ 1/p, in order to have good numerical accuracy,
+because the smallest possible non-zero value assumed by νi is νi =p, as stated in Ref. [14].
+The BP running time is of order O(MN 3
+bin), M being the number of edges in the graph.
+The factorN 3
+bin comes from the computation of the function M (n)(x,y ) in Eq. (114), that
+requires a double integration overx1 andx2 (giving a factorN 2
+bin), for each value ofy (giving
+an extra factor Nbin). Since Nbin∼ 1/p, the BP running time diverges as p−3 for p→ 0.
+This is the reason why we cannot use BP directly for p = 0. So, we set p = 0.01, as small as
+possible, and w = 0.99, as close to 1 as possible, in the BP algorithm. Moreover, we choose
+a quite high value of the inverse temperature β = 10, close enough to the zero temperature
+limit. Note that for this value of p = 10−2, the number of bins needed for good numerical
+resolution is of the order of Nbin∼ 102, which introduces a prefactor in the computational
+cost of the algorithm already of order 10 6.
+We compare CI and BP on a small ER network of N = 10 3 nodes and average degree
+⟨k⟩ = 3.5, where BP can be run eﬃciently to do a study over the parameter space. Since for
+those values of p andw we cannot compute the full curve f(q) (for the reasons explained in
+Section VII A), we compare the giant component found by BP and the one obtained with
+CI (notice that f coincides with the giant component G in the limits p→ 0 and w→ 1).
+In order to choose which nodes have to be removed according to BP, we use the following
+74
+
+===== Page 75 =====
+criterion: we run BP and we assign to each node the value of the sign of its magnetization:
+sign(⟨σi⟩) (the value of the inverse temperature we chose, β = 10, is suﬃciently high for the
+spins σi to be highly polarized). Then, node i is removed if sign(⟨σi⟩) = 1, and it is not
+if sign(⟨σi⟩) =−1. When BP does not converge, we stop the algorithm after a maximum
+number of iterations and we use the unconverged marginals to assign the magnetizations.
+In this way we can draw the full curve G(q) even if BP does not converge. The result of
+the comparison is shown in Extended Data Fig. 9c, where we can see that BP is not better
+than CI, and performs slightly worst than the HDA method.
+To conclude this section, we mention two other versions of the BP algorithm. The ﬁrst
+one is developed in Ref. [48]. The technique used in Ref. [48] is the same BP technique
+as the one introduced by Altarelli et al. [13, 14]. From the analytical point of view, Ref.
+[48] improves the lower bound on the thresholdqc by considering the eﬀects of 1 step replica
+symmetry breaking (1RSB), obtaining slightly larger lower bounds than those predicted by
+the replica symmetry (RS) approach of Altarelli et al. : qRS
+c ≤ q1RSB
+c , or θmin,0 ≤ θmin,1,
+respectively in the notation of Ref. [48]. Hence the lower bound in Ref. [48] is larger than
+the one obtained by Altarelli et al.
+The second variant of the BP algorithm is used in Refs. [49, 50] for solving the undirected
+feedback vertex set problem. This algorithm, named Belief Propagation Guided Decimation
+(BPD), improves the time complexity of the BP approach of [13, 14, 48] and can be tested
+in SF networks. In Extended Data Fig. 9d we compare the BPD with CI algorithm where
+we ﬁnd evidence of the best performance of CI.
+2. Second comparison
+In this section we compare CI and BP in a diﬀerent way; this time in the case where BP
+is well deﬁned and CI is not, for parameter values p̸= 0 and w̸= 1. Thus, we use p = 0.1
+and w = 0.5. So, this second comparison represents the opposite situation with respect to
+the previous one. We compare the two methods in the following way. We use BP to compute
+directly the fraction of infected nodesf(q) as a function of the fractionq of immunized nodes
+by means of Eqs. (117)–(118). To compare against CI, we have to simulate explicitly the
+SIR process, since we cannot estimate directly the f(q). More precisely, we ﬁrst identify the
+immunized nodes with CI, and then we run the SIR algorithm to obtain the ﬁnal fraction
+75
+
+===== Page 76 =====
+of infected individuals f(q).
+The result of the comparison is reported in Extended Data Fig. 10, for an ER network of
+N = 103 nodes and average degree⟨k⟩ = 3.5. The values of the initially infected individuals
+p and the transmission probability w are p = 0.1 and w = 0.5. The value of the inverse
+temperature β used in the BP algorithm is β = 10 (for the portion of the curve where the
+adaptive BP algorithm is needed, we chose the lowest possible temperature such that the
+algorithm converges). As the ﬁgure shows, there is little diﬀerence between BP and CI, with
+CI slightly better for small q. Moreover we checked that even using HDA gives more or less
+the same results as BP and CI, as the authors of Ref. [14] also show in Fig. 12a of their work.
+Therefore, in the case when p >0 (meaning that a ﬁnite fraction of the entire network is
+already infected from the very beginning of the epidemic outbreak), any reasonable targeted
+immunization technique gives the same result. That is, the optimization achieved by any
+method is washed out by the large number of already infected people, and all strategies
+perform equally well. On the contrary, in the case when p = 0, i.e. when the epidemic is
+initiated by a superspreader event O(1), diﬀerent strategies behave very diﬀerently, with CI
+being the best so far.
+We notice, en passant, that the analytical BP estimation of f(q) gives a lower bound on
+the actual f(q). That is, if we used the same procedure as for CI, by ﬁrst identifying the
+immunized nodes and then computing the fraction of infected ones trough the outcome of
+the SIR process, the resulting curve f(q) would lie above the analytical BP estimation.
+Finally, we note that EO estimates the optimal numerical value of the threshold qc as
+a numerical extrapolation to N→∞ and ℓ→∞ . While EO can estimate this threshold
+accurately (providing an upper bound very close to the real optimum), it cannot provide the
+actual optimal conﬁguration n∗ for large system sizes. This is of course a general feature
+due to the NP-hardness of the problem.
+Indeed, the EO method we use to estimate the value of optimal threshold for ER random
+graphs in Extended Data Fig. 4b may not be the only way to assess analytically that result.
+Indeed, there are other methods to approximate the location of the optimal threshold, which
+can provide lower or upper bounds. For instance, the BP (or cavity) method investigated
+above writes down approximate self-consistent equations for the optimization problem, that
+are solved iteratively to get an estimation of the optimal threshold. Often, the BP equations
+do not converge (as a consequence of the NP-hardness of the problem), but an attitude has
+76
+
+===== Page 77 =====
+gained a foothold in the statistical physics community, which amounts to ignore convergence
+problems and use anyway an unconverged solution as an estimation of the optimal threshold.
+Indeed, in all cases where this approach has been pursued, it has been shown that the BP
+analytical prediction provides a lower bound to the optimal threshold. On the contrary,
+the EO method employed in our work provides an upper bound to the optimal threshold.
+Therefore, diﬀerent analytical methods can give, indeed, predictions which are close to each
+other and, hence, close to the optimal value of the threshold.
+Furthermore, it may not be impossible to ﬁnd the exact analytical value of the threshold
+even if the problem is NP, as in the case of the Sherrington-Kirkpatrick model for spin glasses
+[36], where the Parisi ansatz provides the correct solution. We also notice that analytical
+solutions are based on the analysis of the most probable case in general, but not for a speciﬁc
+instance of the problem. Indeed, not every NP-complete problem can be analysed in this
+way. Some problems do not permit a discussion based on the most probable case. A random
+chosen satisﬁability problem, for example, is almost always easy to solve, because a random
+sequence of symbols almost always does not make sense.
+In our problem of optimal percolation, even though the numerical value of the threshold
+could be known exactly with EO or other method, the main problem remains open: ﬁnding
+an optimal conﬁguration that is as close to the minimal as possible in the large system size.
+The most relevant challenge for practical applications of NP problems is not to estimate
+theoretically the value of the threshold qc, but to ﬁnd a scalable algorithm (for realistic
+applications should be at mostO(N logN)) which is able to approximate as close as possible
+a real optimal conﬁguration n∗ at qc.
+Our algorithmic solution to this NP problem is then CI: a scalable algorithm∼O(N logN)
+that contains the physics of the optimal conﬁguration, and it is necessarily an approxima-
+tion to the true optimum; being a O(N logN) algorithm it cannot give the optimal solution
+unless P = NP. Thus, proper benchmarking does not compare the analytical value of the
+threshold qc. Benchmarking should be carried out by comparing the optimal conﬁgurations
+with the corresponding giant components for large size networks, which should be at least
+of the order of 10 7+ nodes (as we have done in Fig 3d), showing an improvement both in
+the running time and eﬃciency.
+77
+
+===== Page 78 =====
+VIII. A NEW PARADIGM OF INFLUENCE IN SOCIAL MEDIA: TWITTER
+In the next two sections we show that the performance of our method is conﬁrmed in
+two real networks. We study two prototypical examples of real networks: Twitter web and
+a social network derived from phone calls. The former is used to test our theory as a new
+paradigm of inﬂuence, while the second can be used to design an immunization protocol in
+the case of an epidemic outbreak.
+We have paved the way to explore the consequences of our theory in real networks, where
+the assumption of tree-like structure that is the basis of our theory is not necessarily satisﬁed.
+The reason to be interested in such a kind of problem is that it is manifestly in the interest of
+man’s communal existence to understand how people increase their inﬂuence when they tie
+one another. The critical question is to what extent one can deﬁne a measure for inﬂuence
+solely on the basis of social contact network. The answer might be hard to ﬁnd, but, at the
+same time, one cannot deny that the network itself mirrors the mutual relations of users,
+and hence it must contain information about their inﬂuence. The resulting network-based
+inﬂuence estimation can always be supplemented by measures of activity and engagement.
+With this caveat in mind, our optimal percolation theory uncovers the optimal inﬂuencers
+in social media. In this context, the measure of node-inﬂuence in social media is the drop
+in the size of the giant cluster which would happen if the node in question were removed.
+Such a measure of inﬂuence is related to the ability to spread the news to the largest portion
+of the network as shown by our mapping of the maximal spreading problem in LTM (with
+θi =ki− 1) to optimal percolation. We test this idea in Twitter, next.
+Twitter is the online social networking and microblogging service that has gained world-
+wide popularity. Here we use the dataset of approximately 16 million tweets sampled
+between January 23rd and February 8th, 2011 and publically shared by Twitter ( http:
+//trec.nist.gov/data/tweets/) (also available at http://jamlab.org, see Ref. [19] for
+more details). The natural way to get the social network is to extract the follower net-
+work through Twitter API. Unfortunately, due to the access rate limit of Twitter API, it
+is impossible to obtain the full information of the follower network in a reasonable time.
+Furthermore, many of the follower links are not active. To approximate the social network,
+we use an alternative way - the mention network [19]. In contrast to the normal tweets,
+mentions are tweets containing @username and usually include personal conversations or
+78
+
+===== Page 79 =====
+references. In fact, the mention links have stronger strength of ties than follower links.
+Therefore, the mention network can be viewed as a stronger version of interactions between
+Twitter users. In the mention network, if user i mentions user j in his/her tweets, there
+exists a link from i to j. In order to better represent the social contacts, we also add to
+the network the retweet relations from the tweets. A retweet (RT @username) corresponds
+to content forward with the speciﬁed user as the nominal source. If user i retweets a tweet
+of user j, then a contact is established between j and i. We then consider all links to be
+undirected. In this way, the social network of Twitter is constructed. The resulting network
+has N = 469, 013 nodes and M = 913, 457 edges.
+We measure the collective inﬂuence of a group of nodes as the drop in the size of the
+giant component which would happen if the nodes in question were removed. The results
+are shown in Fig. 3a, showing the better performance of CI in comparison with HDA, PR,
+HD and k-core. The other heuristics and BP cannot be run in this large dataset.
+In Fig. 3b we plot the percentage of fake inﬂuencers (PFI) or false positives as a function
+of the fraction of removed nodes q. This quantity is deﬁned with respect to the HD method,
+and represents the amount of diﬀerent inﬂuencers between HD and CI. More precisely, we
+call SCI(q) the set of inﬂuencers (i.e. removed nodes) found by CI at a given value of q:
+SCI(q) ={x1
+CI,x 2
+CI,...,x Nq
+CI} , (119)
+and SHD(q) the corresponding vector for HD. Moreover we denote by |S(q)| = Nq the size
+of the set. Notice that |SCI(q)| is upper bounded by Nq CI
+c , i.e. |SCI(q)|≤ Nq CI
+c , where
+qCI
+c is the inﬂuence threshold obtained with CI. Indeed Nq CI
+c is the maximum number of
+inﬂuencers. Analogously,|SHD(q)| is upper bounded by Nq HD
+c .
+We deﬁne PFI(q) as:
+PFI(q) = 100×
+[
+1−|SCI(q)∩SHD(q)|
+Nq
+]
+. (120)
+In other words, we measure the percentage of diﬀerent nodes removed by CI and HD.
+As shown in Fig. 3b, the PFI at the critical threshold of CI is PFI( qCI
+c )∼ 26%, meaning
+that HD misses roughly 1 /4 of the total number of (real, i.e. optimal) inﬂuencers. As a
+consequence the giant component for HD is still very large,GHD(qCI
+c )∼ 0.37, and hence, HD
+needs to keep on removing nodes to fragment completely the network. This comes at the
+price of including a large number of fake inﬂuencers at the end of the process qHD
+c , where
+PFI(qHD
+c )∼ 48%.
+79
+
+===== Page 80 =====
+In the same way, if one knew the true (optimal) conﬁguration of inﬂuencer, one could
+analogously deﬁne the fake CI inﬂuencers which do not overlap with the optimal ones.
+Actually, the obtained nearly optimal set by the CI method has an unknown overlap with
+the true optimal solution. On the other hand, the impossibility to ﬁnd such an optimal set
+(because of the aforementioned prohibitive running time), makes the CI inﬂuencer set the
+natural substitute for the optimal one, and, hence, the reference set for studying the overlap
+with node sets identiﬁed by other methods.
+IX. HALTING EPIDEMICS: MOBILE PHONE CALL NETWORK
+While medicine has made solid advances in the isolation of new vaccines for an increasing
+number of diseases, and may expect to make still greater ones, no certain claim can be
+established for a corresponding advance in preventive immunization.
+It is of deep social importance to have a fast and optimal intervention strategies when
+new outbreaks of disease break out. Prevention methods are still limited for various reasons:
+many virus are responsible of diseases of animals that can be transmitted to humans and
+thus causing epidemics. It is diﬃcult, if not impossible, to control the populations of vectors
+and natural reservoirs, or predict what changes in the environment can favor the epidemics.
+The development of new drugs is usually not the solution to the problem.
+It is generally accepted that an eﬃcient way to ﬁght epidemic diseases is the execution
+of immunization protocols and fast quarantine procedures, together with the spread of the
+knowledge of these dangers and the eﬀorts to remove the environmental causes that favor
+them [46]. Probably a certain percentage of diseases will always remain undefeated, but if
+only one can succeed in reducing to a minority the majority that is today vulnerable, one
+will have accomplished a great deal, perhaps indeed everything that can be accomplished. In
+this situation is highly desirable to have a guiding strategy which enables to select who must
+be vaccinated or put in quarantine. Our theory oﬀers a protocol of selection, the closest
+one to the optimal. This result is important because immunization doses can be limited
+or very expensive in practice, and without an optimal distribution these resources can go
+inadvertently to waste.
+To investigate the applicability of CI to an immunization/quarantine scheme in a real
+large-scale social network we consider a social contact network built from the mobile phone
+80
+
+===== Page 81 =====
+calls between people in Mexico. Data has been provided by GranData.
+A mobile phone call social network reﬂects people’s interactions in social lives, and is
+generally accepted as a proxy of a human contact network. For example, the mobile phone
+network from Mexico can help us to design eﬀective immunization strategies, by identifying
+the most relevant social contacts among people. The disease spreads through direct contacts
+of infected people and proximity and mobility data from mobile phone networks can serve as
+a proxy of human movements and possible spreading patterns in human contact networks.
+In order to build the network, we put a link between two people if there is a reciprocal
+exchange of phone calls between them in a observation window of three months (i.e. a
+call in both directions), and the number of such reciprocal calls is larger than or equal to
+three. This criterion gives us a network of N = 14, 346, 653 nodes, with an average degree
+⟨k⟩ = 3.53 and a maximum degree kmax = 419. The result of the CI algorithm, compared
+to HD and HDA, is shown in Fig. 3d.
+The phone call network is the prototype of big-data, where a scalable (i.e. almost linear)
+algorithm is mandatory. Indeed, the size of this network already rules out many heuristic
+methods with quadratic (or larger) running time (CC, EC, BC, and EGP) and also BP. From
+the perspective of performance, CI is better by a very good margin. Indeed, it fragments the
+network using about 500, 000 people less than the best heuristic strategy (HDA) implying a
+saving of the same number of vaccines in a hypothetical immunization campaign. Moreover,
+when CI gives a zero giant component, HDA gives still G∼ 0.3, i.e. a connected network of
+∼ 4× 106 people. This result, together with the result on Twitter, indicates that, although
+the theory has been developed for a locally-tree like network, in real networks with loops
+the CI-algorithm performs quite well as well.
+[31] Colizza, C., Flammini, A., Serrano, M. A. & Vespignani, A. Detecting rich-club ordering in
+complex networks. Nature Phys. 2, 110-115 (2006).
+[32] Wasserman, S. & Faust, K. Social Network Analysis (Cambridge Univ. Press, Cambridge,
+1994).
+[33] Straﬃn, P. D. Linear algebra in geography: eigenvectors of networks. Mathematics Magazine
+53, 269-276 (1980).
+81
+
+===== Page 82 =====
+[34] Bavelas, A. Communication patterns in tasks oriented groups. J. Acoust. Soc. Am. 22, 271-282
+(1950).
+[35] Freeman, L. C. A set of measures of centrality based on betweenness. Sociometry 40, 35-41
+(1977).
+[36] M´ ezard, M. & Montanari, A. Information, Physics, and Computation (Oxford University
+Press, USA, 2009).
+[37] Centola, D., Eguiluz, V. & Macy, M. W. Cascade dynamics of complex propagation. Physica
+A: Statistical Mechanics and its Applications 374, 449-456 (2007).
+[38] Singh, P., Sreenivasan, S., Szymanski, B. K. & Korniss, G. Threshold-limited spreading in
+social networks with multiple initiators. Sci. Rep. 3, 2330 (2013).
+[39] Baxter, G. J., Dorogovtsev, S. N., Goltsev, A. V. & Mendes, J. F. F. Bootstrap percolation
+on complex networks. Phys. Rev. E 82, 011103 (2010).
+[40] Wormald, N. C. The asymptotic connectivity of labelled regular graphs. J. Combinatorial
+Theory B 31, 156-167 (1981).
+[41] Dorogovtsev, S. N., Mendes, J. F. F. & Samukhin, A. N. Metric structure of random networks.
+Nucl. Phys. B 653, 307-338 (2003).
+[42] Bhatia, N. P. & Szeg¨ o, G. P. Stability theory of dynamical systems (Springer-Verlag, Berlin
+Heidelberg, 2002).
+[43] ˜Sulc, P. & Zdeborov´ a, L. Belief propagation for graph partitioning.J. Phys. A: Math. Theor.
+43, 285003 (2010).
+[44] Parisi, G., Ritort, F. & Slanina, F. Several results on the ﬁnite-size corrections in the
+Sherrington-Kirkpatrick spin-glass model. J. Phys. A: Math. Gen. 26, 3775-3790 (1993).
+[45] Bray, A. J. & Moore, M. A. Chaotic nature of the spin-glass phase. Phys. Rev. Lett. 58, 57-60
+(1987).
+[46] Ferguson, N. M., et al. Strategies for containing an emerging inﬂuenza pandemic in Southeast
+Asia. Nature 437, 209-214 (2005).
+[47] Auerbach, D. M., Darrow, W. W., Jaﬀe, H. W. & Curran, J. W. Cluster of cases of the
+acquired immune deﬁciency syndrome. Patients linked by sexual contact. Am. J. Med. 76,
+487-492. (1984).
+[48] Guggiola, A., Semerjian, G. Minimal contagious sets in random regular graphs. J. Stat. Phys.
+158, 300-358. (2015).
+82
+
+===== Page 83 =====
+[49] Zhou, H.-J. Spin glass approach to the feedback vertex set. Eur. Phys. J. B 86, 455-463 (2013).
+[50] Qin, S.-M. & Zhou, H.-J. Solving the undirected feedback vertex set problem by local search.
+Eur. Phys. J. B 87, 273 (2014).
+83

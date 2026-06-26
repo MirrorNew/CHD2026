@@ -1,0 +1,1057 @@
+
+
+===== PDF PAGE 1 =====
+A2DEPT: Large Language Model–Driven Automated Algorithm Design via
+Evolutionary Program Trees
+Bin Chen * 1 Shouliang Zhu * 1 Beidan Liu 2 Yong Zhao2 Tianle Pu 2 Huichun Li 3 Zhengqiu Zhu † 2
+Abstract
+Designing heuristics for combinatorial optimiza-
+tion problems (COPs) is a fundamental yet chal-
+lenging task that traditionally requires extensive
+domain expertise. Recently, Large Language
+Model (LLM)-based Automated Heuristic De-
+sign (AHD) has shown promise in autonomously
+generating heuristic components with minimal
+human intervention. However, most existing
+LLM-based AHD methods enforce fixed algo-
+rithmic templates to ensure executability, which
+confines the search to component-level tuning
+and limits system-level algorithmic expressive-
+ness. To enable open-ended solver synthesis be-
+yond rigid templates, we propose Automated Al-
+gorithm Design via Evolutionary Program Trees
+(A2DEPT), which treats LLMs as system-level al-
+gorithm architects. A 2DEPT explores the vast
+program space via a tree-structured evolution-
+ary search withhybrid selectionandhierarchi-
+cal operators, enabling iterative refinement of
+complete algorithms. To make open-ended gen-
+eration practical, we enforce executability with a
+lightweight program-maintenance loop that per-
+forms feedback-driven repair. In experiments,
+A2DEPT consistently outperforms representative
+LLM-based baselines on both standard and highly
+constrained benchmarks. On the standard bench-
+marks, it reduces the mean normalized optimality
+gap by 9.8% relative to the strongest competing
+AHD baseline.
+*Equal contribution. † Corresponding authors. 1The Insti-
+tute of Intelligent Computing, University of Electronic Science
+and Technology of China, Chengdu 611731, China 2College of
+Systems Engineering, National University of Defense Technol-
+ogy, Changsha 410073, China 3Academy of Military Medical
+Sciences, Beijing 100071, China. Correspondence to: Shou-
+liang Zhu <202522900324@std.uestc.edu.cn>, Zhengqiu Zhu
+<zhuzhengqiu12@nudt.edu.cn>.
+S1 + H 1 S2 + H 1 S2 + H 2
+5.0
+5.2
+5.4
+5.6
+5.8
+6.0
+6.2
+6.4
+6.6Objective Value Ã
+6.53
+6.34 6.28
+(a)
+H (H; ¼) (H; ¼; ½)
+5.0
+5.2
+5.4
+5.6
+5.8
+6.0
+6.2
+6.4
+6.6 6.53
+6.18
+5.85
+(b)
+0
+5
+10
+15
+20
+25
+30
+Non-executable Rate (%)2.6%
+14.8%
+25.0%
+Figure 1.Pilot study on the Traveling Salesman Problem (TSP).
+It illustrates (i) framework dependence in template-bound AHD
+and (ii) the executability challenge when scaling from heuristics to
+full solver logic.(a) S1 is a step-by-step constructive framework,
+and S2 adds backtracking. H 1 and H 2 are evolved under S1 and
+S2.(b)We expand the evolution target from a scoring heuristic
+H to (H, π) with backtracking policy π, and then to (H, π, ρ) by
+adding a utilization mechanism ρ. The red dashed curve reports
+the non-executable rate (generated programs that fail to run).
+1. Introduction
+Combinatorial optimization problems (COPs) (Desale et al.,
+2015) are ubiquitous in real-world applications, ranging
+from logistics planning (Bengio et al., 2021) and vehicle
+routing (Braekers et al., 2016) to chip floorplanning (Mirho-
+seini et al., 2021) and job scheduling (Chaudhry & Khan,
+2016). Due to the combinatorial explosion of the search
+space, these problems are typically NP-hard (Garey & John-
+son, 1979), rendering exact solvers computationally infea-
+sible for large-scale instances. Consequently, constructing
+high-performance heuristics—which trade optimality for
+computational efficiency—has become the typical approach
+to obtain satisfactory solutions under limited time budgets
+(Talbi, 2009). However, the traditional paradigm of man-
+ual heuristic design faces a severe scalability bottleneck.
+This process is inherently labor-intensive and highly de-
+pendent on domain-specific human intuition (Burke et al.,
+2013). Practitioners must often engage in a tedious trial-and-
+error cycle to handcraft rules that capture problem structure.
+Moreover, handcrafted heuristics can be sensitive to prob-
+lem variants: strategies tuned for one setting may degrade
+on others (Wolpert & Macready, 2002), requiring substantial
+re-tuning or redesign.
+To address these scalability limitations, Large Language
+1
+arXiv:2604.24043v1  [cs.AI]  27 Apr 2026
+
+
+===== PDF PAGE 2 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+Models (LLMs) have recently enabled a paradigm shift to-
+ward Automated Heuristic Design (AHD) (Romera-Paredes
+et al., 2024). Acting as general-purpose heuristic generators,
+LLMs can translate high-level intentions into executable
+code (Ma et al., 2023). This makes it possible to automate
+substantial parts of the heuristic-development pipeline—
+from implementing candidate rules to iterating over variants
+under a user-specified evaluation protocol—thereby reduc-
+ing reliance on repeated manual re-engineering.
+Recent studies have further integrated LLMs with Evolu-
+tionary Computation (EC) to advance AHD. For instance,
+FunSearch (Romera-Paredes et al., 2024) adopts an LLM-
+as-mutation-operator paradigm to evolve priority functions.
+Subsequent methods further improve generation quality:
+EoH (Liu et al., 2024a) evolves natural-language thoughts
+and code jointly, while ReEvo (Ye et al., 2024) leverages
+reflective verbal gradients for self-improvement. Most re-
+cently, MCTS-AHD (Zheng et al., 2025) introduces Monte
+Carlo Tree Search to mitigate premature convergence and
+better balance exploration and exploitation.
+Despite these advances, a critical limitation persists: most
+LLM-based AHD methods design key heuristic functions
+within predefined solver frameworks. Advanced search
+strategies are therefore applied only to optimize isolated
+functional slots. As a result, performance becomes tightly
+coupled to the chosen framework. Figure 1(a) illustrates
+the bottleneck: heuristics evolved under one constructive
+framework can fail to transfer under another, and the relative
+advantage of structural choices can be problem-dependent.
+Consequently, template-constrained AHD inherits a hidden
+yet consequential design decision—selecting an appropriate
+solver backbone—that is difficult to resolve a priori, and
+can cap performance even when the heuristic component
+itself is well optimized.
+These limitations motivate a transition from template-bound
+AHD to open-ended Automated Algorithm Design (AAD),
+where the search target expands from heuristic components
+to complete solver programs, as illustrated in Figure 2(a).
+By enabling redesign of the full algorithmic workflow, AAD
+unlocks a much richer design space, but it also amplifies
+generation difficulty. As Figure 1(b) suggests, enlarging the
+evolution target from a scoring heuristic to broader solver
+control can improve objective values, yet it increases the
+non-executable rate due to the growing complexity of free-
+form code generation. This transition introduces three fun-
+damental challenges. First,Executability Instability: com-
+plete solvers involve long, interdependent code with fragile
+interfaces and dependencies, making candidates prone to
+compilation/runtime failures. Second,Search Space Explo-
+sion: AAD must explore an effectively unbounded program
+space where valid, high-performing algorithms are sparse.
+Third,Credit Assignment Opacity: large coupled edits
+change multiple behaviors at once, making it difficult to
+attribute performance differences to specific modifications
+and weakening search guidance.
+In this paper, we proposeA 2DEPT(AutomatedAlgorithm
+Design viaEvolutionaryProgramTrees), a framework for
+open-ended AAD that evolves complete solver programs.
+A2DEPT performs tree-structured program search with hy-
+brid selection, combining SA-style parent–child acceptance
+with Boltzmann sampling to preserve diverse trajectories. It
+further evolves programs with hierarchical operators (micro-
+tuning, macro-mutation, semantic crossover) under adaptive
+scheduling. To keep open-ended evolution runnable, we
+couple the search with a lightweight maintenance loop that
+repairs missing dependencies via a dependency graph and
+prunes unreachable code.
+Our main contributions are concluded as follows:
+• Problem framing.We identify the framework bottle-
+neck of LLM-based AHD and motivate open-ended
+AAD as program-space search over executable solvers.
+• A2DEPT framework.We propose A 2DEPT, a tree-
+structured evolutionary program search framework that
+uses LLMs as program-level variation operators to
+evolve complete solvers.
+• Mechanisms for reliable long-horizon evolution.We
+introduce (i) a program-maintenance loop for depen-
+dency repair and executability enforcement, (ii) a tree-
+structured hybrid selection scheme that preserves di-
+verse trajectories under a fixed budget, and (iii) hier-
+archical operators with adaptive scheduling to enable
+localized edits and improved credit assignment.
+• Empirical validation.We evaluate A 2DEPT on a
+diverse suite of NP-hard combinatorial optimization
+benchmarks (standard and high-constraint) and show
+consistent gains over representative LLM-based AHD
+baselines. On the standard benchmarks, A 2DEPT re-
+duces the mean normalized optimality gap by9.8%rel-
+ative to the strongest competing AHD baseline, where
+each per-task gap is defined as the relative percentage
+deviation from the optimum before averaging.
+2. Background and Related Work
+2.1. Heuristics for Combinatorial Optimization
+Combinatorial optimization problems such as TSP
+(Rosenkrantz et al., 1974) and Job Shop Scheduling (JSP)
+(Jain & Meeran, 1999) are typically NP-hard, making exact
+solvers impractical at scale. Heuristics therefore serve as the
+workhorse in practice, broadly falling into (i)constructive
+rules that build feasible solutions incrementally (Campbell
+& Savelsbergh, 2004; Paessens, 1988) and (ii)improvement
+2
+
+
+===== PDF PAGE 3 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+methods that iteratively refine incumbents via local search
+or metaheuristics (Dorigo et al., 2007; Katoch et al., 2021),
+e.g., simulated annealing (Rutenbar, 2002) and tabu search
+(Al-Sultan, 1995). However, hand-crafted heuristics are of-
+ten brittle: they are tuned to specific instance distributions
+and can degrade under shifting constraints or operating con-
+ditions (Hooker, 1995).
+2.2. Automated Heuristic Design
+Automated Heuristic Design (Liu et al., 2024a), often stud-
+ied under the hyper-heuristics paradigm, aims to automate
+the construction of optimization heuristics. Early AHD
+work was dominated by Genetic Programming (GP) (Lang-
+don & Poli, 2013; Koza, 1994), which evolves heuristic
+programs via crossover and mutation but can suffer from
+instability (e.g., invalid programs and code bloat) (O’Neill
+et al., 2010). More recently, LLMs have enabled seman-
+tically informed program generation and editing for AHD
+(Liu et al., 2025; van Stein & B ¨ack, 2024), exemplified
+by FunSearch (Romera-Paredes et al., 2024), EoH (Liu
+et al., 2024a), ReEvo (Ye et al., 2024), and tree-based vari-
+ants such as MCTS-AHD (Zheng et al., 2025). However,
+most LLM-based AHD methods remain template-bound:
+they optimize a small set of heuristic components (e.g.,
+scoring/priority functions) within predefined algorithmic
+templates, while keeping the surrounding control flow and
+solver logic fixed. This structural constraint limits their abil-
+ity to discover system-level algorithmic innovations required
+by complex optimization problems. A2DEPT performs se-
+mantically informed edits over complete solver programs
+with explicit executability checks, enabling system-level
+redesign rather than component-level tuning.
+2.3. LLMs for Program Synthesis and Optimization
+Recent advances in LLMs have catalyzed progress in pro-
+gram synthesis and code-level optimization (Xi et al., 2025;
+Lu et al., 2023; Shypula et al., 2023; Liventsev et al., 2023).
+A dominant paradigm integrates LLM-based generation
+with evaluation-driven feedback (Yang et al., 2023): instead
+of one-shot code synthesis, systems interleave generation
+with execution, verification, or performance assessment to
+iteratively refine programs (Wang et al., 2023; Wu et al.,
+2024). Such generation–evaluation loops have been ex-
+plored across debugging (Chen et al., 2023), prompt opti-
+mization (Zhou et al., 2022), reward design (Ma et al., 2023),
+robotics (Lehman et al., 2023), and broader search/evolution-
+based optimization settings. However, program-space
+search remains challenging due to the fragility of code edits
+and the sheer size of the search space (Chen, 2021; Austin
+et al., 2021). In contrast to prior work that typically opti-
+mizes programs for correctness or local efficiency under
+fixed specifications/tests, A2DEPT targets open-ended algo-
+rithmic performance and evolves complete solver logic via
+benchmark-driven feedback.
+3. Methodology
+3.1. Workflow Overview
+As illustrated in Figure 2, A2DEPT casts AAD as an evolu-
+tionary search over a discrete program space. It maintains
+a global search tree T (Zheng et al., 2025) ofexecutable
+programs, where each node stores the program, its score,
+and its generation metadata. Unlike population-based meth-
+ods, T retains all evaluated programs, enabling structured
+exploration and reuse of prior trajectories. Formally, each
+node is defined as a tuple n= (P, S,h, ω) , where P is
+an executable program, S is its score on D, h records the
+parent/operator history, and ω stores local operator weights.
+A2DEPT decomposes long-horizon solver synthesis into a
+sequence of localized, verifiable program edits guided by
+empirical feedback. As shown in Figure 2(b), it expands
+afrontierin batches: each iteration selects asetof parent
+nodes via hybrid selection and applies adaptively scheduled
+operators to generate multiple independent offspring. To
+prevent failures from propagating across these expansions,
+the program-maintenance pipeline in Figure 2(c) repairs
+broken dependencies and prunes unreachable code before
+evaluation, and the scores are written back into T to guide
+subsequent selection.
+The workflow proceeds in two phases. First, an LLM-based
+initialization produces a diverse set of executable root pro-
+grams (see Appendix C.1). Then, A 2DEPT enters an it-
+erative loop: it selects parent nodes, applies hierarchical
+mutation and recombination to generate new code, repairs
+broken dependencies via the program maintenance mech-
+anism, evaluates feasible programs, and inserts them back
+into T until the computational budget is exhausted. The spe-
+cific mechanisms for selection, generation, and governance
+are detailed in the following subsections.
+Design rationale.The components of A 2DEPT are not an
+interchangeable assembly; each is necessitated by the con-
+sequences of the previous one, forming a self-reinforcing
+loop tailored to open-ended AAD. Tree-structured search
+with SA-style parent–child acceptance is a natural fit be-
+cause AAD primarily requiresdescribing parent–child re-
+finement relationsrather than maintaining population-level
+dynamics; SA satisfies detailed balance and provides a well-
+characterized exploration–exploitation trade-off. However,
+SA’s rejection rate is inherently high in open-ended AAD,
+since many children carry structural changes whose bene-
+fits are not immediately reflected in the score; this shrinks
+the parent frontier and motivates Boltzmann supplementary
+sampling over T to recover temporarily underperforming
+but structurally promising branches. The resulting diver-
+3
+
+
+===== PDF PAGE 4 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+Key heuristic function
+LLM
+Automated Heuristic Design
+Fixed framework
+LLM
+Automated Algorithm Design
+Entry point
+Open-ended Space
+Control flow
+Helper functions
+(a) Paradigm Shift (AHD to AAD)
+Root
+Initial 
+nodes
+Hybrid selection
+Simulated
+annealing
+Boltzmann 
+sampling
+Frontier
+Parent Set
+nextP
+Adaptive operator scheduling
+Weight 
+Depth 
+Score  
+ 1
+ 2
+1
+Raw
+Generation
+Broken
+Dependencies
+（e.g. missing func_x())
+Dependency
+Analysis
+Missing 
+Dependency
+
+Pruning
+Unreachable
+Function
+Output Executable
+Program
+Iterative
+Repair
+LLM
+Evaluation
+on     
+(b) The A2DEPT Framework (Main Workflow) (c) Program Maintenance Mechanism
+Offspring
+Figure 2.Overview of the A 2DEPT framework. (a)Paradigm shift from template-bound AHD, where the LLM fills heuristic slots
+within a fixed solver framework, to open-ended AAD, where the LLM synthesizes complete solver programs.(b)A 2DEPT maintains
+a global search tree and expands a frontier in a batched manner via hybrid selection and adaptive operator scheduling.(c)A program
+maintenance pipeline enforces executability through dependency analysis, iterative repair, and pruning, yielding executable programs for
+evaluation onD.
+sity provides the stepping stones that macro-mutation needs
+to achieve paradigm-level restructuring, whose free-form
+code in turnnecessitatesthe dependency-repair loop to pre-
+serve executability. Finally, evaluation feedback drives the
+adaptive scheduler (Eq. 5–6), which learns which operator
+granularity is productive at each node, shaping the next cy-
+cle. The ablation in Table 4 confirms that removing any one
+component breaks the loop and causes clear degradation on
+at least one task.
+3.2. Program Maintenance Mechanism
+Algorithms in AAD are inherently complex, involving mul-
+tiple interdependent functions, global variables, and library
+calls. Evolving such systems as flat text sequences is fragile,
+as a single syntax error or unresolved reference can inval-
+idate the entireprogram. To address this issue, A 2DEPT
+introduces a program maintenance mechanism that improves
+executability during evolution.
+3.2.1. STRUCTUREDPROGRAMREPRESENTATION
+Instead of evolving raw text, A2DEPT represents each solver
+as a function-level modular program.
+Formally, a program is written as P= (C pre,F f uncs). The
+Preface Cpre contains global imports/configurations (and
+constants) and is kept fixed to stabilize the execution envi-
+ronment. TheFunction Registry Ff uncs is a set of modular
+functions, where each function f is represented by its signa-
+ture and executable body.
+To regulate evolution, A2DEPT applies a role-aware pars-
+ing that partitions Ff uncs intoImmutable Definitions Fimm
+andMutable Strategies Fmut. Operators act only on Fmut
+(Section 3.4), which prevents accidental corruption of foun-
+dational utilities in Fimm and makes micro-tuning edits
+interface-preserving.
+3.2.2. DEPENDENCYREPAIR ANDCLOSURE
+Structural mutations may introduce missing dependencies
+when generated code calls undefined functions. A2DEPT re-
+solves this via an automated dependency-repair mechanism.
+Given a program P , we build a directed call graph Gdep =
+(V, E), where V is the set of function names appearing in
+P and (u, v)∈E denotes that u calls v. Let Def(P) be
+the set of function names defined in P , and let B denote
+language built-ins. We identify unresolved symbols as
+U={v∈V| ∃u∈V: (u, v)∈E∧v /∈(Def(P)∪B)}.
+(1)
+If U ̸=∅ , A2DEPT iteratively prompts the LLM to imple-
+ment the missing functions using call-site context (signa-
+tures and usage) until U=∅ , yielding a dependency-closed
+program. The repair loop is guaranteed to terminate: it halts
+either when all missing dependencies are resolved (U=∅ )
+or when the global LLM call budget is exhausted. In the
+latter case, the program that remains incomplete is assigned
+a score of zero and does not block subsequent search itera-
+4
+
+
+===== PDF PAGE 5 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+tions (Algorithm 1, Lines 19–26 in Appendix B).
+Finally, we perform reachability analysis from the program
+entry function and prune functions that are unreachable,
+preventing dead logic from accumulating over iterations.
+3.3. Tree-Structured Hybrid Search Strategy
+To enable efficient exploration of the vast and discrete AAD
+space, A2DEPT maintains a global search treeT . At each it-
+eration, the goal is to select a set of valid parent nodesPnext
+from the current frontier to generate the next batch of can-
+didate programs. Because T primarily serves as a memory
+of parent–offspring transformation trajectories rather than a
+rollout-intensive planning structure, we adopt a lightweight
+hybrid rule: simulated-annealing acceptance explicitly re-
+flects the parent–child refinement relation with minimal
+overhead, and Boltzmann sampling over T supplements the
+remaining budget to reach a fixed parent set size K while
+avoiding greedy top-kcollapse.
+3.3.1. SIMULATEDANNEALING-BASEDPRIMARY
+SELECTION
+The primary selection stage determines which nodes from
+the most recent expansion of the search tree are selected for
+further evolution. We employ a simulated annealing strategy
+(Nourani & Andresen, 1998) based on the Metropolis crite-
+rion to filter the current frontier. For each newly generated
+node nc, its performance is compared against that of its
+parent np to determine whether it should be retained for the
+subsequent evolutionary cycle.
+Assuming that the scoring functionS(n) is to be maximized,
+the selection probabilityP select is defined as:
+Pselect(nc, np) =
+(
+1ifS(n c)≥S(n p),
+exp
+
+S(nc)−S(np)
+Tt
+
+otherwise,
+(2)
+where Tt denotes the system temperature at iteration t.
+Nodes accepted under this criterion are added to Pnext as
+seeds for subsequent mutations.
+Dynamic Re-annealing.To mitigate search stagnation,
+A2DEPT monitors the global best solution P ∗. If P ∗ re-
+mains unchanged for a predefined number of generations
+Nstall, the temperature Tt is increased to restore exploration
+capability (Ingber, 1989). The temperature update rule is
+given by:
+Tt+1 =
+(
+Tt + ∆Tif∆t stall ≥N stall,
+αTt otherwise, (3)
+where α∈(0,1) is a decay factor and ∆T denotes the
+re-annealing increment. Upon triggering re-annealing, the
+stagnation counter ∆tstall is reset to zero, allowing the stan-
+dard temperature decay schedule to resume.
+3.3.2. BOLTZMANN-BASEDSUPPLEMENTARY
+SELECTION
+Since the simulated annealing stage may reject many can-
+didates, the resulting parent set may contain fewer than K
+nodes (i.e., |Pnext|< K ). To maintain constant parallel
+throughput, A2DEPT supplements the parent set by sam-
+pling additional nodes from the global search treeT.
+Specifically, K− |P next| nodes are selected according to
+Boltzmann selection (Goldberg, 1990), where the probabil-
+ity of choosing a noden i is defined as:
+Psupp(ni) = exp ((S(ni)−S max)/Tt)P
+nj ∈T exp ((S(nj)−S max)/Tt) ,(4)
+with Smax denoting the maximum score observed in the
+search history.
+Unlike greedy strategies that exclusively favor top-
+performing candidates, this probabilistic selection assigns
+non-zero sampling probabilities to suboptimal nodes.
+3.4. Hierarchical Operators with Adaptive Scheduling
+A challenge in AAD is coarse-grained credit assignment:
+when a program is modified, it is non-trivial to attribute
+an observed performance change to specific structural ed-
+its. To address this, A 2DEPT decomposes evolution into
+hierarchical granularities and uses an adaptive scheduler to
+dynamically allocate search resources.
+3.4.1. HIERARCHICALOPERATORDEFINITION
+We define a tiered operator set O={m 1, m2, e1} that
+acts at three levels of program transformation:micro-level
+refinement,macro-level workflow restructuring, andse-
+mantic recombinationvia crossover.
+Micro-tuning (m1):Applies localized edits to the mutable
+strategy functions Fmut (Section 3.2), refining logic and
+parameters while preserving interfaces.
+Macro-mutation (m2):Rewrites the solver workflow by
+reconstructing the entry-point function, allowing changes
+to control flow and function signatures; newly introduced
+dependencies are resolved by the maintenance loop.
+Semantic crossover ( e1):Synthesizes a hybrid program
+from two parents (na, nb) by integrating complementary
+mechanisms from their code and performance feedback,
+with missing components repaired automatically.
+3.4.2. ADAPTIVESCHEDULINGLOGIC
+Instead of using fixed operator probabilities, A2DEPT main-
+tains a node-specific weight vector ωn = (ωm1 , ωm2) for
+each node n. At node n, the probability of selecting a
+mutation operator op∈ {m 1, m2} is given by a softmax
+5
+
+
+===== PDF PAGE 6 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+scheduler:
+P(op|n) = exp(ωop/τ)P
+k∈{m1,m2} exp(ωk/τ) ,(5)
+where τ >0 is a temperature parameter regulating the
+exploration-exploitation trade-off. The crossover operator
+e1 is invoked conditionally and is therefore excluded from
+the node-local scheduling distribution.
+After generating a child node nchild from parent nparent using
+operator op, A2DEPT computes a normalized performance
+change ¯r=
+
+S(nchild)−S(n parent)
+
+/|S(nparent)|. The cor-
+responding operator weight is then updated to reinforce
+beneficial modifications:
+ωt+1
+op =
+(
+ωt
+op + ¯rif¯r≥0,
+ωt
+op −λ|¯r|if¯r <0, (6)
+where λ >0 penalizes unsuccessful mutations. The child
+node nchild inherits the updated vector ωnchild ←ω t+1
+nparent as a
+warm startrather than a fixed preference: because the soft-
+max scheduler (Eq. 5) with temperature τ always assigns
+non-zero probability to both operators, an inappropriate
+inherited bias (e.g., after a macro-mutation that substan-
+tially alters program structure) is corrected by subsequent
+feedback within a few iterations, as Eq. 6 penalizes the un-
+derperforming operator and reinforces the productive one.
+Overall, this feedback-driven scheduler adaptively shifts
+search effort between micro-tuning and macro-mutation as
+the search progresses.
+3.4.3. DIVERSITY-AWAREPARTNERSELECTION
+We select crossover partners by balancing performance and
+trajectory diversity. For a primary parent na, we measure
+diversity with the depth of the least common ancestor (LCA)
+in the search tree: smaller D(LCA(na, nb)) indicates ear-
+lier divergence. We samplen b with
+Pcross(na, nb)∝ S(nm)−S min
+Smax −S min
+
+1− D(LCA(na, nb))
+Dmax
+
+,
+(7)
+where nm = arg max{S(na), S(nb)}, D(·) is node depth,
+andD max is the current maximum depth.
+4. Experiments
+In this section, we evaluate A 2DEPT on six combinato-
+rial optimization problems, reporting solution quality on
+standard benchmarks, robustness across alternative design
+paradigms, and feasibility under stringent constraints; we
+further conduct ablation studies, parameter sensitivity anal-
+yses and a case study. Additional analyses are deferred to
+Appendix E, including robustness to the LLM backbone
+(Appendix E.1), comparison with LLM-as-Optimizer (Ap-
+pendix E.2), convergence behavior at different search bud-
+gets (Appendix E.3), LLM scaling and equalized token-
+budget studies (Appendix E.4), hyperparameter sensitiv-
+ity (Appendix E.5), wall-clock budget sensitivity (Ap-
+pendix E.6), the source of the GLS advantage on FJSP
+(Appendix E.7), out-of-distribution generalization (Ap-
+pendix E.8), and resource consumption (Appendix E.9).
+Benchmarks.We evaluate A 2DEPT on a diverse set of
+NP-hard CO problems. For standard performance evalu-
+ation, we consider four representative benchmarks from
+FrontierCO (Feng et al., 2025): Maximum Independent Set
+(MIS), Capacitated Vehicle Routing Problem (CVRP), Ca-
+pacitated Facility Location Problem (CFLP), and Flexible
+Job-Shop Scheduling Problem (FJSP). To further assess
+robustness in highly constrained settings, we additionally
+include the Capacitated Electric Vehicle Routing Problem
+with Time Windows (CEVRPTW) and the Multi-Mode Re-
+source Constrained Project Scheduling Problem (MRCPSP).
+Detailed problem definitions are provided in Appendix A.4.
+Baselines.We compare A 2DEPT against three categories
+of baselines. (1) classical solvers: We include the com-
+mercial solver Gurobi (Gurobi Optimization, LLC, 2025)
+as a reference for optimal or near-optimal solutions, to-
+gether with a classical heuristic baseline based on Iterated
+Local Search (ILS) (Louren c ¸o et al., 2003). (2) learning-
+based methods: We evaluate representative neural solvers
+tailored to each problem, including SDDS (Sanokowski
+et al., 2025) for MIS, DeepACO (Ye et al., 2023) for CVRP,
+GCNN (Gasse et al., 2019) for CFLP, and MPGN (Lei et al.,
+2022) for FJSP. (3) LLM-based AHD methods: We compare
+against recent LLM-driven heuristic design frameworks,
+namely FunSearch (Romera-Paredes et al., 2024), EoH (Liu
+et al., 2024a), ReEvo (Ye et al., 2024), and MCTS-AHD
+(Zheng et al., 2025). For standard benchmarks and high-
+constraint evaluations, we use a unified step-by-step con-
+structive framework (Asani et al., 2023), which incremen-
+tally builds feasible solutions with minimal domain-specific
+engineering and thus emphasizes the LLM’s heuristic design
+capability. For the generalization study (Section 4.1.2), we
+instead evaluate under the Guided Local Search(GLS) and
+AAD paradigms. A detailed description on these general
+frameworks is provided in Appendix A.
+Settings.A 2DEPT is implemented in Python and exe-
+cuted on a personal computer equipped with an Intel Core
+Ultra 9 285K CPU and 96 GB of system memory. For all
+LLM-based methods, we fix the search budget to N=500
+LLM calls. Baseline methods are configured following the
+hyperparameters reported in their original papers. For fair-
+ness, each generated solver program is given a wall-clock
+time limit of 120 seconds to solve the entire evaluation
+dataset Deval (Appendix D.2). We run each method three
+6
+
+
+===== PDF PAGE 7 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+times on standard benchmarks and twenty times on high-
+constraint benchmarks, reporting averaged results (and stan-
+dard deviation when applicable). Within A2DEPT, we set
+the parent budget to K=5 per expansion step. Simulated an-
+nealing is initialized with T0=1.0 and decay factor α=0.95,
+with re-annealing triggered after Nstall=3 consecutive gener-
+ations without improvement using increment ∆T=0.2 . We
+synchronize the scheduler temperature τt with the annealing
+temperatureT t and set the penalty coefficient toλ=0.8.
+4.1. Main Results
+4.1.1. EXPERIMENTS ONSTANDARDBENCHMARKS
+As shown in Table 1, A2DEPT outperforms all LLM-based
+AHD baselines on every benchmark under both DeepSeek
+and Gemini, under the same step-by-step constructive tem-
+plate. Beyond winning on all tasks, A 2DEPT delivers
+sizable and consistent gap reductions relative to the best
+competing AHD method (for instance, from 17.42% to
+8.79% on CVRP and from 11.35% to 4.20% on MIS un-
+der DeepSeek), indicating that solver-level edits translate
+into robust quality gains. Averaging the per-task normal-
+ized Gap(%) values in Table 1 (each already expressed as
+a percentage deviation from the optimum, so cross-task av-
+eraging is on a common scale), A2DEPT reduces the mean
+gap by 9.8% relative to the best competing AHD method
+under DeepSeek. On CVRP and FJSP, the gains are smaller,
+indicating that domain-specific inductive biases and mature
+hand-engineered operators narrow the headroom available
+to generic program-space evolution. Notably, A2DEPT is
+competitive with strong non-LLM references: it matches
+Gurobi on MIS while remaining clearly better than all LLM
+baselines, whereas on CVRP the specialized neural method
+remains ahead, highlighting that learned priors can still dom-
+inate when problem structure is well captured by training.
+Overall, the table shows that A2DEPT consistently converts
+open-ended program exploration into measurable quality
+gains, with the largest benefits arising in domains where
+solver-level redesign matters most.
+4.1.2. GENERALIZATIONACROSSDESIGN
+FRAMEWORKS
+To ensure that the observed AAD–AHD gap is not specific
+to the step-by-step constructive template, we additionally
+evaluate the AHD baselines under GLS framework, where
+the LLM designs knowledge-based guidance matrices while
+the local-search operators are fixed (Appendix A.3). We
+also evaluate EoH and ReEvo in AAD.
+As shown in Table 2, FJSP is an outlier where GLS outper-
+forms all AAD-style methods when provided with expert-
+designed neighborhood operators, suggesting that a local-
+search inductive bias can dominate benefits of open-ended
+solver synthesis. This also suggests AHD can be competi-
+tive when the framework supplies suitable operator set and
+the LLM only needs to learn effective guidance. To pinpoint
+the source of the GLS advantage on FJSP, we additionally
+compare the LLM-designed guidance matrix against a ran-
+dom one under the same fixed operators (Appendix 14):
+the random matrix loses only a modest amount on FJSP but
+causes a sharp drop on CFLP. This contrast indicates that the
+FJSP advantage stems largely from the strong inductive bias
+of expert-designed neighborhood operators rather than from
+LLM-designed knowledge, making template-bound AHD
+and open-ended AADcomplementaryrather than strictly
+ordered. In contrast, A2DEPT targets a more general setting
+that evolves solver logic directly in program space with-
+out domain-specific operators, and it remains consistently
+strong on CFLP, CVRP, and MIS. Meanwhile, simply mov-
+ing EoH and ReEvo from AHD to AAD does not close
+the gap to A2DEPT, suggesting that extra freedom must be
+paired with mechanisms that preserve long-range logical
+consistency to be useful.
+4.1.3. EXPERIMENTS ONHIGH-CONSTRAINTCO
+High-constraint combinatorial optimization problems
+present significant challenges due to fragmented search
+spaces and stringent validation requirements, making the
+identification of feasible solutions particularly difficult. To
+evaluate A2DEPT’s capacity to address these challenges,
+we conduct experiments on two representative problems:
+CEVRPTW and MRCPSP. For CEVRPTW, we use the ES-
+OGU benchmark (Aslan et al., 2025). For MRCPSP, we use
+instances from the PSPLIB library (Sprecher & Kolisch,
+1996). Detailed dataset information is provided in Ap-
+pendix D.1. We report two metrics: the Infeasibility Rate
+(IR), which measures the percentage of test instances where
+the algorithm fails to generate a valid solution, and the Rel-
+ative Gap, which quantifies the deviation from the best solu-
+tion achieved across all successful runs. The results in Table
+3 highlight A2DEPT’s performance in high-constraint envi-
+ronments. On the CEVRPTW task, A2DEPT achieves the
+lowest IR and the best performancein terms of optimality
+gap. For the MRCPSP problem, A2DEPT outperforms all
+other methods in terms of solution feasibility. While no
+method achieves a valid solution for all instances due to the
+problem’s complexity, A2DEPT demonstrates robustness
+with asubstantially lower IR.
+4.2. Ablation Studies
+To validate the necessity of A 2DEPT’s components, we
+construct several ablated variants by disabling one mech-
+anism from the full pipeline, with all other settings fixed.
+Part A of Table 4 shows that each ablation degrades per-
+formance on at least one task relative to full A 2DEPT. In
+particular, disabling adaptive scheduling increases the gap
+on both tasks, suggesting that feedback-driven allocation is
+7
+
+
+===== PDF PAGE 8 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+Table 1.Main Results on Standard Benchmarks.Comparison of A 2DEPT against baselines under different LLM backbones. Obj.
+denotes the objective value (lower↓ or higher ↑ is better), and Gap reports the relative gap (%) to the Optimal solution. Standard deviations
+are shown for Gap to emphasize robustness under repeated runs. For LLM-based methods, we additionally report the standard deviation
+over independent runs. Bold: global best results among non-oracle methods; Shaded: best performance within each LLM group.
+Method CFLP CVRP FJSP MIS
+Obj. (105)↓ Gap (%) ± std ↓Obj. (10 5)↓ Gap (%) ± std ↓Obj. (10 4)↓ Gap (%) ± std ↓Obj. (10 3)↑ Gap (%) ± std ↓
+Baselines
+Optimal 6.01 – 0.99 – 1.25 – 2.86 –
+ILS 8.36 39.04 1.18 19.48 1.50 19.78 2.31 19.11
+Neural* 6.51 8.261.05 6.311.46 16.55 2.45 14.26
+Gurobi6.01 0.001.06 6.751.34 7.222.74 4.28
+LLM: DeepSeek v3.2 (Non-Think Mode)
+FunSearch 7.34 22.13±3.03 1.23 24.13±9.59 1.60 27.82±3.98 2.35 17.89±2.93
+EoH 7.12 18.48±4.73 1.16 17.42±1.55 1.60 28.08±1.62 2.54 11.35±6.18
+ReEvo 7.01 16.56±6.55 1.20 18.04±4.65 1.60 28.24±2.71 2.44 14.70±3.78
+MCTS-AHD 6.86 14.09±2.23 1.19 19.97±3.88 1.58 26.55±2.13 2.40 16.16±5.51
+A2DEPT (Ours) 6.70 11.46±3.70 1.08 8.79±2.63 1.49 18.95±4.15 2.74 4.20±2.07
+LLM: Gemini 2.5 Flash
+FunSearch 7.45 23.94±1.69 1.24 25.13±3.96 1.62 29.31±5.15 2.37 17.12±6.28
+EoH 7.08 17.82±8.04 1.14 14.72±0.79 1.62 29.45±3.72 2.39 16.47±4.27
+ReEvo 6.98 16.15±6.75 1.20 17.47±1.38 1.62 29.21±4.09 2.40 16.15±0.83
+MCTS-AHD 7.26 20.87±2.57 1.14 15.28±3.73 1.63 30.16±1.45 2.40 16.14±5.90
+A2DEPT (Ours) 6.87 14.24±1.25 1.11 12.49±2.73 1.53 22.71±5.91 2.65 7.43±2.92
+Note: “Neural*” denotes learning-based methods.
+Table 2.Generalization across Paradigms.Comparison of op-
+timality gaps (%) under different algorithm design frameworks
+on standard benchmarks. Values are reported as mean gap ±
+standard deviation. All LLM-based methods use DeepSeek v3.2
+(Non-Think Mode). Lower is better ↓. Bold: best performance in
+each column.
+Method CFLP CVRP FJSP MIS
+A 2 DEPT (Ours)11.46±3.70 8.79±2.6318.95±4.154.20±2.07
+Framework: GLS
+FunSearch 20.92±4.52 12.62±2.11 14.71±1.82 17.88±0.41
+EoH 17.39±1.63 12.68±4.63 11.71±1.09 15.33±3.41
+ReEvo 14.39±1.85 12.32±3.65 13.77±0.52 17.79±2.90
+MCTS-AHD 15.87±3.55 12.09±2.8710.76±1.0610.49±1.74
+Framework: AAD
+EoH 16.51±8.27 10.38±3.19 17.47±4.66 8.31±3.99
+ReEvo 13.79±6.23 9.72±4.65 19.67±7.73 7.85±2.51
+important for balancing local refinement and structural ed-
+its. Removing Boltzmann supplementation further degrades
+performance, supporting the role of diversity-preserving
+sampling from the global search tree. Replacing hybrid
+SA+Boltzmann selection with uniform random parent se-
+lection also worsens both benchmarks, confirming the im-
+portance of performance-aware selection pressure. Finally,
+constraining the method to a fixed-template AHD setting
+yields the largest gaps, highlighting the benefit of open-
+ended program-level solver evolution. We also analyze
+Table 3.Results on High-Constraint Problems.Comparison of
+IR and Optimality Gap. Gap is relative to the known optimum; “–”
+indicates the optimum is unavailable. Bold: best result.
+Method
+CEVRPTW MRCPSP
+Gap (%)↓IR (%)↓Gap (%)↓IR (%)↓
+LLM: DeepSeek v3.2 (Non-Think Mode)
+FunSearch 6.81 15.25 – 29.64
+EoH 3.52 9.87 – 25.68
+ReEvo 4.89 8.67 – 22.75
+MCTS-AHD 3.75 8.79 – 24.85
+A2DEPT (Ours)0.00 2.56–15.89
+sensitivity to the parent set size k, which controls the batch
+expansion budget. Part B of Table 4 shows that overly small
+k limits diversity, whereas overly large k dilutes the fixed
+sampling budget; overall, k=5 offers the best trade-off (ad-
+ditional results are reported in Appendix E.5).
+4.3. Case Study
+We trace the evolutionary lineage of the best MIS solver to
+illustrate how A2DEPT’s mechanisms interact (Appendix F).
+A branch rejected by primary selection is recovered by Boltz-
+mann supplementation, preserving a diverse stepping stone.
+Along this branch, hierarchical operators enable a jump
+from a constructive greedy heuristic to an ILS-style solver
+8
+
+
+===== PDF PAGE 37 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+it into the parent pool, preserving a pivotal evolutionary pathway that would otherwise have been pruned.
+Phase 3: Macro-level Paradigm Shift (ID 70, Score 25.94).Using the retained lineage, Generation 4 (ID 70) exhibits a
+massive structural jump. As illustrated in Figure 4(b), the LLM moves beyond constructive greedy logic and synthesizes
+a complete ILS framework. This includes a kick move for perturbation, a multi-operator local search step, and
+basin-hopping control logic. This transition confirms the ability of our hierarchical operators to perform non-local program
+rewrites.
+Phase 4: Efficiency Refinement (ID 318, Score 26.44).In later generations (e.g., Generation 24), the focus shifted to
+fine-grained refinement. ID 318 introduced priority queues (Heaps) via heapq to support repeated ranking operations
+efficiently (Figure 4(c)). Throughout this process, the Program Maintenance mechanism was critical in detecting and
+repairing broken dependencies as the code grew into a complex multi-module system.
+# ID 2: Simple Greedy Construction
+defsolve_mis(adjacency_matrix, n_nodes):
+candidate_nodes = np.arange(n_nodes)
+while len(candidate_nodes) > 0:
+next_node = select_next_node(...)# min-degree style rule
+independent_set.append(next_node)
+# ... remove neighbors ...
+returnindependent_set
+(a)Generation 1: Baseline Constructive Heuristic
+# ID 70: Paradigm Shift to Iterated Local Search (ILS)
+defsolve_mis(adjacency_matrix, n_nodes):
+current_set = greedy_initial_solution(...)
+foriterationin range(max_iterations):
+ifno_improve_count >= max_no_improve:
+current_set = kick_move(current_set, ...)# perturbation
+new_set = local_search_step(current_set, ...)# add/swap/plateau
+if len(new_set) >len(best_set):
+best_set = new_set.copy()
+return sorted(best_set)
+(b)Generation 4: Structural Breakthrough Enabled by Hierarchical Operators
+# ID 318: Heuristic Guidance + Data Structure Optimization
+importheapq# efficiency: priority queue operations
+deflocal_search_step(current_set, ...):
+ifadd_candidates:
+degrees = [np.sum(adj[node])fornodeinadd_candidates]
+min_deg =min(degrees)
+best = [nforn, din zip(add_candidates, degrees)ifd == min_deg]
+node_to_add = random.choice(best)# heuristic-guided choice
+current_set.add(node_to_add)
+returncurrent_set
+(c)Generation 24: Efficiency Refinement via Heaps and Heuristic Guidance
+Figure 4.Evolutionary trajectory on MIS.The solver evolves from a constructive greedy heuristic (ID 2) to an ILS-based framework
+(ID 70) through non-local structural edits, and later improves efficiency and decision quality (ID 318).
+F.2. Case Study II: Failure Analysis and AAD Risks
+To provide a comprehensive view of open-ended AAD, we analyze recurring failure modes observed on MIS. One prominent
+failure mode isincomplete system-level refactoring: the LLM initiates a global change of data representation, but fails to
+consistently enforce the new contract across modules. Unlike AHD, where data structures are typically fixed, A 2DEPT
+allows the LLM to redefine the solver’s data representation. While this enables profound innovations (like the heap
+optimization in Phase 4 of Appendix F.1), it also opens the door to catastrophic structural inconsistencies.
+The Bitmask Refactoring Trap (IDs 158, 160).We analyzed a cluster of candidates that are marked as non-executable
+due to runtime errors. In these instances, the LLM attempted a theoretically sound optimization: replacing standard Python
+Set operations with bitmasking (using integers to represent sets of nodes) . The model correctly identified that bitwise
+37
+
+
+===== PDF PAGE 38 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+operations could offer O(1) complexity for set intersections on dense graphs and successfully implemented helper functions
+likeset to bitmask.
+The Failure Mechanism: Partial Migration.The crash occurred because the refactoring waspartial. As shown in
+Figure 5, while the mutation operators allowed the LLM to rewrite the core search logic to use bitmasks, the cognitive
+load of maintaining this new ”Bitmask Protocol” across all system modules proved too high. Notably, this is not a missing-
+dependency issue: the program is syntactically complete, yet violates a cross-module data contract, which is harder to
+recover from with dependency closure alone. Specifically, the LLM failed to enforce the new data contract in the perturbation
+operator (kick move) and the final improvement phase, leading toType Mismatcheswhere bitmasks (integers) were
+passed to functions expecting iterables (sets).
+Insight.This failure mode highlights a key trade-off: to enable system-level discovery, AAD must tolerate the instability
+arising from imperfect architectural migrations. It suggests that future work could benefit from static analysis tools or
+”type-aware” prompt augmentation to help the LLM maintain global consistency during radical data structure changes.
+# ID 158: Partial Refactoring Failure (Bitmask vs Set)
+# 1. The LLM correctly implements bitmask helpers (Good Idea)
+defset_to_bitmask(node_set, n_nodes):
+mask = 0
+fornodeinnode_set: mask |= 1 << node
+returnmask
+# 2. The Local Search is updated to use bitmasks (Complex Logic)
+defimproved_local_search(current_set, ...):
+# ... logic using bitwise OR/AND ...
+current_mask = set_to_bitmask(current_set, n_nodes)
+# LLM forgets to convert back to Set before returning!
+returncurrent_mask# <--- Returns INT (Bitmask)
+# 3. The Main Loop or Next Operator crashes (Type Mismatch)
+defsolve_mis(adjacency_matrix, n_nodes):
+# ...
+# improved_local_search returns an INT, but current_set expects a SET
+current_set = improved_local_search(current_set, ...)
+# CRASH: kick_move expects a Set to calculate len(), but gets an Int
+ifno_improve_count >= max_no_improve:
+# TypeError: object of type ’int’ has no len()
+current_set = improved_kick_move(current_set, ...)
+Figure 5.Anatomy of a Failure (ID 158).The LLM attempts to optimize the solver by introducing bitmasks. However, the refactoring is
+incomplete: improved local search returns a bitmask (int) instead of a set, causing a type error in the subsequent kick move
+operator which expects a standard set. This illustrates the risk of ”Type Consistency” loss during open-ended architectural redesign.
+G. Generalization to Continuous Optimization
+To test whether A2DEPT generalizes beyond discrete combinatorial optimization, we further evaluate it on three continuous
+domains: numerical ODE integration, root-finding, and feedback control. Together, these tasks assess whether the algorithm-
+design logic learned in discrete search can transfer to continuous mathematical settings.
+G.1. Discovery of Numerical ODE Solvers
+To evaluate the capability of A2DEPT in discovering numerical algorithms for continuous dynamics, we designed a rigorous
+benchmarking framework covering distinct numerical challenges.
+Experimental Setup.The experiment dataset consists of four problem families commonly used in numerical ODE
+benchmarking (Hairer et al., 1993): (1)Non-Stiff(Harmonic Oscillator), (2)Medium Non-Linear(Van der Pol Oscillator),
+(3)Stiff(Robertson Kinetics), and (4)High-Dimensional(Discretized Heat Equation, N= 20 ). The evaluation metric is
+defined as S=−log 10(Error)−λlog 10(Cost), which balances accuracy and computational effort (function evaluations).
+Crucially, to rigorously test stability, we imposed a challenging fixed step size of∆t= 0.05 for all fixed-step solvers. This
+step size is significantly larger than the stability limit of classical explicit methods for the Stiff and High-Dimensional
+problems, thereby forcing the algorithm to discover implicit-like or highly stable mechanisms to ensure convergence. For
+adaptive solvers, we set a high precision tolerance (rtol= 10 −5) to simulate industrial usage standards.
+38
+
+
+===== PDF PAGE 39 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+Table 17.ODE Solver Performance Comparison.Scores reflect −log 10(Error)−λlog 10(Cost). Higher is better. “-20” indicates
+divergence. A2DEPT achieves state-of-the-art performance on Stiff and High-Dimensional problems, outperforming specialized solvers
+like LSODA, though it struggles with medium non-linearity.
+Problem Family Baselines Ours
+Euler BwdEuler RK4 RK45 LSODA DOP853 A2DEPT
+1. Non-Stiff (Harmonic) 0.08 0.145.704.10 3.86 4.78 4.60
+2. Medium (Van der Pol) -0.57 -0.68 3.30 4.08 3.244.82 -1.03
+3. Stiff (Robertson) -20.00 3.42 -20.00 3.21 4.73 1.75 5.56
+4. High-Dim (Heat Eq) -3.45 1.20 -20.00 5.30 5.04 5.32 5.99
+Baselines.We benchmarked the evolved solver against a comprehensive suite of classical numerical integrators, organized
+into three distinct categories. First, we employed explicit fixed-step methods (Euler, RK4) (Hairer et al., 1993) to represent
+standard low-order and high-order approaches, which are anticipated to fail in stiff regimes given the large time step (∆t).
+Second, we included the implicit fixed-step method (Backward Euler) to benchmark stability; while inherently robust against
+stiffness, this approach typically incurs high computational costs due to the necessity of iterative root-finding. Finally,
+we compared against adaptive step-size methods (RK45, DOP853, LSODA) (Fehlberg, 1969; Dormand & Prince, 1980;
+Hindmarsh, 1983), representing industrial solvers. Among these, LSODA serves as the strongest baseline for stiff problems
+due to its capability to automatically switch between stiff (BDF) and non-stiff (Adams) integration schemes.
+Results Analysis.Table 17 shows that A 2DEPT performs particularly well on stiff and high-dimensional problems, where
+standard explicit solvers diverge under the large fixed step size. It even surpasses specialized industrial solvers such as
+LSODA on the stiff benchmark, suggesting that the evolved method acquires unusually strong stability properties. On
+medium nonlinear dynamics, however, A2DEPT underperforms adaptive methods, indicating that the current strategy lacks
+sufficiently fine-grained error-control logic in regimes that alternate between stiff and non-stiff behavior.
+G.2. Discovery of Numerical Root-Finding Algorithms
+To evaluate A2DEPT’s capability in discovering optimization algorithms for continuous functions, we constructed a
+comprehensive benchmark covering diverse root-finding challenges.
+Experimental Setup.We generated a dataset consisting of 400 stochastic instances across four distinct problem families.
+These includeSmooth Polynomialsrepresenting well-behaved differentiable functions,Ill-Conditioned Functionscharacter-
+ized by multiple roots with vanishing derivatives ,Oscillatory Functionsfeaturing high non-linearity and local extrema, and
+High-Dimensional Systems(N= 2) requiring vector-valued solutions. To comprehensively assess algorithmic quality, we
+defined an efficiency-aware unified scoreS=I succ ·(1−αln(1 +N fev)−βln(1 +N iter))−(1−I succ)·γ , where Isucc
+denotes the success indicator, and Nfev and Niter represent the number of function evaluations and iterations, respectively.
+This metric explicitly rewards algorithms that converge successfully with minimal computational cost.
+Baselines.We tested A 2DEPT against a wide spectrum of classical numerical solvers to ensure a rigorous comparison.
+For univariate problems, the baseline suite includes robust bracketing methods such as Bisection and Brent (Brent, 2013),
+which guarantee convergence given a valid interval; derivative-based methods like Newton-Raphson and Secant, which
+exploit gradient information for rapid convergence (Press et al., 2007); and acceleration techniques such as Steffensen’s
+method (Steffensen, 1933). For multivariate systems, we employ specialized quasi-Newton solvers, specifically Broyden’s
+method (Broyden, 1965) and Anderson acceleration (Anderson, 1965), which are designed to handle coupled non-linear
+equations without full Jacobian computation.
+Results Analysis.The comparative results presented in Table 18 illustrate A 2DEPT’s versatile performance profile. On
+well-behavedSmooth PolynomialsandOscillatoryfunctions, A 2DEPT effectively matches the theoretical optimality of
+Newton-Raphson while significantly surpassing derivative-free methods, suggesting the rediscovery of gradient-exploitation
+logic. In the challengingHigh-Dimensionalsetting, A 2DEPT demonstrates superior generalization, substantially outper-
+forming standard multivariate solvers like Broyden and Anderson that struggle with coupled non-linearities. Although
+A2DEPT falls short of specialized bracketing methods like Brent onIll-Conditionedproblems due to the lack of strict
+39
+
+
+===== PDF PAGE 40 =====
+A2DEPT : Large Language Model–Driven Automated Algorithm Design via Evolutionary Program Trees
+Table 18.Performance Comparison on Numerical Root-Finding Tasks.We report the average unified score (higher is better) over
+400 stochastic instances. “–” indicates the method is not applicable to the problem dimension. A2DEPT achieves the best or near-best
+performance across all categories, demonstrating superior generalization compared to specialized baselines.
+Task Family Baselines Ours
+Bisect. Brent Newton Secant Steff. Broyden And. A2DEPT
+1. Smooth Poly. 0.36 0.500.640.59 0.40 – – 0.63
+2. Ill-Cond. (Roots) 0.650.750.30 0.23 0.45 – – 0.51
+3. Oscillatory -1.15 -1.200.660.59 0.64 – – 0.66
+4. High-Dim (N= 2) – – – – – 0.38 0.38 0.60
+Table 19.Long-Horizon Control Performance (T=5000).Average stability scores over 5 random seeds (higher is better). “Fail”
+indicates divergence. The extended horizon highlights steady-state precision. A2DEPT achieves SOTA results across all tasks, notably
+outperforming the expert-designed Energy Shaping on Pendulum and matching the theoretical optimal LQR on CartPole and Double
+Integrator.
+System Dynamics Baselines Ours
+PID SMC Bang-Bang Energy Shaping LQR A2DEPT
+1. Pendulum Swing-Up -1086.69 -1086.69 -1086.69 -8.48 -1086.69 -7.85
+2. CartPole Stabilization -22299.76 -25683.72 -4881.07 – -0.09 -0.08
+3. Double Integrator -2.18 -2.17 -7.74 –-2.12 -2.13
+interval safeguards, it still robustly outperforms pure gradient-based methods that suffer from vanishing derivatives. In
+essence, A2DEPT acts as a robust generalist, striking a favorable balance between the convergence speed of gradient
+methods and the stability of heuristic approaches across diverse topological landscapes.
+G.3. Discovery of Feedback Control Policies
+To evaluate A2DEPT’s ability in discovering continuous feedback control laws, we constructed a benchmark consisting of
+three classic control tasks with distinct dynamic properties.
+Experimental Setup.The evaluation includes three physical systems: Pendulum Swing-Up ( ˚Astr¨om & Furuta, 2000)
+(underactuated non-linear), CartPole Stabilization (Barto et al., 2012) (multivariable unstable), and Double Integrator (linear
+canonical). All systems are simulated via RK4 integration (Press et al., 2007) with a time step of ∆t= 0.02s . Crucially, we
+use an extended horizon of T= 5000 steps to evaluate long-horizon stability and steady-state accuracy. Performance is
+measured by a composite cost that heavily penalizes divergence (Ifail), while also minimizing tracking error (MSE) and
+control effect.
+Baselines.We compare against a diverse set of representative strategies. For linear regimes, we include PID ( ˚Astr¨om
+& H ¨agglund, 2006) as a standard model-free baseline and the Linear Quadratic Regulator (LQR) (Kreindler, 1963),
+which is optimal control for linear systems under quadratic costs. To handle nonlinear dynamics, we consider switching
+controllers including Sliding Mode Control (SMC) (Utkin, 2003) and Bang-Bang control; these methods use discontinuous
+actions to enforce desired behavior but often induce chattering. Additionally, we incorporate an expert heuristic (Energy
+Shaping)(Spong, 2002), a domain-specific controller explicitly designed to manage the global non-linearity inherent in the
+Pendulum Swing-Up task.
+Results Analysis.Table 19 summarizes the results. On Pendulum Swing-Up, where linear controllers typically fail,
+A2DEPT succeeds and improves upon the energy-shaping heuristic, suggesting a more efficient swing-up strategy. On
+CartPole and the Double Integrator, A 2DEPT performs comparably to the optimal LQR baseline, indicating that it can
+recover near-optimal feedback behavior in linearizable settings. Moreover, relative to switching baselines that can be
+destabilized by chattering, A 2DEPT tends to produce smooth control laws that remain stable over the long evaluation
+horizon.
+40

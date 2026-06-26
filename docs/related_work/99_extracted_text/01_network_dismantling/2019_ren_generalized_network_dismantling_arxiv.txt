@@ -1,0 +1,771 @@
+
+
+===== Page 1 =====
+Generalized Network Dismantling
+Xiao-Long Rena,1, Niels Gleinigb,1, Dirk Helbinga, and Nino Antulov-Fantulina,2
+aComputational Social Science, ETH Zürich, Clausiusstraße 50, 8092 Zürich, Switzerland; bDepartment of Computer Science, ETH Zürich, Switzerland
+Finding an optimal subset of nodes in a network that is able to dis-
+rupt the functioning of a corrupt or criminal organization or contain
+an epidemic or the spread of misinformation is still one of the open
+problems in modern network science. In this paper, we introduce the
+generalized network dismantling problem, which aims at ﬁnding a
+minimum set of nodes that, when removed from a network, results in
+the fragmentation of a network into subcritical network components
+at minimum cost. Contrary to previous formulations, we allow the
+costs for node removal to take arbitrary non-negative real value. For
+unit costs, our formulation becomes equivalent to the standard net-
+work dismantling problem. Our non-unit cost generalization allows
+one to consider topological cost functions related to node centrality
+or non-topological features such as the price or protection level of
+a node. In order to solve this optimization problem, we propose a
+method, which is based on the spectral properties of a novel node-
+weighted Laplacian operator. The proposed method is applicable to
+large-scale networks with millions of nodes. It outperforms current
+state-of-the-art methods and opens new directions for understand-
+ing the vulnerability and robustness of complex systems.
+complex systems | robustness| network fragmentation
+I
+n a hyper-connected world, systemic instability, based on
+cascading eﬀects, can seriously undermine the functionality
+of a network(1). The quick global spread of rumors and fake
+news may be seen as recent examples (2–4), while the spread
+of epidemics (5–7) or failure propagation (8–10) is a problem
+that has been around much longer. Furthermore, it is known
+that the network structure, for example the exponent charac-
+terizing scale-free networks, is of particular importance for the
+controllability of cascading eﬀects (11). For certain scaling
+exponents of scale-free network, the variance or mean value of
+relevant quantities may not be well-deﬁned, which means that
+unpredictable or uncontrollable behavior may result. It may
+then be impossible to contain epidemic spreading processes.
+Similar circumstances may make it impossible to contain the
+spread of computer viruses or misinformation—a problem that
+is not only relevant for the quick increase of cyberthreats,
+but may also undermine the functionality of markets, societal
+or political institutions. At the same time, the removal or
+deactivation of even a small set of collective inﬂuential nodes
+can dismantle the network into isolated subcomponents and
+thus disrupt the malfunctioning of a system. For example,
+scale-free networks (12, 13) are more robust to random re-
+movals than Erdős–Rényi network (14, 15), but at the same
+time more vulnerable to targeted attacks (16–22).
+However, ﬁnding a minimum set of nodes, the removal of
+which is able to dismantle a network (23, 24) into isolated
+subcomponents of speciﬁc small size belongs to class of hard
+computational problems, called non-deterministic polynomial
+hard (NP-hard) problems. Essentially, this implies that there
+currently exists no eﬃcient algorithm that can ﬁnd the best
+dismantling solution for large-scale structures. However, this
+does not exclude ﬁnding approximate dismantling solutions.
+For example, novel approximations (23–30), based on spin-
+glass and optimal percolation theory, have been proposed. But
+still, all these methods make the implicit assumption that the
+cost of removing nodes is constant. Only recently, the eﬀect of
+costs depending on the node degree was studied (31, 32), but
+restricted to random network structures (31) or edge-based
+strategies (32) that take the degree-based cost into account.
+This paper addresses the question of how to select the set
+of nodes in a network, that, when removed or (de)activated,
+can stop the spread of (dis)information, or an epidemic or
+disrupt the functioning of a malicious systems by fragmenting
+it into small components with minimal cost. In the generalized
+network dismantling problem, the cost of removing a node
+can be an arbitrary non-negative real number, which can, for
+example, be speciﬁed as a function of node centrality properties
+(33) such as degree, PageRank, betweenness or other variables
+unrelated to network topology. Examples of variables that
+may determine the cost of removing a node include: the
+monetary price for buying or controlling a node, the protection
+level or the energy eﬀort. In this paper, we reformulate the
+Laplacian spectral partitioning (34, 35), which dates back
+to 1973 and since then was primarily used for edge removal
+strategies on networks. We then construct a special node–
+weighted Laplacian operator, which serves to determine the
+upper bound of the cost of the generalized network dismantling
+problem. Furthermore, we propose an elegant and eﬃcient
+approximation algorithm for the problem, which is applicable
+to large-scale networks. Finally, a ﬁne-tunning mechanism is
+introduced by mapping the spectral solution to the weighted
+vertex cover problem (36) from graph theory. Understanding
+the key relationships between dismantling solutions and their
+cost(s) enables one to increase the level of robustness of real-
+world systems.
+Signiﬁcance Statement
+The functioning of many socio-technical systems depends on
+the ability of its subcomponents or nodes to communicate or
+interact via its connections. By removing or deactivating a spe-
+ciﬁc set of nodes, a network structure can be dismantled into
+isolated subcomponents, thereby disrupting the malfunction-
+ing of a system or containing the spread of misinformation or
+an epidemic. We propose a generalized network dismantling
+framework, which can take realistic removal costs into account
+such as the node price, protection level or removal energy. We
+discuss applications of cost-efﬁcient dismantling strategies to
+real-world problems such as epidemic spread or criminal and
+corruption networks.
+No conﬂict of interest.
+1X.-L.R. and N. G. contributed equally to this work.
+2To whom correspondence should be addressed. E-mail: anino@ethz.ch
+| April 13, 2018 | 1–6
+arXiv:1801.01357v2  [cs.SI]  12 Apr 2018
+
+===== Page 2 =====
+Fig. 1. (a) Network dismantling measured by the size of the giant connected component (GCC) with respect to the degree-based deﬁnition of the cost for three different
+strategies: state-of-the-art Min-Sum (23), random removal (37) (site percolation), our GND strategy. Dismantling represents the controlled process of suppressing the spread of
+misinformation, computer viruses or other harmful contagion effects on a online social network (Petster-hamster (38)). The Min-Sum algorithm was set to dismantle the network
+up to a ﬁxed target size of 80 percent of the network GCC size. The cost of removing a node is proportional to the current degree of a node and the cost of the dismantling is
+measured with the fraction of removed edges adjacent to the removed nodes. We observe that, for the same dismantling cost 0.4, the Min-Sum algorithm produces results (red
+color) which are 5 % worse than the naive random removal (green color) of nodes in a network. However, for the same cost the proposed GND strategy (blue color) fragments
+the network up to 62 % GCC size, which is 18 % better than the Min-Sum strategy. (b,c,d) Online social network (Petster-hamster (38)) displaying the set of removed nodes
+according to the Min-Sum (red color), random removal (green color), and our GND strategy (blue color). Although the Min-Sum strategy removes a small percentage of nodes,
+the cost is rather high as it targets high degree nodes, which is visible from the histogram of the removed nodes. In contrast, the GND strategy avoids the expensive removal of
+hubs in this scenario and produce a much better fragmentation.
+Main Contributions
+The main contributions of this paper are listed below:
+(i) We introduce a generalized network dismantling problem,
+which seeks to ﬁnd a set of nodes that, when removed
+from a network, results in a network fragmentation into
+components of subcritical size at minimum cost. Contrary
+to the previous formulations (23–30), assuming identical
+costs for the removal of each node, we allow for costs that
+have arbitrary non-negative real values.
+(ii) We formulate a novel node-weighted graph-cut objective
+function, which determines the upper bound for the gen-
+eralized network dismantling cost. We ﬁnd the analytical
+solution for the relaxed objective function, which is related
+to the spectral properties of the node-weighted Laplacian
+matrix.
+(iii) To dismantle large-scale networks, we propose an eﬃcient
+spectral approximation by constructing a Power Lapla-
+cian operator, which has complexityO(n·log2+ϵ(n)). Fur-
+thermore, we provide analytical bounds and convergence
+proofs for the spectral approximation. Finally, we propose
+a ﬁne-tuning mechanism by mapping the problem to the
+weighted vertex cover problem.
+(iv) We show that, on real networks, our approach outper-
+forms current state-of-the-art methods (23, 24, 26, 28, 29)
+for non-unit costs. In unit cost scenario, our approach per-
+forms either better or comparably to other state-of-the-art
+methods.
+Generalized network dismantling problem
+Let us deﬁne a networkG(V, E) as the set of nodes,V, which
+are connected via a set of edges, E. A set S is called a
+C-dismantling set, if the largest connected component of a
+network contains at mostC nodes (23, 39). Finding the C-
+dismantling set is a NP-hard problem. Current state-of-the-art
+methods (23, 24, 26, 28, 29) make the implicit assumption
+that the cost of node removal is the same for all nodes in
+a network, regardless of their importance. Here thus, we
+generalize the network dismantling problem in such a way that
+the cost of removing a nodei can be an arbitrary non-negative
+number wi∈R instead of a unit value. More formally, for a
+given network G(V, E), we want to ﬁnd the subset of nodes
+S⊆ V with the minimum cost of removal, which will result
+in fragmentation into components of sizeC. Depending on
+the system of interest, the costwi could represent the amount
+of energy needed to remove a node, monetary cost of buying
+or controlling a node, or some other network measure such as
+the node importance or inﬂuence. The presented methodology
+works for arbitrary non-negative weights, but in the absence of
+other information, here we use the node degree as a proxy for
+node importance and the associated removal cost. Note that,
+in case of unit costs, the problem becomes equivalent to the
+standard network dismantling problem (23, 24, 26, 28, 29).
+Node-weighted spectral cut. Let us assume that we want to
+partition the networkG = (V, E) in such a way that the nodes
+from a setM⊆ V are not connected to the nodes from the
+complementary set M = V\ M. Whether a nodei belongs to
+the set M is represented by the following vectorv∈ Rn:
+vi :=
+{
++1 i∈ M ,
+−1 otherwise. [1]
+The classical spectral bisection of a graph aims to minimize the
+number of edges that has to be removed between the clusters
+M and M. In this paper we propose a novel node–weighted
+spectral cut objective function, where the cost of cutting the
+edge (i, j) is equivalent to the cost of removing nodesi and j.
+Then the upper bound for the cost of removing a subset
+of nodes that are adjacent to the edges separating clustersM
+and M is:
+1
+2
+∑
+i,j
+−1
+2 (vivj− 1) Ai,j (wi + wj− 1) , [2]
+2 | Ren et al.
+
+===== Page 3 =====
+where the matrixA denotes the adjacency matrix of the net-
+work. Therefore, if the edge(i, j) connects nodes from diﬀerent
+clusters, the associated cost iswi + wj− 1, as vivj =−1 and
+Ai,j = 1. In contrast, if the edge(i, j) connects nodes from
+the same cluster (vivj = 1), the associated cost is zero, as this
+link is not removed. Without loss of generality (see SI section
+1 for more details), we assume that the proxy for the weight
+is proportional to the degree centralitywi∝ di. The term
+(wi + wj− 1)containstheconstantelement −1inordertolead
+to a more elegant notation. Additionally, it corrects for double
+counting of links that connectsi and j. Now, we deﬁne the ma-
+trix B by the elementsBi,j = Ai,j (wi + wj− 1), and deﬁne
+the node-weighted Laplacian of the matrixB = AW +W A−A
+by Lw = DB−B. In matrix notation the optimization problem
+can be written as:
+min 1
+4 vT Lwv [3]
+subject to
+1T v = 0, [4]
+vi∈{ +1,−1} , i∈{ 1, 2, ..., n} . [5]
+Matrices W and DB are diagonal matrices with the elements
+Wii = di and (DB)ii =
+∑n
+j=1 Bij. For more details about the
+objective function see section 1 of the SI.
+When the weight matrix equals the identity matrix (W =
+I), we get the unweighted Laplacian, which corresponds to
+the classical bisection problem (34, 35, 40). The additional
+constraint 1T v = 0 enforces that clusters are of the same
+size. Unfortunately, the optimization problem is NP-hard.
+Therefore, we follow the standard relaxation (34) from the
+integer constraint vi∈{ +1,−1} to vi∈R . The solution to
+this relaxed constrained minimization problem is, according to
+the Courant-Fisher theorem, analytically given by the second
+smallest eigenvector of the node–weighted Laplacianλ2v(2) =
+Lwv(2). A more detailed derivation of this solution is presented
+in section 1 of the SI. If we remove all the nodesi whose
+corresponding element in the second smallest eigenvector is
+non-negative (v(2)
+i >= 0) and has a neighborj with a negative
+entry (v(2)
+j < 0), the network will fragment into two sub-
+networks M and ¯M. Note that we can make a ﬁne-tuning of
+the spectral approximation solution, which will be described
+later. Recursively, the node–weighted spectral cut is applied
+to M and ¯M until the network is suﬃciently fragmented into
+small subnetworks of maximum sizeC.
+Spectral approximation.In order to ﬁnd the second smallest
+eigenvectors for large-scale networks, we propose the following
+simple and elegant approximation algorithm. Note that theLw
+is a real, symmetric and positive semideﬁnite matrix. Then, it
+has real non-negative eigenvaluesλ1≤ λ2≤ ...≤ λn with the
+eigenvectors v(1), ..., v(n), which form an orthonormal basis
+of Rn. In section 2 of the SI, we show that 0 = λ1 and
+λn≤ 6· d2
+max, where dmax is the maximum degree of any
+node of the network. Furthermore, in section 2 of the SI,
+we also give spectral bound for general non-negative weights
+λn≤ 4dmax(wmax + 1), where wmax is the maximum cost. So,
+in order to computev(2), we consider the matrix˜L = 6· d2
+max·
+I− Lw, which has the same eigenvectorsv(1), ..., v(n) as Lw.
+Now the corresponding eigenvalues are shifted such that˜λ1 =
+6· d2
+max≥ ...≥ ˜λn = 6· d2
+max− λn≥ 0. Let v(1) correspond
+to the eigenvector with the largest eigenvalue andv(2) to
+the eigenvector with the second largest eigenvalue. Then,
+Node weighted 
+Laplacian matrix
+Spectral approximation = apply linear 
+operator to random vector Fine -tuning of spectral solution
+B= + −
+ =  −=
+1 ⋯ 0
+⋮ ⋱ ⋮
+0 ⋯
+Adjacency matrix: A Node weights matrix
+(2)
+= 6 Ι-
+=  
+(3)(4)
+(1)
++
+< 0
+≥ 0
+Fig. 2. Schematic diagram of the proposed GND method for generalized network
+dismantling. (1) The input network is deﬁned by the adjacency matrixA. The costs for
+node removals are represented by the diagonal matrix W and visualized by different
+node sizes in the network. (2) Construction of the cost-weighted network deﬁned
+by the adjacency matrix B and it’s corresponding node weighted Laplacian Lw. (3)
+Construction of the Power Laplacian operator ˜Lk, which is applied to the random
+vector v′ on an n-dimensional sphere that is perpendicular to the ﬁrst eigenvector
+v1 = (1 , 1, ...., 1). The result gives an approximate solution to the generalized
+network dismantling into two components {i : vi < 0} and{i : vi≥ 0}. The
+operator ˜Lk is constructed from the node–weighted Laplacian (LW ) and the scaled
+identity matrix I with the maximal degree of a node in the network, dmax. (4) Fine-
+tuning of the spectral solution is done with the weighted vertex cover on the subgraph
+of nodes that contains edges between components (represented in black and red).
+The solution of the ﬁne-tunning is a subset of nodes represented in red.
+we ﬁnd the eigenvector ofLw associated with the eigenvalue
+λ2 via the following steps: (i) start with a random vectorv
+uniformly drawn from the unit sphereSn, (ii) force it to be
+perpendicular to the ﬁrst eigenvectorv1 = (1, ...,1)T of the
+weighted Laplacian Lw and (iii) apply the linear operator˜Lk
+with unit normalization to our vectorv. The pseudo-code of
+this spectral approximation is:
+1. Draw v randomly from a uniform distribution on the unit
+sphere.
+2. Set v = v−
+vT
+1 v
+vT
+1 v1
+· v1.
+3. For i = 1 to k = η(n), set
+v =
+˜Lv
+∥ ˜Lv∥.
+The intuition that the random vectorv converges exponen-
+tially to some eigenvector ofLw with eigenvalueλ2 is closely
+related to the spectral properties of operator˜Lk. Note that
+we can represent our random vectorv in the orthonormal
+eigenvector basis as v =
+∑n
+i=1 ψiv(i). The second step of
+orthogonalization ensures ψ1 = 0 and ψ2̸= 0 (almost surely).
+Finally, by applying the linear operator˜Lk to vector v we get:
+˜Lkv =
+n∑
+i=2
+ψi ˜λi
+k
+v(i)∝ ψ2v(2) +
+n∑
+i=3
+ψi
+( ˜λi
+˜λ2
+)k
+v(i). [6]
+When λ3 > λ 2 we have|
+˜λi
+˜λ2
+| < 1,
+(
+˜λi
+˜λ2
+)k
+ψivi → 0 with
+exponential speed. The expected value of vectorv converges
+to some eigenvector ofLw with eigenvalueλ2:
+E
+[
+|λ2− vT Lwv
+vT v |
+]
+→ 0, [7]
+when the power k of operator ˜L scales asO(log(n)1+ϵ) for
+every real numberϵ > 0, where n is the size of the network.
+Ren et al. | 3
+
+===== Page 4 =====
+0 0.02 0.04 0.06 0.08 0.1 0.12
+Dismantling cost (degree-based)
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+GCC Size
+(a) Crime
+0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4
+Dismantling cost (degree-based)
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+(b) Corruption
+0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1
+Dismantling cost (degree-based)
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+(c) PB
+EGP
+CI
+CoreHD
+GND
+MinSum (0.5)
+BPD (0.5)
+GNDR
+0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1
+Dismantling cost (degree-based)
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+(d) PK
+Fig. 3. Dismantling of criminal and corruption networks, creation of ﬁrewalls to stop the spread of misinformation or malicious software or viruses in online networks. Speciﬁcally,
+we show the size of the GCC versus the overall dismantling cost for four different networks: (a) crime network (41), (b) corruption network (42), (c) information network (Political
+Blogs - PB) (43) and (d) online social network (Pokec - PK) ( 44). In this example, the cost of removing a node is assumed to be proportional to its current degree. The
+dismantling cost is measured as the fraction of removed edges adjacent to the removed nodes. The network fragmentation was measured for a ﬁxed realistic size from 0.5 to
+1.0 (partial dismantling). The results show that our GND and GNDR strategies signiﬁcantly outperform current state-of-the-art strategies. On the Pokec network with1.63∗ 106
+nodes and 2.23∗ 107 edges, we only compare our methods with Min-Sum, BPD and CoreHD methods, due to the scalability issues of other methods.
+If λ2 = λ3 = ... = λk < λ k+1, this sequence converges to
+a unit length linear combination ofv2, ..., vk, and is therefore
+a vector which still minimizesvT Lw v
+vT v among all vectors, that
+are orthogonal tov1. Formal proofs for the convergence and
+bounds are given in section 3 of the SI.
+The computational complexity of recursively applying this
+procedure to smaller and smaller partitions isO(n·η(n)·log(n))
+for sparse networks. Due to the fast convergence, one can
+expect asymptotically good partitions whenη(n) = log(n)1+ϵ
+and ϵ > 0, which ﬁnally ends in the complexity of O(n·
+log2+ϵ(n)) for sparse networks. Further details about the
+asymptotic complexity are given in section 4 of the SI.
+Fine-tuning of the spectral solution. Let us denote with E∗
+the set of separating edges that connect nodes from the set
+{vi≥ 0}to the set{vi < 0}. The set of nodes that are adjacent
+to the separating setE∗ is denoted byV∗. We can optimize
+the solution by ﬁnding a set of nodes which covers all the
+edges in E∗ with minimal cost. This is the weighted vertex
+cover problem (36) on the graphG∗ = (V∗, E∗) with weights
+wi =
+∑
+j Ai,j, according to the degrees in the original network
+G = ( V, E). This subproblem is also an NP-hard problem.
+However there exists a 2-approximation eﬃcient solution (36)
+for it. Therefore, the cost of the approximate solution for the
+subproblem is, at most, two times the cost of the optimal ﬁne-
+tuning. Further details about the ﬁne-tuning approximation
+are provided in section 5 of the SI. A general overview of
+our proposed method is given in Fig. 2, to which we refer
+as the GND method in the rest of the paper. At last, as the
+proposed GND method is oﬀering a recursive solution, some of
+the nodes from early stages of fragmentation do not contribute
+to the ﬁnal stage of complete fragmentation. Therefore, in
+order to produce better dismantling solutions (GNDR) for the
+complete fragmentation, we reduce some of the nodes from
+the ﬁnal dismantling set. More details are provided in section
+6 of the SI.
+Results
+In order to demonstrate the applicability of the proposed gen-
+eralized network dismantling framework to a realistic scenario,
+we apply it to the real-world networks and show that the
+current state-of-the-art dismantling strategy (26) delivers dif-
+ferent results from the non-unit cost deﬁnition, as expected.
+We make the following two realistic assumptions: (i) the cost
+of removing a node is not constant, but proportional to the
+importance of the node, measured here by its current degree,
+and (ii) we focus on the partial dismantling of the system’s
+giant connected component (GCC). The ﬁrst assumption that
+the cost of removing a node is non-unit was already motivated
+in this paper before. The second assumption reﬂects the fact
+that, in practical applications, a partial dismantling of the
+system size to say, 80 %, 50 %, or 1 % of the original GCC size
+is more realistic than the complete dismantling, as the budget
+is usually limited such that only a partial dismantling is possi-
+ble. The degree-based cost of the dismantling is measured by
+the number of removed edges adjacent to the removed nodes,
+which is normalized with the total number of edges in the
+network. In the case of unit-costs, the cost of the dismantling
+is the fraction of the removed nodes as compared to the total
+number of nodes in the network.
+In Fig 1, we show the results of the network dismantling,
+which represent suppressing the spread of misinformation,
+computer viruses or other harmful contagion process on the
+online social network (Petster-hamster (38)). The cost for
+the 80 % partial dismantling with the state-of-the-art Min-
+Sum strategy (26) is 0.4. However, although the Min-Sum
+algorithm removes only 5 % of nodes in this process, its cost is
+rather large. The reason for this high cost becomes clear if we
+study the degree distribution of the removed nodes in Fig. 1b,
+where we notice that all large hubs are removed. In contrast,
+the random removal of nodes, also known as site percolation
+process, with the same cost of 0.4 achieves fragmentation to
+approximately 75 % of the original GCC size. This implies that
+the current state-of-the-art strategy becomes very ineﬃcient
+when the non-unit cost is taken into consideration. Finally,
+with the same cost of 0.4, our GND method fragments the
+network to 62 % of the original GCC size, and for the target
+of 80 % of the GCC size, the corresponding cost is only 0.2.
+Next, we study the partial dismantling up to 50 % of the
+GCC size on four diﬀerent real-world networks for ﬁve diﬀerent
+state-of-the-art methods: Equal Graph Partitioning (EGP)
+(45), Collective Inﬂuence (CI) (24), Min-Sum (23), CoreHD
+(26) and Belief Propagation-guided Decimation (BPD) (27).
+4 | Ren et al.
+
+===== Page 5 =====
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+(a) Dismantling cost (degree-based)
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+(b) Dismantling cost (unit costs)
+EGP
+CI
+Min-Sum
+CoreHD
+BPD
+GND
+GNDR
+GCC Size
+GCC Size
+0.8 10 0.2 0.30.10 0.40.40.2 0.6
+Fig. 4. Dismantling represents the controlled process of suppressing the spread of
+misinformation, computer viruses or other harmful contagion processes on the online
+social network (Petster-hamster (38)). Size of the GCC versus the dismantling cost
+for complete dismantling (target size 0.01). The cost of removing a node is: (a)
+proportional to the current degree of a node or (b) equal for all nodes (unit costs). We
+observe that even for unit costs and complete dismantling the presented methodology
+(GNDR) provides good solutions.
+The real-world networks include: (i) crime network with 754
+nodes obtained by the projection of a bipartite network of
+persons and crimes (41); (ii) corruption network (42) with 309
+nodes; (iii) information network of political blogs (PB) (43)
+with 1222 nodes and 16714 edges; and (iv) large online social
+network (Pokec) (44) with 1.63∗ 106 nodes and 2.23∗ 107
+edges. In a case of malfunction, the dismantling of these
+networks can enable eﬃcient immunization strategies against
+harmful contagion by engineered breaking points in criminal
+or corruption networks, or by ﬁrewalls to stop the spread
+of misinformation and malicious cyber data. In Fig. 3, the
+results show that, for the partial dismantling to 50 % of
+the original GCC size, the proposed methodology (GND and
+GNDR) achieves the same fragmentation level with much
+smaller cost: 0.03 (GNDR) vs. 0.1 (Min-Sum) for the crime
+network, 0.14 (GNDR) vs. 0.19 (Min-Sum) for the corruption
+network, 0.55 (GND) vs. 0.65 (EGP) for the information
+network and0.69 (GND) vs. 0.91 (Min-Sum) for the online
+network. If we did the unit cost dismantling analysis, our
+approachwasstillbetterorcomparabletotheotherapproaches
+(see section 7 of the SI for more details). In Fig. 4, we
+show the fragmentation curve for the complete dismantling
+(approximately 1 % of the original GCC size) for diﬀerent
+weighting: (a) degree-based cost, and (b) unit costs. For unit
+costs, our approaches provide better or comparable solutions.
+In case the external information about the cost of removing
+a node wi is available, we are able to incorporate it into
+the matrix W and proceed with our GND method. Section
+2 of the SI gives spectral bounds for general non-negative
+weights, for which the same spectral approximation method
+can be used. In Fig. 5, we show the results for the world
+airport network, where the costwi of closing an airporti is
+assumed to be proportional to the total ﬂux of the passengers
+of the airport. In this example, we have set the target size
+of the GCC of the network at 80% of the initial size. It
+is interesting to observe that our GND method dismantles
+the network with the cost of only 0.06 of the total weights,
+which is signiﬁcantly less than the cost of 0.25 incurred with
+the Min-Sum method (23). In the same ﬁgure, we provide a
+geographical visualization of the dismantling solution, where
+the closed airports are represented by red dots with area
+proportional to the dismantling cost. The world airport case
+study shows the importance of considering realistic dismantling
+costs, whichdramaticallychangesthedismantlingsolutions. In
+case of the world airport network, the closing of an airport can
+represent quarantine. Correspondingly, the reduction of the
+GCC size represents the containment eﬀect for the pandemic
+spread.
+Conclusion
+In this paper, we introduce the generalized network disman-
+tling problem, which seeks to ﬁnd a set of nodes allowing to
+dismantle a network into components of subcritical size in the
+most cost-eﬀective way. We do not make the assumption that
+the cost of removing nodes is the same for all nodes (23–30).
+We allow for costs to include non-topological properties re-
+lated to the price or protection level. Our proposed method
+is based on a blend of spectral properties of a novel node-
+weighted Laplacian operator, randomized approximations and
+weighted vertex cover approximations. We demonstrate that,
+for the partial dismantling of networked systems, current state-
+of-the-art methods do not produce near-optimal results and
+sometimes behave even worse than the random baseline strat-
+egy (site percolation method). Our study raises new questions
+regarding the reorganization of current socio-technical systems
+under diﬀerent realistic costs in order to become more robust
+against targeted attacks. We have demonstrated that the
+dismantling can enable cost-eﬀective immunization strategies
+against harmful contagion eﬀects in social and transportation
+networks as well as the disruption of criminal and corruption
+networks. Understanding the theory behind network disman-
+tling opens new research directions and will enable us to design
+more robust and resilient systems in future.
+Ethics.The method presented in this paper aims at oﬀering a
+possible solution for emergencies where cutting a dysfunctional
+network into pieces can restore the functionality. However, we
+also warn of potential misuses or dual uses. When not applied
+in appropriate contexts and ways, the use of the dismantling
+approach may undermine the proper functionality of networks.
+Therefore, we point out that related ethical issues must be
+always suﬃciently, appropriately, and transparently addressed
+(46, 47) when the method is applied. The method must be
+restricted to legitimate uses and actors. It may be justiﬁed
+to stop harmful cascading problems such as deadly epidemics
+and the spreading of disruptive computer malware, or to
+dismantle criminal organizations or corruption networks. The
+method may also be used to identify more resilient system
+designs and network operations. Note, however, that the
+use of dismantling strategies to contain misinformation can
+be potentially problematic, as it may result in censorship
+if a government, company, news agency or other institution
+decides what is misinformation or not. Stopping the spread of
+true information can seriously obstruct the societal evolution
+towards better insights and solutions. (For example, if the
+method had been misused by the established powers in the
+past, we might still believe that the Earth is the center of
+the universe.) Also note that, if public discourse is shaped
+by a few people only, this may promote the misuse of power,
+corruption and crime. In order to contain fake news, dis- and
+misinformation, we recommend a suitable combination of the
+use of AI, collective intelligence (such as Wikipedia and crowd-
+sourced fact checking), reputation systems for messages and
+information sources, elected community moderators, complaint
+Ren et al. | 5
+
+===== Page 6 =====
+Fig. 5. Comparison of our proposed GND algorithm with the Min-Sum algorithm for the world airport network. The cost of a node wi in this network is assumed to be given by
+the total passenger ﬂux of the airport. (a) Setting the target size of the GCC of the network to 80%, the Min-Sum algorithm ( 23) implies a cost of approximately 25 % of the total
+passengers. In contrast to the Min-Sum algorithm, our GND method dismantles the network with the cost of only 6 % of the total passengers, which amounting to 19 % less for
+the same target dismantling size. (b), (c), and (d) visualize the airports that will be closed for a target size of 80% of the GCC size using the Min-Sum algorithm (upper panel) or
+the GND algorithm (lower panel) in Europe, North America, and Asia, respectively. Closed airports are represented by red dots with the area proportional to the cost.
+mechanisms, qualiﬁcation mechanisms, quality-based message
+ranking and reach, as well as veriﬁcation/measurement-based
+approaches.
+ACKNOWLEDGMENTS. X.-L.R. thanks for ﬁnancial support by
+China Scholarship Council (CSC). N.A.-F. and D.H. are grateful for
+ﬁnancial support from the EU Horizon 2020 projects: SoBigData
+under grant agreement No. 654024 and CIMPLEX under grant
+agreement No. 641191. Authors would like to thank to A. Lancic
+and K.K. Kleinberg for useful comments and suggestions.
+1. Helbing D (2013) Globally networked risks and how to respond. Nature 497(7447):51–59.
+2. Vicario MD, et al. (2016) The spreading of misinformation online. Proc Natl Acad Sci USA
+113(3):554–559.
+3. Waldrop MM (2017) News feature: The genuine problem of fake news. Proc Natl Acad Sci
+USA 114(48):12631–12634.
+4. Lazer DMJ, et al. (2018) The science of fake news. Science 359(6380):1094–1096.
+5. Vespignani A (2011) Modelling dynamical processes in complex socio-technical systems. Nat
+Phys 8(1):32–39.
+6. Brockmann D, Helbing D (2013) The hidden geometry of complex, network-driven contagion
+phenomena. Science 342(6164):1337–1342.
+7. Antulov-Fantulin N, Lan ˇci´c A, Šmuc T, Štefan ˇci´c H, Šiki ´c M (2015) Identiﬁcation of patient
+zero in static and temporal networks: Robustness and limitations. Phys Rev Lett 114(24).
+8. Holme P , Kim BJ (2002) Vertex overload breakdown in evolving networks. Phys Rev E
+65(6):066109.
+9. Buldyrev SV, Parshani R, Paul G, Stanley HE, Havlin S (2010) Catastrophic cascade of fail-
+ures in interdependent networks. Nature 464(7291):1025–1028.
+10. Battiston S, Puliga M, Kaushik R, Tasca P , Caldarelli G (2012) DebtRank: Too central to fail?
+ﬁnancial networks, the FED and systemic risk. Sci Rep 2(1).
+11. Dorogovtsev SN, Goltsev AV, Mendes JFF (2008) Critical phenomena in complex networks.
+Rev Mod Phys 80(4):1275–1335.
+12. Barabási AL, Albert R (1999) Emergence of scaling in random networks. Science
+286(5439):509–512.
+13. Dorogovtsev SN, Mendes JFF , Samukhin AN (2000) Structure of growing networks with pref-
+erential linking. Phys Rev Lett 85(21):4633–4636.
+14. Erd ˝os P , Rényi A (1960) On the evolution of random graphs inPublication of the mathematical
+institute of the Hungarian of the Hungarian Academy of Sciences. pp. 17–61.
+15. Gilbert EN (1959) Random graphs. Ann Math Stat 30(4):1141–1144.
+16. Molloy M, Reed B (1995) A critical point for random graphs with a given degree sequence.
+Random Structures Algorithms 6(2/3):161–179.
+17. Albert R, Jeong H, Barabási AL (2000) Error and attack tolerance of complex networks. Na-
+ture 406(6794):378–382.
+18. Cohen R, Erez K, ben Avraham D, Havlin S (2000) Resilience of the internet to random
+breakdowns. Phys Rev Lett 85(21):4626–4628.
+19. Cohen R, Erez K, Ben-Avraham D, Havlin S (2001) Breakdown of the Internet under inten-
+tional attack. Phys Rev Lett 86(16):3682.
+20. Tanizawa T, Paul G, Cohen R, Havlin S, Stanley HE (2005) Optimization of network robust-
+ness to waves of targeted and random attacks. Phys Rev E 71(4).
+21. Schneider CM, Moreira AA, Andrade JS, Havlin S, Herrmann HJ (2011) Mitigation of mali-
+cious attacks on networks. Proc Natl Acad Sci USA 108(10):3838–3841.
+22. Gallos LK, et al. (2006) Attack strategies on complex networks , eds. Alexandrov VN, van
+Albada GD, Sloot PMA, Dongarra J. (Springer Berlin Heidelberg, Berlin, Heidelberg), pp.
+1048–1055.
+23. Braunstein A, Dall’Asta L, Semerjian G, Zdeborová L (2016) Network dismantling. Proc Natl
+Acad Sci USA 113(44):12368–12373.
+24. Morone F , Makse HA (2015) Inﬂuence maximization in complex networks through optimal
+percolation. Nature 524(7563):65–68.
+25. Kovács IA, Barabási AL (2015) Network science: Destruction perfected. Nature
+524(7563):38–39.
+26. Zdeborová L, Zhang P , Zhou HJ (2016) Fast and simple decycling and dismantling of net-
+works. Sci Rep 6.
+27. Mugisha S, Zhou HJ (2016) Identifying optimal targets of network attack by belief propagation.
+Phys Rev E 94(1):012305.
+28. Morone F , Min B, Bo L, Mari R, Makse HA (2016) Collective inﬂuence algorithm to ﬁnd inﬂu-
+encers via optimal percolation in massively large social media. Sci Rep 6(1):30062.
+29. Tian L, Bashan A, Shi DN, Liu YY (2017) Articulation points in complex networks. Nat Com-
+mun 8:14223.
+30. Zhou HJ (2013) Spin glass approach to the feedback vertex set problem. Eur Phys J B
+86(11):455.
+31. Patron A, Cohen R, Li D, Havlin S (2017) Optimal cost for strengthening or destroying a given
+network. Phys Rev E 95(5):052305.
+32. Ren XL, Gleinig N, Toli ´c D, Antulov-Fantulin N (2018) Underestimated cost of targeted attacks
+on complex networks. Complexity 2018:1–15.
+33. Lü L, et al. (2016) Vital nodes identiﬁcation in complex networks. Phys Rep 650:1–63.
+34. Fiedler M (1973) Algebraic connectivity of graphs. Czechoslovak Math J 23(2):298–305.
+35. Pothen A, Simon HD, Liou KP (1990) Partitioning sparse matrices with eigenvectors of graphs.
+SIAM J Matrix Anal Appl 11(3):430–452.
+36. Bar-Y ehuda R, Even S (1981) A linear-time approximation algorithm for the weighted vertex
+cover problem. J Algorithms 2(2):198 – 203.
+37. Callaway DS, Newman ME, Strogatz SH, Watts DJ (2000) Network robustness and fragility:
+Percolation on random graphs. Phys Rev Lett 85(25):5468.
+38. Kunegis J (2013) The koblenz network collection in Proc Int Web Observatory Workshop. pp.
+1343–1350.
+39. Janson S, Thomason A (2008) Dismantling sparse random graphs. Combin Probab Comput
+17(2):259–264.
+40. Riolo MA, Newman MEJ (2014) First-principles multiway spectral partitioning of graphs. J
+Complex Networks 2(2):121–140.
+41. Kunegis J (2013) KONECT – The Koblenz Network Collection in Proc Int Conf on World Wide
+Web Companion. pp. 1343–1350.
+42. Ribeiro HV, Alves LGA, Martins AF , Lenzi EK, Perc M (2018) The dynamical structure of
+political corruption networks. J Complex Networks pp. cny002–cny002.
+43. Adamic LA, Glance N (2005) The political blogosphere and the 2004 U.S. election: divided
+they blog in Proceedings of the 3rd international workshop on Link discovery , LinkKDD ’05.
+(ACM, New Y ork, NY , USA), pp. 36–43.
+44. Takac L, Zabovsky M (2012) Data analysis in public social networks in International Scientiﬁc
+Conference and International Workshop Present Day Trends of Innovations. Vol. 1.
+45. Chen Y , Paul G, Havlin S, Liljeros F , Stanley HE (2008) Finding a better immunization strategy.
+Phys Rev Lett 101(5):58701.
+46. Helbing D, et al. (2017) Will democracy survive big data and artiﬁcial intelligence. Scientiﬁc
+American. Feb 25.
+47. Fairﬁeld J, Shtein H (2014) Big data, big problems: Emerging issues in the ethics of data
+science and journalism. Journal of Mass Media Ethics 29(1):38–51.
+6 | Ren et al.

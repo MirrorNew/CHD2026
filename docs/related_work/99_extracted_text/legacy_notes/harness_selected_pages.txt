@@ -1,0 +1,581 @@
+
+
+===== PDF PAGE 1 =====
+Agent Harness Engineering: A Survey
+Junjie Li1,6,*,Xi Xiao 6,*,Yunbei Zhang 5,*,Chen Liu 2,*,
+Lin Zhao4,Xiaoying Liao 3,Yingrui Ji 6,Janet Wang 6,
+Jianyang Gu7,Yingqiang Ge 9,Weijie Xu 9,Xi Fang 9,Xiang Xu 9,
+Tianchen Zhao9,Youngeun Kim 9,Tianyang Wang 6,Jihun Hamm 5,
+Smita Krishnaswamy2,Jun Huan 9,Chandan K Reddy 8,9
+1CMU, 2Yale, 3JHU, 4NEU, 5Tulane, 6UAB, 7OSU, 8Virginia Tech, 9Amazon
+Project Page:Awesome-Agent-Harness
+Abstract
+The rapid deployment of large language model (LLM) agents in production has revealed
+a recurring pattern: task execution reliability depends less on the underlying model
+than on the infrastructure layer that wraps it, theagent execution harness. This sur-
+vey provides a practice-grounded, systematic treatment of agent harness engineering,
+organized around three claims. First, the agent harness is an independent system layer
+whose engineering quality drives a large share of real-world reliability, a position we
+develop through a three-phase engineering evolution from prompt to context to har-
+ness engineering, a cross-layer synthesis covering the cost–quality–speed trilemma, the
+capability–control tradeoff, and the harness coupling problem, and an open-problem
+agenda grounded in both research gaps and production pain points. Second, we propose
+ETCLOVG, a seven-layer taxonomy (Execution environment, Tool interface, Context
+management, Lifecycle/Orchestration, Observability, Verification, Governance) that ex-
+tends prior six-component frameworks by treating observability and governance as in-
+dependent architectural concerns. Third, we map 170+ open-source projects onto this
+taxonomy to expose ecosystem patterns, coverage gaps, and emerging design princi-
+ples, alongside engineering principles distilled from production deployments at OpenAI,
+Anthropic, and LangChain that address the gap between practitioner knowledge and
+research vocabulary.
+Figure 1: A brief comparison of prompt, context and harness engineering.
+1
+
+
+===== PDF PAGE 2 =====
+Under review as submission to TMLR
+Contents
+1 Introduction 4
+1.1 The Binding Constraint: Harness over Model . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+1.2 The Practitioner–Research Gap . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+1.3 Scope and Contributions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+2 Background and Taxonomy 5
+2.1 Evolution of Agent Systems . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+2.2 Three Engineering Phases . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+2.3 The ETCLOVG Seven-Layer Taxonomy . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+2.4 Scope . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+2.5 Project Collection Procedure . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+2.6 Inclusion and Exclusion Criteria . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+2.7 Coding Protocol . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+2.8 Limitations of the Corpus . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+2.9 Aggregate Analysis . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+3 Execution Environment and Sandbox (E) 11
+3.1 Scope and Concepts . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+3.2 Categories of Agent Sandboxes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+3.3 Threat Model and Sandbox Escape . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+3.4 Deployment Modes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+3.5 Summary . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+4 Tool Interface and Protocol Layer (T) 16
+4.1 Protocol and Interface Standards . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17
+4.2 Tool Description, Discovery, and Selection . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17
+4.3 Tool-Augmented Training and Integration . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+4.4 Scalability and Session Management . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+5 Context and Memory Management (C) 18
+5.1 Why Context Must Be Engineered . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+5.2 From Prompt Engineering to Context Engineering . . . . . . . . . . . . . . . . . . . . . . . . 20
+5.3 Short-Term: Managing the Active Context Window . . . . . . . . . . . . . . . . . . . . . . . 20
+5.4 Mid-Term: Session State and Cross-Run Persistence . . . . . . . . . . . . . . . . . . . . . . . 21
+5.5 Long-Term: Persistent Memory Systems . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+5.6 Long-Horizon Techniques: Keeping Agents Coherent Over 100+ Turns . . . . . . . . . . . . . 24
+5.7 Context Drift and the Limits of Current Approaches . . . . . . . . . . . . . . . . . . . . . . . 24
+6 Lifecycle and Orchestration (L) 25
+6.1 Lifecycle State Management . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+6.2 Single-Agent Inner Loop . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27
+6.3 Multi-Agent Orchestration Patterns . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27
+6.4 Full Lifecycle Pipeline from Issue to Pull Request . . . . . . . . . . . . . . . . . . . . . . . . . 27
+2
+
+
+===== PDF PAGE 3 =====
+Under review as submission to TMLR
+7 Observability and Operations (O) 28
+7.1 Tracing and Monitoring Platforms . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 28
+7.2 Agent-Specific Operations Platforms . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+7.3 Cost Tracking and Optimization . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+7.4 Reliability Engineering . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+7.5 Discussion: Toward Unified Observability . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+8 Verification and Evaluation (V) 32
+8.1 Harness Evaluation as a Task-to-Feedback Lifecycle . . . . . . . . . . . . . . . . . . . . . . . . 32
+8.2 Stage 1: Task and Benchmark Grounding . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 33
+8.3 Stage 2: Pre-execution Readiness Validation . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+8.4 Stage 3: Controlled Execution and Trace Capture . . . . . . . . . . . . . . . . . . . . . . . . . 35
+8.5 Stage 4: Multi-level Judgement and Failure Attribution . . . . . . . . . . . . . . . . . . . . . 36
+8.6 Stage 5: Continuous Regression and Deployment Feedback . . . . . . . . . . . . . . . . . . . . 38
+8.7 Summary . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+9 Governance and Security (G) 39
+9.1 Permission Models and Identity Management . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+9.2 Lifecycle Hooks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+9.3 Component Hardening . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 42
+9.4 Declarative Constitutions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+9.5 Audit Infrastructure . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+9.6 Situating Governance in the Agent Security Landscape . . . . . . . . . . . . . . . . . . . . . . 45
+9.7 Research Directions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 46
+10 Cross-Cutting Concerns 47
+11 Cross-Layer Synthesis 48
+11.1 Cost-Quality-Speed Trilemma . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 48
+11.2 Capability-Control Tradeoff . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 48
+11.3 Harness Coupling Problem . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 48
+11.4 From Agent Frameworks to Agent Platforms . . . . . . . . . . . . . . . . . . . . . . . . . . . 48
+11.5 Open Research Agenda . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 49
+12 Open Problems and Future Directions 49
+12.1 Hardening and Scaling Execution Environments . . . . . . . . . . . . . . . . . . . . . . . . . . 49
+12.2 Maintaining Reliable State in Long-Running Agents . . . . . . . . . . . . . . . . . . . . . . . 49
+12.3 Diagnosing Failures from Agent Traces . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 50
+12.4 Standard Handoffs Across Agents, Tools, and Humans . . . . . . . . . . . . . . . . . . . . . . 50
+12.5 Keeping Harnesses Useful as Models Improve . . . . . . . . . . . . . . . . . . . . . . . . . . . 51
+13 Conclusion 51
+3
+
+
+===== PDF PAGE 4 =====
+Under review as submission to TMLR
+1 Introduction
+1.1 The Binding Constraint: Harness over Model
+The academic study of LLM-based agents has, by and large, been a study of the model. Research agendas
+center on what the model can do: whether it can plan across multiple steps, call tools reliably, retrieve
+and compress relevant memories, or coordinate with other agents. The implicit assumption is that agent
+capability is primarily a function of model capability, that a sufficiently capable model with a sufficiently
+good prompt will produce sufficiently reliable behavior.
+Recent empirical evidence challenges the assumption that better models alone produce more reliable agents.
+Three recent results establish the pattern. Bölük (2026a) modified only the edit-tool format and surrounding
+tool harness, with no model modification, and reported gains of up to 10×on coding benchmarks across 15
+models. Trivedy (2026) improved a fixed GPT-5.2-Codex agent from 52.8% to 66.5% on Terminal-Bench 2.0
+through system prompt restructuring, middleware context injection, and self-verification hooks alone, a 13.7
+percentage point gain achieved entirely through infrastructure changes. Meta-Harness (Lee et al., 2026)
+achieved 76.4% on Terminal-Bench-2 via automated harness optimization, surpassing all hand-engineered
+approaches without modifying model weights. In each case, the variable was theexecution harness(the
+infrastructure layer governing context construction, tool interaction, orchestration, feedback, and execution
+constraints); the model was held fixed. Each of these harness-only gains exceeds the typical 2 to 4 percentage
+point improvements reported as meaningful model advances on the same benchmarks. The pattern is not
+incidental: the harness, not the model, is driving the outcome.
+We refer to this pattern as the binding-constraint thesis (Bölük, 2026b): for long-horizon tasks evaluated
+across comparable frontier models, benchmark variance may be driven as much by the execution harness as
+by the model itself. We use this thesis as the framing for the remainder of the survey.
+Figure 3 in §2 illustrates the same shift historically: early systems concentrated capability in a single model
+loop, whereas later systems increasingly expose reliability as a cross-layer infrastructure problem.
+1.2 The Practitioner–Research Gap
+A tension exists between practitioner urgency and research vocabulary. OpenAI explicitly framed “harness
+engineering” as the discipline of designing environments, constraints, documentation, and feedback loops
+around Codex agents, reporting in February 2026 that a small team produced an internal product of roughly
+one million lines over five months without manually writing production code (OpenAI, 2026a). Anthropic’s
+agent-engineering posts arrived at the same principle from adjacent directions: effective agents should use
+simple and inspectable architectures, tool interfaces should be designed for agent use rather than copied from
+human-facing APIs, context should be progressively disclosed instead of eagerly loaded, and long-running
+work requires durable handoff artifacts and recoverable execution infrastructure (Anthropic, 2024a; Aizawa,
+2025; Anthropic Applied AI Team, 2025; Anthropic, 2025d; 2026b). An article on Martin Fowler’s site
+characterizes harness engineering as “cybernetic governors for AI agents,” consisting of feedforward guides
+and feedback sensors that form control loops around LLMs (Böckeler, 2026).
+The research community, meanwhile, has been studying the components of agent systems with increasing
+precision: memory, tool use, planning, and safety. What has not been studied systematically is the system
+that integrates these components into reliable operation. The result is a practitioner–research gap: practi-
+tioners knowthatharness infrastructure matters but lack the formal vocabulary to describewhy, in terms
+that enable systematic improvement. This survey attempts to bridge that gap.
+1.3 Scope and Contributions
+This survey focuses on the infrastructure layer that wraps a language model to manage long-running, multi-
+step task execution. We do not survey agent frameworks as development tools, agent platforms as product
+categories, or model capabilities per se, though all three inform our analysis. Figure 4 summarizes the
+seven-layer taxonomy that structures the remainder of the survey.
+4
+
+
+===== PDF PAGE 5 =====
+Under review as submission to TMLR
+Our contributions are organized around three claims.
+1.Claim 1 (Conceptual): Building on the binding-constraint thesis (Bölük, 2026b), we
+argue that the harness, not the model alone, is the binding constraint on real-world
+agent reliability.Three recent results show harness-only gains of up to 10×on coding benchmarks,
++13.7percentagepointsonTerminal-Bench2.0, and76.4%onTerminal-Bench-2(§1), eachexceeding
+typical model-driven gains on the same benchmarks. We develop this thesis through a three-phase
+engineering evolution (§2), a cross-layer synthesis covering the cost–quality–speed trilemma, the
+capability–control tradeoff, and the harness coupling problem (§11), and an open-problem agenda
+(§12).
+2.Claim 2 (Classificatory): The seven-layer ETCLOVG taxonomy treats Observability
+and Governance as first-class layers rather than side effects of lifecycle hooks.Each has
+its own production tooling stack (Langfuse and OpenTelemetry on the observability side; permission
+engines, gateways, and audit pipelines on the governance side) and is owned by a different team in
+production deployments. We also place state management inside Lifecycle and Orchestration, where
+state lives next to the execution flow that reads and writes it (§2.3).
+3.Claim3(Empirical): Mapping170+open-sourceprojectsontoETCLOVGshowswhere
+the ecosystem is dense, where it is thin, and which categories earlier corpora missed.
+The mapping is the largest open-source agent-harness corpus to date. Execution, Tooling, Lifecycle,
+and Verification are densely covered; Observability and Governance are thinner and more often live
+in commercial platforms; and three categories absent from earlier corpora, including task runners,
+multi-agent orchestrators, and spec-driven development tools, are now first-class. The methodology
+subsections (§2.4–§2.9, Appendix A) make the coding reproducible, and the mapping supports the
+layer-by-layer observations in §3–§9.
+2 Background and Taxonomy
+2.1 Evolution of Agent Systems
+The trajectory from early chain-of-thought prompting to autonomous agents can be understood as a pro-
+gressive expansion of the engineering surface that practitioners must manage.
+The ReAct era (2022–2023).Yao et al. (2023) established the observe-think-act loop as a foundational
+primitive. Early systems operated with minimal infrastructure: a while-loop, a prompt template, and a
+small tool dispatch table. AutoGPT and BabyAGI showed the ambition of fully autonomous operation by
+wrapping language-model calls with task queues, memory, and tool dispatch, while also making failure modes
+such as execution runaway, context blowout, state loss, and unmonitored side effects visible as infrastructure
+problems rather than prompt-only problems (Significant Gravitas, 2023; Nakajima, 2023).
+Tool integration and multi-agent coordination (2023–2024).Gorilla, ToolLLM, and Toolformer
+established that tool-use capability can be learned or induced rather than hard-coded into a fixed API wrap-
+per (Patil et al., 2024b; Qin et al., 2024; Schick et al., 2023). CAMEL, ChatDev, MetaGPT, and Mixture-
+of-Agents introduced multi-agent coordination patterns, ranging from role-playing dialogue to software-
+development organizations and layered agent aggregation (Li et al., 2023a; Qian et al., 2023a; Hong et al.,
+2023; Wang et al., 2024). Evaluation infrastructure matured with SWE-bench, AgentBench, WebArena,
+and GAIA (Jimenez et al., 2024; Liu et al., 2023a; Zhou et al., 2024; Mialon et al., 2023), while protocol
+standardization began with Anthropic’s MCP and Google’s A2A (Anthropic, 2024c; Surapaneni et al., 2025).
+The harness turn (2025–2026).By 2025, enough deployment experience had accumulated to make a clear
+case that the binding constraint on agent reliability was infrastructure quality rather than model quality.
+Three independent developments in early 2026 validated this shift: OpenAI’s explicit adoption of “harness
+engineering” as a discipline, Stanford/MIT’s Meta-Harness showing that automated harness optimization
+surpasses hand engineering, and LangChain’s DeepAgents improving from 52.8% to 66.5% on Terminal-
+5
+
+
+===== PDF PAGE 6 =====
+Under review as submission to TMLR
+Bench 2.0, corresponding to a 13.7 percentage point gain and roughly 26% relative improvement, through
+harness layer changes alone (OpenAI, 2026a; Lee et al., 2026; Trivedy, 2026).
+2.2 Three Engineering Phases
+The 2022–2026 period reveals a coherent three-phase evolution in what the field has chosen to engineer.
+Promptengineering(2022–2024).Theprimaryleverwastheinputprompttext. Practitionersoptimized
+by crafting better instructions, few-shot examples, and reasoning templates. The engineering scope was
+narrow: optimize a single text input to a single model call.
+Context engineering (2025).As agents became longer-running, the binding constraint shifted from “what
+is the input?” to “what information should the model see at each step?” This phase focused on context
+management: what to inject on each turn, how to retrieve and compress memories, how to rank tool results
+by relevance, and how to handle context window saturation. The scope expanded from a single input to
+managing multiple information streams flowing into the context window (Anthropic Applied AI Team, 2025).
+Harness engineering (2026).As models became capable enough to handle long-running tasks, reliability
+increasingly depended on the infrastructure wrapper that maintains state, mediates tools, injects feedback,
+enforces constraints, and verifies progress. This observation aligns with the binding-constraint view that
+long-horizon agent performance is produced by a coupled model–harness system rather than by the model
+alone (Bölük, 2026b). Harness engineering therefore asks what governance, constraints, feedback loops, and
+execution controls must be designed around the model to make agent systems reliable. In our taxonomy, this
+phase treats all seven ETCLOVG layers as an integrated whole (OpenAI, 2026a; Böckeler, 2026; LangChain,
+2026b).
+Each phase subsumes the previous: harness engineering includes context engineering, which includes prompt
+engineering. Thethreephasesalsooverlapintimeandinconceptratherthansucceedingoneanotherbyclean
+boundaries. Prompt engineering remains an active part of harness practice today, and context engineering
+Figure 2: Illustration of the taxonomy of harness engineering for LLM-based agent systems. The four layers
+E, T, C, and L form the structural pillars of the system. The O layer provides system-wide monitoring,
+while the V layer delivers evaluation and feedback across components. The G layer enforces governance
+and security constraints over the entire system. The color scheme corresponds to the ETCLOVG layers
+developed in §2.3.
+6
+
+
+===== PDF PAGE 7 =====
+Under review as submission to TMLR
+Figure 3: Timeline of representative agent-harness systems from 2022 to 2026. The timeline situates the
+shift from early single-loop agents to richer harness infrastructure spanning execution environments, tool
+interfaces, context and memory management, lifecycle orchestration, observability, verification, and gover-
+nance. The color scheme corresponds to the ETCLOVG layers developed in §2.3.
+continues to mature in parallel with the harness-level concerns we survey here. Our periodization is therefore
+best read as a shift in where the marginal engineering effort goes, not as a sequence of replacements.
+2.3 The ETCLOVG Seven-Layer Taxonomy
+We propose a seven-layer taxonomy for agent harness engineering. We refer to it by the acronymET-
+CLOVG, which stands forExecution, Tooling, Context, Lifecycle, Observability, Verification, Governance.
+Figure 4 gives the compact visual map; this subsection fixes the interpretation used throughout the survey.
+The first four layers describe the structural core of a harness.Execution(E) determines where agent code
+runs and what sandbox constraints bound it;Tooling(T) specifies how external capabilities are described,
+discovered, and invoked;Context(C) controls what the model can see over short-term, session-level, and
+persistent horizons; andLifecycle(L) organizes the control flow that reads and writes that state, from
+single-agent loops to multi-agent and issue-to-pull-request workflows. The remaining three layers describe
+the control plane around that core.Observability(O) captures traces, costs, failures, and reliability signals;
+Verification(V) turns tasks and traces into evaluation, failure attribution, and regression feedback; and
+Governance(G) constrains behavior through permission, identity, policy, hardening, audit, and human
+oversight mechanisms. Sections 3–9 develop these seven layers in order, while Sections 10–12 synthesize the
+cross-layer tradeoffs and open problems that do not belong to any single layer.
+Two design choices distinguish this taxonomy. First, we promoteObservability(O) to an independent
+layer rather than treating it as a side effect of lifecycle hooks. In production systems, observability has a
+dedicated tooling ecosystem (Langfuse, Arize Phoenix, OpenLLMetry) and distinct engineering practices
+(OpenTelemetry instrumentation, cost attribution, anomaly detection) that warrant independent treatment.
+Second, we introduceGovernance(G) as a first-class layer that captures the full spectrum of security and
+7
+
+
+===== PDF PAGE 8 =====
+Under review as submission to TMLR
+Agent Harness
+Engineering
+Execution Environment
+& Sandbox (E) (§3)
+General-Purpose Managed Sandboxes
+Computer-Use Agent Infrastructure
+Code-Specialized Sandboxes
+Framework-Integrated Runtimes
+Browser Evaluation Environments
+OS-Level Permission Sandboxes
+Sandbox Abstraction Layers
+Tool Interface
+& Protocol (T) (§4)
+Protocol and Interface Standards
+Tool Description, Discovery, and Selection
+Tool-Augmented Training and Integration
+Scalability and Session Management
+Context & Memory
+Management (C) (§5)
+Short-Term Active Context Window
+Mid-Term Session State and Cross-Run Persistence
+Long-Term Persistent Memory Systems
+Long-Horizon Context Techniques
+Context Drift and Limits
+Lifecycle &
+Orchestration (L) (§6)
+Single-Agent Inner Loop
+Multi-Agent Orchestration Patterns
+Full Lifecycle Task Pipelines
+Observability &
+Operations (O) (§7)
+Tracing and Monitoring Platforms
+Agent-Specific Operations Platforms
+Cost Tracking and Optimization
+Reliability Engineering
+Unified Observability
+Verification &
+Evaluation (V) (§8)
+Task and Benchmark Grounding
+Pre-Execution Readiness Validation
+Controlled Execution and Trace Capture
+Multi-Level Judgement and Failure Attribution
+Continuous Regression and Deployment Feedback
+Governance &
+Security (G) (§9)
+Permission Models and Identity Management
+Lifecycle Hooks
+Component Hardening
+Declarative Constitutions
+Audit Infrastructure
+Agent Security Landscape
+Figure 4: Details of the agent harness engineering taxonomy. Each branch corresponds to one ETCLOVG
+layer and its major subcategories; representative systems and papers are discussed in later sections.
+compliance concerns across three sub-layers: model-level (guardrails, content filters), system-level (gateways,
+proxies, permission models), and organizational-level (audit, compliance, human-in-the-loop oversight).
+8
+
+
+===== PDF PAGE 49 =====
+Under review as submission to TMLR
+11.5 Open Research Agenda
+The synthesis points to a research agenda centered on harnesses as adaptive control systems. The field
+needs benchmarks that vary harness interventions rather than only model weights, trace-native methods
+for attributing failures across layers, protocols for transferring state and responsibility among agents, tools,
+sandboxes, evaluators, and humans, and optimization methods that simplify harnesses as models improve.
+The next section turns these cross-layer effects into five open questions: how to harden and scale execution
+environments, maintain reliable state, diagnose failures from traces, standardize handoffs, and keep harnesses
+useful under changing model capability.
+12 Open Problems and Future Directions
+The open problems collected here follow from the binding-constraint thesis and the cross-layer synthesis,
+and they form the forward-looking part of the evidence for Claim 1 (§1). Rather than treating the seven
+ETCLOVG layers as independent component lists, this section asks where the whole harness remains sci-
+entifically under-specified. The central pattern is that agent harnesses are becoming long-running control
+systems, but the field still lacks mature answers for hardening the execution substrate, preserving state,
+diagnosing failures, transferring responsibility, and updating the harness as model capabilities change. We
+organize these gaps into five questions that cut across the taxonomy.
+12.1 Hardening and Scaling Execution Environments
+Execution environments are becoming the control boundary where security, scalability, and portability meet.
+SandboxEscapeBench documents that frontier models can exploit sandbox weaknesses under realistic config-
+urations (Marchand et al., 2026), but defense work remains fragmented across systems with different threat
+models and evaluation protocols (Wu et al., 2025; Yan, 2025). At the same time, the one-container-per-
+task pattern strains large-scale training and evaluation, where tens of thousands of parallel trajectories need
+cheap reset and replay; SWE-World points toward Docker-free surrogate environments, but the fidelity of
+learned transitions relative to real execution remains unresolved (Sun et al., 2026). Even deployment porta-
+bility is not a solved engineering detail: Docker-based sandboxes inherit Linux-kernel assumptions, while
+macOS, Windows, browser, desktop, and hybrid-cloud settings expose different isolation and reproducibility
+constraints.
+The open problem is to make the runtime substrate both measurable and composable. Future harnesses
+need common security evaluations for prompt injection, goal misalignment, and compositional amplification;
+cost models that decide when to use containers, microVMs, OS-level permission boundaries, full desktop
+VMs, browser environments, or learned surrogates; and portability layers that preserve semantics across
+self-hosted, cloud, and hybrid deployments. The bundle-versus-compose split between framework-integrated
+runtimes (§3.2.4) and sandbox abstractions (§3.2.7) should be treated as an empirical design question rather
+than a product preference. Standards such as MCP may reduce composition cost, but only if the tool,
+governance, and observability layers expose enough state to keep runtime choices auditable, recoverable, and
+safe.
+12.2 Maintaining Reliable State in Long-Running Agents
+The deepest context problem is not simply how to fit more tokens into a prompt, but how to keep an
+agent’s working state aligned with the true task state over long horizons. Long-running coding, research, and
+operationsagentsrepeatedlysummarize, retrieve, compact, andexternalizeinformation; everysuchoperation
+can delete constraints, distort priorities, or preserve stale assumptions. Recent context-engineering work
+treats compaction, tool-result clearing, retrieval, and prompt-cache-aware ordering as practical mechanisms
+formanaginglimitedcontextwindows(AnthropicAppliedAITeam,2025;Anthropic,2025c;OpenAI,2026b).
+However, context rot and memory benchmarks show that longer inputs and richer memory stores do not
+automatically imply better task-state tracking (Hong et al., 2025; Tan et al., 2025; He et al., 2026).
+49
+
+
+===== PDF PAGE 50 =====
+Under review as submission to TMLR
+A principled research agenda should therefore recast context management asstate estimation. The open
+question is whether we can characterize how much task-relevant information is lost at each compression,
+retrieval, or forgetting step, and whether we can bound the divergence between the agent’s internal state
+and the real state of the task. Recent surveys formalize agent memory as a write–manage–read loop and
+identify policy-learned management as an emerging mechanism family (Zhang et al., 2025; Du, 2026). Fu-
+ture systems need uncertainty-aware summaries, provenance for remembered facts, contradiction handling,
+explicit staleness markers, and recovery procedures that let an agent reconstruct missing state from durable
+artifacts rather than trusting its own compressed history. This also suggests a tighter link between memory
+and evaluation: memory policies should be judged not only by recall accuracy, but by whether they prevent
+downstream action errors in multi-session tasks.
+12.3 Diagnosing Failures from Agent Traces
+Agent evaluation is still too often final-score-centric: a run passes or fails, and the final number is treated
+as evidence about model quality. For harness engineering, this is insufficient because a failed rollout may
+originate from model reasoning, a misleading tool schema, sandbox misconfiguration, stale context, flaky
+tests, benchmark ambiguity, judge instability, or orchestration loops. Anthropic’s analysis of agentic coding
+evaluations shows that infrastructure settings can measurably shift benchmark scores (Anthropic, 2026a),
+and recent work on randomness in agentic evals argues that single-run pass rates can hide substantial vari-
+ance (Bjarnason et al., 2026). The evaluation layer must therefore be studied as a measurement instrument,
+not merely used as a leaderboard generator.
+The next step is trace-native evaluation: traces should become the primary object from which systems
+compute outcome scores, trajectory quality, failure attribution, and regression tests. Observability systems
+already capture spans, tool calls, costs, retries, exceptions, and intermediate messages (OpenTelemetry, 2026;
+AlSayyad et al., 2026; Koc et al., 2025), but these traces are often disconnected from evaluation pipelines.
+LangChain’s 2026 survey reports that 89% of teams use observability while only 52.4% run offline evalu-
+ations (LangChain, 2026a); this gap means teams can see what agents did without systematically judging
+whether the behavior was correct. Future work should close this loop by converting anomalous production
+traces into regression cases, computing trajectory metrics directly over spans, and feeding diagnostic sig-
+nals back into prompt, tool, context, and orchestration changes. Reflexion showed that agents can learn
+from their own traces in short-horizon settings (Shinn et al., 2023); extending this idea to long-running,
+multi-session harnesses remains open.
+12.4 Standard Handoffs Across Agents, Tools, and Humans
+Modern harnesses increasingly distribute work across planners, subagents, tools, sandboxes, evaluators, and
+humans, but the interfaces between these actors remain ad hoc. There are emerging local standards: MCP
+standardizes tool access, A2A targets inter-agent communication, and OpenTelemetry provides a general
+substrate for traces (Model Context Protocol, 2025b; A2A Project, 2025; OpenTelemetry, 2026; Ehtesham
+et al., 2025). What is missing is a cross-layer handoff contract. When a planner hands work to an executor,
+an agent calls a tool, a subagent returns control, or a system escalates to a human, the handoff should
+transfer not only a text summary but also intent, constraints, permissions, artifacts, provenance, budget
+state, risk level, trace history, and unresolved decisions.
+This problem is partly technical and partly institutional. OpenAI’s Symphony frames the issue tracker
+and repository as a control plane for agent work, while Anthropic’s long-running-agent harnesses emphasize
+durable progress artifacts and clean handoff state (Kotliarskyi et al., 2026; Anthropic, 2025d; 2026b). Gov-
+ernance work reaches the same conclusion from the opposite direction: agent identity, delegation, permission
+manifests, and auditability are needed before agents can safely act on behalf of users across systems (South
+et al., 2025; Marro et al., 2025; Syros et al., 2025). The open problem is to define handoff protocols that
+are rich enough for safety and recovery, but simple enough for broad adoption. Such protocols should make
+responsibility explicit: who authorized the action, which state was transferred, which evidence supports the
+current plan, what the receiver is allowed to do, and when control must return to another agent or a human.
+50
+
+
+===== PDF PAGE 51 =====
+Under review as submission to TMLR
+12.5 Keeping Harnesses Useful as Models Improve
+Harness design should not be assumed to move monotonically toward more scaffolding. Every wrapper,
+reset, verifier, planner, memory rule, and permission gate encodes an assumption about what the model
+cannot do reliably on its own. As model capabilities change, harness interventions should be re-estimated
+rather than assumed to remain beneficial. A factorial model-by-harness evaluation can reveal when an inter-
+vention improves all models, helps only specific model families, or reverses model rankings (Bölük, 2026b).
+Anthropic reports a concrete version of this pattern in long-running application development: context resets
+that were useful for one model became dispensable for a stronger model, and removing them reduced cost
+without degrading quality (Anthropic, 2026c). OpenAI similarly frames harness engineering as a discipline
+of keeping human attention, repository state, and agent execution aligned rather than merely adding more
+scaffolding (OpenAI, 2026a;b).
+This creates a meta-engineering agenda: harnesses need mechanisms for optimizing and simplifying them-
+selves. Meta-Harness shows that prompts, tools, and control loops can be searched as part of the optimiza-
+tion target rather than fixed by hand (Lee et al., 2026), while Natural-Language Agent Harnesses make
+harness modules explicit and ablatable (Pan et al., 2026). Production observability and cost systems such as
+TensorZero, Axon, and AgentOps point toward budget-aware harness operation (TensorZero, 2026; harshke-
+dia177, 2026; AgentOps AI, 2026), but the research problem is broader than cost minimization. Future
+systems should identify which interventions are causally responsible for quality, safety, or reliability; run
+shadow-mode or A/B tests across harness variants; and optimize under joint quality–latency–cost–risk con-
+straints. A central risk is benchmark overfitting: a harness that optimizes itself only against a narrow suite
+may become brittle. The more durable goal is adaptive simplification, where the harness continuously asks
+which controls are still necessary as tasks, tools, and model capabilities change.
+13 Conclusion
+This survey treats the agent harness as an independent engineering surface and argues that infrastructure
+quality, not model capability alone, sets the ceiling on real-world agent reliability. Around this binding-
+constraint thesis we develop three claims. The seven-layer ETCLOVG taxonomy separates Observability
+and Governance from Lifecycle Hooks and reflects how production teams already organize their tooling
+and ownership. A mapping of 170+ open-source projects onto the taxonomy gives the most extensive
+ecosystem snapshot to date and surfaces adoption patterns, coverage gaps, and emerging design principles.
+A three-phase engineering evolution from prompt to context to harness engineering, together with a cross-
+layer synthesis covering the cost–quality–speed trilemma, the capability–control tradeoff, and the harness
+coupling problem, situates the harness within a broader engineering trajectory. Our analysis has limits. The
+corpus is biased toward English-language, GitHub-visible, open-source projects, and toward the coding-agent
+ecosystem; extending it to closed-source production systems and to non-coding agent ecosystems would
+sharpen the empirical picture. The taxonomy itself is descriptive: turning ETCLOVG into a normative
+framework that can guide harness design decisions, rather than only classify them, is the natural next step
+we hope this survey will encourage.
+51
+
+
+===== PDF PAGE 52 =====
+Under review as submission to TMLR
+References
+A2A Project. Agent2agent (A2A) protocol. GitHub repository, 2025. URLhttps://github.com/
+a2aproject/A2A. Accessed May 14, 2026.
+General Action. Emdash.https://github.com/generalaction/emdash, 2026. GitHub repository.
+Aden. Openhive: Multi-agent swarms deployed in minutes for long-session business process.https://
+github.com/aden-hive/hive, 2026. GitHub repository.
+affaan-m. everything-claude-code.https://github.com/affaan-m/everything-claude-code, 2025.
+GitHub repository.
+Alexandru Agache, Marc Brooker, Alexandra Iordache, Anthony Liguori, Rolf Neugebauer, Phil Piwonka,
+andDiana-MariaPopa. Firecracker: Lightweightvirtualizationforserverlessapplications. In17th USENIX
+symposium on networked systems design and implementation (NSDI 20), pp. 419–434, 2020.
+Agent Infra. agent-infra sandbox: All-in-one sandbox for AI agents.https://github.com/agent-infra/
+sandbox, 2024. Open-source software.
+agentmd. AGENT.md: The universal agent configuration file. GitHub repository, 2025. URLhttps:
+//github.com/agentmd/agent.md. Accessed May 14, 2026.
+AgentOps AI. AgentOps: Python SDK for AI agent monitoring, LLM cost tracking, benchmarking, and
+observability.https://github.com/AgentOps-AI/agentops, 2026.
+agentsmd. AGENTS.md. GitHub repository, 2025. URLhttps://github.com/agentsmd/agents.md. Ac-
+cessed May 14, 2026.
+Aider-AI. aider: Ai pair programming in your terminal.https://github.com/aider-ai/aider, 2025.
+GitHub repository.
+AIMing Lab. AutoHarness: Automated harness engineering for AI agents.https://github.com/
+aiming-lab/AutoHarness, 2026. Version 0.1.0, released April 1, 2026.
+Ken Aizawa. Writing effective tools for agents – with agents. Anthropic Engineering Blog, September 2025.
+URLhttps://www.anthropic.com/engineering/writing-tools-for-agents.
+Alibaba. OpenSandbox: A general-purpose sandbox platform for AI applications.https://github.com/
+alibaba/OpenSandbox, 2026. Open-source software.
+Adam AlSayyad, Kelvin Yuxiang Huang, and Richik Pal. Agenttrace: A structured logging framework
+for agent system observability. InLLM-based Multi-Agent Systems: Towards Responsible, Reliable, and
+Scalable Agentic Systems, 2026.
+Maksym Andriushchenko, Francesco Croce, and Nicolas Flammarion. Jailbreaking leading safety-aligned
+llms with simple adaptive attacks.arXiv preprint arXiv:2404.02151, 2024.
+Anomaly. Opencode: The open source ai coding agent.https://github.com/anomalyco/opencode, 2025.
+GitHub repository.
+Anthropic. Building effective agents. Anthropic Engineering Blog, December 2024a. URLhttps://www.
+anthropic.com/engineering/building-effective-agents.
+Anthropic. Introducing computer use, a new Claude 3.5 Sonnet, and Claude 3.5 Haiku.https://www.
+anthropic.com/news/3-5-models-and-computer-use, 2024b. Blog post.
+Anthropic. Introducing the model context protocol.https://www.anthropic.com/news/
+model-context-protocol, November 2024c.
+Anthropic. Claude code.https://github.com/anthropics/claude-code, 2025. GitHub repository.
+52
+
+
+===== PDF PAGE 53 =====
+Under review as submission to TMLR
+Anthropic. Claude Code documentation.https://docs.claude.com/en/docs/claude-code/overview,
+2025a. Documentation.
+Anthropic. Beyond permission prompts: Making Claude Code more secure and autonomous.https://www.
+anthropic.com/engineering/claude-code-sandboxing, October 2025b. Blog post.
+Anthropic. Context management: Tool result clearing and compaction.https://www.anthropic.com/
+news/context-management, 2025c. News article.
+Anthropic. Effective harnesses for long-running agents. Anthropic Engineering Blog, 2025d. URLhttps://
+www.anthropic.com/engineering/effective-harnesses-for-long-running-agents. Accessed May
+14, 2026.
+Anthropic. How we built our multi-agent research system.https://www.anthropic.com/engineering/
+multi-agent-research-system, 2025e. Blog post.
+Anthropic. Code execution with MCP: Building more efficient AI agents. Anthropic Engineering Blog,
+November 2025f. URLhttps://www.anthropic.com/engineering/code-execution-with-mcp. Ac-
+cessed May 14, 2026.
+Anthropic. Anthropic sandbox runtime: A lightweight sandboxing tool for enforcing filesystem and network
+restrictions at the OS level.https://github.com/anthropic-experimental/sandbox-runtime, 2025g.
+Research preview and npm packageanthropic-ai/sandbox-runtime.
+Anthropic. Claude’s constitution.https://www.anthropic.com/constitution, January 2026a. Published
+January 22, 2026; released under CC0 1.0.
+Anthropic. Demystifying evals for AI agents.https://www.anthropic.com/engineering/
+demystifying-evals-for-ai-agents, 2026b. Engineering blog.
+Anthropic. Harness design for long-running application development.https://www.anthropic.com/
+engineering/harness-design-long-running-apps, 2026c. Blog post.
+Anthropic. Quantifying infrastructure noise in agentic coding evals. Anthropic Engineering Blog, 2026a.
+URLhttps://www.anthropic.com/engineering/infrastructure-noise.
+Anthropic. Scaling managed agents: Decoupling the brain from the hands. Anthropic Engineering Blog,
+2026b. URLhttps://www.anthropic.com/engineering/managed-agents.
+Anthropic Applied AI Team. Effective context engineering for AI agents.https://www.anthropic.com/
+engineering/effective-context-engineering-for-ai-agents, 2025. Blog post.
+Arize AI. OpenInference: OpenTelemetry-based auto-instrumentation and semantic conventions for AI
+applications.https://github.com/Arize-ai/openinference, 2026a.
+Arize AI. Phoenix: AI observability and evaluation.https://github.com/Arize-ai/phoenix, 2026b.
+Hammad Atta, Muhammad Zeeshan Baig, Yasir Mehmood, Nadeem Shahzad, Ken Huang, Muhammad
+Aziz Ul Haq, Muhammad Awais, and Kamal Ahmed. Qsaf: A novel mitigation framework for cognitive
+degradation in agentic ai.arXiv preprint arXiv:2507.15330, 2025.
+Lei Ba, Qinbin Li, and Songze Li. Ciber: A comprehensive benchmark for security evaluation of code
+interpreter agents.arXiv preprint arXiv:2602.19547, 2026.
+Fu Bang. Gptcache: An open-source semantic cache for llm applications enabling faster answers and cost
+savings. InProceedings of the 3rd Workshop for Natural Language Processing Open Source Software (NLP-
+OSS 2023), pp. 212–218, 2023.
+Manish Bhatt, Vineeth Sai Narajala, and Idan Habler. Etdi: Mitigating tool squatting and rug pull attacks
+in model context protocol (mcp) by using oauth-enhanced tool definitions and policy-based access control.
+In2025 Cyber Awareness and Research Symposium (CARS), pp. 1–6. IEEE, 2025.
+53

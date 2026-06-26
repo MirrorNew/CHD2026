@@ -1,0 +1,814 @@
+
+
+===== Page 1 =====
+Identify Critical Nodes in Complex Network with
+Large Language Models
+Jinzhu Mao1, Dongyun Zou1, Li Sheng1, Siyi Liu2, Chen Gao1, Yue Wang1, Yong Li1
+1Department of Electronic Engineering, BNRist, Tsinghua University, China
+2École Polytechnique Fédérale de Lausanne, Switzerland
+{maojz22,zoudy22,chengl22}@mails.tsinghua.edu.cn
+{ssui.liu1022,chgao96}@gmail.com
+{wangyue,liyong07}@tsinghua.edu.cn
+Abstract
+Identifying critical nodes in networks is a classical decision-making task, and many
+methods struggle to strike a balance between adaptability and utility. Therefore,
+we propose an approach that empowers Evolutionary Algorithm (EA) with Large
+Language Models (LLMs), to generate a function called "score_nodes" which
+can further be used to identify crucial nodes based on their assigned scores. Our
+model consists of three main components: Manual Initialization, Population Man-
+agement, and LLMs-based Evolution. It evolves from initial populations with a
+set of designed node scoring functions created manually. LLMs leverage their
+strong contextual understanding and rich programming skills to perform crossover
+and mutation operations on the individuals, generating excellent new functions.
+These functions are then categorized, ranked, and eliminated to ensure the stable
+development of the populations while preserving diversity. Extensive experiments
+demonstrate the excellent performance of our method, showcasing its strong gener-
+alization ability compared to other state-of-the-art algorithms. It can consistently
+and orderly generate diverse and efficient node scoring functions. All source codes
+and models that can reproduce all results in this work are publicly available at this
+link: https://anonymous.4open.science/r/LLM4CN-6520
+1 Introduction
+Various networks widely exist in the real world, such as social networks, biological networks, etc [36].
+For the network, identifying an optimal set of critical nodes for which the activation/removal has the
+maximized impact is a basic research problem with broad applications in epidemic control, influence
+maximization, etc [19, 2]. From the perspective of combinational optimization, this problem could
+be considered as a kind of optimal search task, in which the computational complexity increases
+exponentially along with the size of the network [ 34]. Existing approaches to this problem can
+be categorized as follows: from heuristic methods to optimization-based methods, and finally, to
+learning-based methods.
+The first kind of work is the basic methods based on heuristics, such as using the Degree Centrality
+[45], to judge whether the node is critical or not, which is simple yet very effective and efficient,
+showing superior performance in many kinds of networks [2, 26]. The second kind of work further
+tries to re-formulate the problem with approximated optimization problems. Some other algorithms
+like CoreHD [43] and WeakNeighbors [32] utilize k-core decomposition, in which the k-core of a
+network is defined as the maximal subgraph with every node having a degree of at least k. These
+methods progressively eliminate nodes with the highest degrees within their respective k-cores to
+identify key nodes. Furthermore, Min-Sum [3] focuses on creating an acyclic network by removing
+Preprint. Under review.
+arXiv:2403.03962v1  [cs.SI]  1 Mar 2024
+
+===== Page 2 =====
+nodes that form loops, followed by utilizing greedy tree-breaking algorithms to decompose the
+remaining forest into smaller disconnected components. Another work, GND [30], adopts a spectral
+approach to iteratively partition the network into two components. These methods have the advantage
+of fast computation, but they may lead to sub-optimal solutions, or even lack a suitable solution
+altogether. Recently, with the advancement of deep learning, some works [ 44, 14] approach the
+problem by using neural networks to learn the node importance or ranking nodes adaptively. That is,
+they utilize neural networks to assign scores to network nodes, determining their importance based
+on these scores.
+Despite these advances, there still exists a key challenge of adaptability-utility dilemma, which
+largely affects the real application values of these methods. Specifically, the heuristic or optimization
+methods provide the same solution for all kinds of networks, but however, ignoring the different
+characteristics, which leads to poor performance in those unpopular networks. The learning-based
+methods try to search the critical nodes adaptively, but are faced with high search costs in such a huge
+search space, which in turn, leads to poor utility.
+Recently, Large Language Models (LLMs) have shown a human-like ability in many tasks, from
+basic natural language processing, to code generation, and some high-level logical reasoning and
+decision-making tasks [47, 4, 12]. Inspired by these advances, we propose a novel solution that
+adopts LLMs to generate the solution and design an evolutional learning framework to fully unleash
+LLMs. Specifically, we utilize LLMs-empowered evolutionary algorithms to address the critical
+node problem, with LLMs performing crossover and mutation operations, continuously iterating to
+generate new solutions.
+The contributions of this work can be summarized as follows:
+• We approach the fundamental problem of critical node detection from a brand new perspective of
+LLMs, for which the original problem is transformed into a code-generation task.
+• We propose a general framework integrating LLMs and evolutional learning. We propose a
+generation-updation mechanism for LLMs and the crossover-mutation method for evolutional
+learning.
+• We conduct extensive experiments on both real-world and synthetic networks, and the results show
+the superior performance of our proposed method. The searched solutions can further inspire
+researchers and practitioners in this area.
+2 Problem Statement
+In this work, our objective is to learn a function f that can identify critical nodes within a network.
+Given a network G = (V, E), where V represents the set of nodes {v1, v2, ..., vV } and E represents
+the set of edges {e1, e2, ..., eE}, we aim to identify a set of critical nodes Vc = {vc1 , vc1 , ..., vcL },
+such that when these nodes are removed or attacked, the network experiences significant disruptions.
+For the sake of facilitating function reading, we represent the network G as an adjacency matrix
+A = {0, 1}V ×V , where Ajk = 1 indicates that there is an edge between node vj and node vk;
+otherwise, Ajk = 0.
+Many existing methods rely on a crucial parameter, which is the number of target nodes N, directly
+impacting the algorithm’s performance. In order to ensure the efficiency and generalization of
+the function learned by our approach, our objective function f does not include the variable N.
+Instead, it will take the network’s adjacency matrix A as input and produce scores for each node
+S = {sv1 , sv2 , ..., svV } as output. In other words, S = f (A), which enables us to rank nodes based
+on their scores and obtain any desired quantity of critical nodes without specifying the number in
+advance.
+This node scoring function is obtained through our proposed evolutionary algorithm empowered
+by large model models. Based on the given initial functions F0 = {f01 , f02 , ..., f0M }, our model
+generates some new functions during the training process through crossover and mutation. To assess
+the fitness of these functions, we introduce an evaluation algorithm E, which determines whether a
+function’s scores for nodes are reasonable, enabling us to update and eliminate functions accordingly.
+Therefore, the evaluation algorithm e explicitly defines the significance of "critical nodes" within the
+2
+
+===== Page 3 =====
+LLMs-based EvolutionCrossoverParent Functions
+Offspring FunctionsCoding Request
+LLMsMutationOffspring Functions
+Mutant FunctionsCoding Request
+Manual Initialization
+def score_nodes(adj_matrix):       score_nodes = {}       num = adj_matrix.shape[0]       …       return scored_nodes
+Initial FunctionPopulation Management
+…Evaluation
+MetricFunctionsNetwork
+Fitness
+…
+Figure 1: Illustration of our proposed model.
+network. In the end, many excellent node scoring functions FT = {fT1 , fT2 , ..., fTN } are retained
+within the population, and we select the one with the highest fitness as the model’s output.
+3 Methodology
+In order to discover a brand new excellent node scoring function, our model is based on evolutionary
+algorithms, combined with the powerful contextual understanding and programming capabilities of
+LLMs. Through generation, evolution, evaluation, and iteration, we obtain a novel high-performance
+function. It primarily consists of three components: Manual Initialization, LLMs-based Evolution,
+and Population Management. Figure 1 and Algorithm 1 illustrate the framework of our model.
+3.1 Manual Initialization
+Evolutionary algorithms is a class of population-based stochastic search strategies. The population
+initialization provides potential individuals for the entire search process. These initial individuals
+continually iterate and improve during the training process, getting closer to the optimal solution.
+A well-designed initialization can assist evolutionary algorithms in finding the optimal solution,
+particularly when dealing with large-scale optimization problems using finite-sized populations.
+Therefore, we categorize the design approaches for node scoring functions into two classes as follows.
+• Network Topology-based Function: Network topology encompasses the connectivity relation-
+ships among nodes, and critical nodes often exhibit distinct connectivity patterns compared to other
+nodes. In this section, we assign corresponding scores to nodes based on their centrality metrics,
+such as the number of N-hop neighbors of a node, the number of shortest paths in which a node
+lies, and the reciprocal of the sum of shortest paths from a node to all other nodes. Because of the
+availability of comprehensive library functions, some centrality metrics can now be directly utilized.
+To achieve a balance between the scalability and readability of the node scoring function, we
+choose not to rely solely on concise library functions for node scoring; instead, we have designed
+some functions that include detailed computation processes.
+• Algorithmic Method-based Function: Many classical algorithms analyze network characteristics
+through mathematical or statistical methods, and they identify critical nodes to dismantle the
+3
+
+===== Page 4 =====
+Algorithm 1 Algorithm of LLMs+EA
+1: Input: Initial function set F0; Evolution epochs T ; Mutation probability θ; Adjacency matrix A;
+Prompt for Crossover promptcross, Prompt for mutation promptmutate; Similarity threshold τ
+2: Output: Best function f ∗.
+3: F0 as the independent population
+4: for epoch = 1 to T do
+5: for all f in Ft do
+6: Evaluate fitness score cf of f on A;
+7: Classify f to the most similar population or create a new one based on τ;
+8: end for
+9: Sample functions Fintra and Finter as Fparent from all functions;
+10: Generate offspring functions Fof f using LLMs given Fparent and promptcross;
+11: Sample from Fof f with probability θ and input with promptmutate into LLM to get Fmutate;
+12: Combine Residual Fof f and Fmutate as Ft+1 for the next evolution round;
+13: end for
+14: return Function with the highest fitness as f ∗.
+network based on the results of analysis. These methods often incorporate greedy algorithms, the
+efficiency of which is closely related to the network size and the number of selected nodes. In this
+work, we retain the core ideas of these algorithms and manually rewrite them into an efficient node
+scoring function as our initial approach. It is worth noting that we did not consider learning-based
+methods because they typically require significant computational resources, which contradicts our
+goal of having a concise, clear, and fast node scoring function.
+Based on the two approaches described above, we designed M initial functions F0 =
+{f01 , f02 , ..., f0M }, each with a different emphasis in scoring nodes, all of which can serve as
+independent populations P = {P1, P2, ..., PM } to start evolution. The input and output of the node
+scoring function have been defined in Section 2 as f (A) = {sv1 , sv2 , ..., svV }.
+3.2 Population Management
+To maintain diversity within the function population, avoid falling into local optima, and simultane-
+ously improve the performance of functions, we implement a sophisticated management strategy for
+the function population.
+3.2.1 Evaluation
+Given a node scoring function f ∈ F , our model first conducts a fitness assessment, which is closely
+related to our specific task — identifying critical nodes in the network through the learned function.
+Therefore, we define the node scoring function’s fitness evaluation as follows:
+E(f ) = σ (A, SORT (f (A)) [: L]) , (1)
+where SORT represents a function that sorts nodes in descending order based on their scores, [: L]
+indicates selecting the top L elements from the sorted list, and σ stands for a function that evaluates
+the network state after removing nodes. Through this evaluation function, each executable node
+scoring function obtains a suitable fitness score cf = E( f ), which assists us in better-performing
+selection and managing the functions population.
+3.2.2 Classification
+While some functions have low fitness, they can introduce diverse potential evolutionary directions to
+the population. Conversely, high-fitness functions already have numerous similar individuals, but
+their widespread presence often indicates a tendency to get trapped in local optima. Considering the
+above situation, we further classify the node scoring functions F based on their fitness scores.
+Inspired by natural language processing tasks, we utilize pre-trained language model [10] to process
+function f ∈ F into embeddings zf , which contain the syntax structure and semantic information of
+the code. Subsequently, we calculate the cosine semantic similarity S(zf , zPi ) between the function
+4
+
+===== Page 5 =====
+and the existing population as follows:
+S(zf , zPi ) = zf · zPi
+| zf || zPi |, (2)
+zPi = 1
+|Pi|
+X
+f ∈Pi
+zf , (3)
+where zPi represents the average of function vectors within population Pi. At the same time, we
+establish a similarity threshold τ. Let
+i∗ = arg max
+i
+S(zf , zPi ), (4)
+if S(zf , zPi ) > τ , Pi∗ = Pi∗ ∪ {f }; otherwise, this distinctive function initiates a new population
+Pnew. It is worth noting that each population has a limit on the number of individuals. Once a
+population reaches its maximum capacity, any newly added function must have a higher fitness
+score to replace the existing lowest-scoring function, thereby maintaining the population’s high
+performance.
+3.2.3 Selection
+We implemented two designs for selection of parent functions within the population, namely, intra-
+population selection and inter-population selection.
+• Intra-population selection: Considering the diversity of functions, our model selects one individ-
+ual from each population to serve as intra-population parent functions Fintra in each selection. At
+the same time, to maintain elite individuals, the highest-fitness function is also added to Fintra.
+• Inter-population Selection: Taking into account the fitness of functions, two functions are chosen
+from the same population to serve as inter-population parent functions Finter in each selection,
+allowing subsequent crossover operations to discover differences between functions of the same
+population but with different fitness scores.
+In both selection methods, the fitness scores of each function serve as selection weights, encouraging
+the selection of more excellent individuals. For convenience, we use Fparent to represent Fintra ∪ Finter.
+3.3 LLMs-based Evolution
+Prompt for Crossover
+Prompt for Mutation
+Function 1 with < Fitness Score>:
+Without changing the input and output of this function, be free to adjust the content of the function by symbol, value and logic:
+Mix the two functions above, and create a Python function called " score_nodes " that accepts " adj_matrix " as input and returns "scored nodes" as output. "adj _matrix" should be a adjacency matrix in the form of a NumPy array, and "scored_nodes" should be a dictionary where the keys are node IDs and the values are node scores. Provide a Python function only, not any explanation.
+I have two functions as follows:
+<Offspring Function>Provide a Python function only, not any explanation.
+Function 2 with < Fitness Score>:  < Parent Function>< Parent Function>
+Figure 2: Prompts used in the crossover and muta-
+tion.
+Given the parent functions, our model begins
+the evolution process to generate new functions.
+The traditional crossover and mutation operators
+used in programming struggles to make high-
+quality modifications to functions like human
+programmers do. In contrast, LLMs trained on
+extensive data including code, documentation,
+tutorials, and more, can comprehend complex
+programming tasks and perform high-quality
+code modifications and generation. Therefore,
+we use LLMs as the operators to cross and mu-
+tate the given functions to generate offspring
+codes.
+3.3.1 Crossover
+The inputs for crossover consist of a set of
+selected parent functions Fparent, and the out-
+puts are a set of offspring functions Foff. The
+prompts provided for LLMs include the func-
+tions and their scores, as well as a text-formed
+description of crossover requirement and addi-
+tional format-related constraints. We aim for the
+LLMs to focus on analyzing the distinctions and
+5
+
+===== Page 6 =====
+relationships among functions. Therefore, we have not provided any descriptions related to the
+network or the task of identifying critical nodes, to avoid causing any interference. The formula for
+the crossover is shown below:
+Foff = LLM(Fparent, Cparent, promptcross), (5)
+where Cparent = {cf , ∀f ∈ Fparent} represent the set of fitness scores of all parent functions.
+3.3.2 Mutation
+For the diversity of the population, each offspring function f ∈ F off has a certain probability θ of
+undergoing mutation. The prompts provided as inputs for LLMs include the offspring function and
+a text-formed description of mutation guiding and format requirements, and the output are a set of
+mutant functions Fmutate. Similarly, to keep LLMs focused on the code, our prompts do not contain
+any descriptions related to the task background. The mutation formula is as follows:
+Fmutate = LLM(Foff, promptmutate). (6)
+Figure 2 illustrates the detailed prompts used in the crossover and mutation. The generated functions
+Foff and Fmutate, after undergoing executable checks, are systematically added to the population
+following the evaluation and classification described in Section 3.2. This process repeats iteratively,
+with the entire function population gradually growing until ideal function emerges.
+4 Experiments and Results
+In this section, we aim to comprehensively evaluate the proposed model by providing detailed
+responses to the following research questions (RQs):
+• RQ1: Can our proposed method outperform existing baselines in terms of performance?
+• RQ2: Which functions does our model discover, and are they identical?
+• RQ3: Through what processes does our model derive these functions?
+• RQ4: How effective is each component within our proposed model?
+4.1 Experimental Settings
+4.1.1 Experimental environment
+We compared the performance of our best algorithm obtained from LLMs+EA with numerous
+traditional methods on both real-world and synthetic networks, including both machine learning-
+based methods and algorithmic approaches. We contrasted the disruptive impact on the networks
+during the removal of 20% of nodes under the ANC metric. The entire model is implemented in
+Python and runs on Intel Xeon Platinum 8358. We use the hyperparameters in Table 1 for LLMs+EA
+runs, and each dataset requires approximately two dollars with gpt-3.5-turbo for three hours.
+Table 1: Hyperparameters of LLMs+EA
+Hyperparameter Value
+LLM (crossover and mutation) gpt-3.5-turbo-0613
+LLM temperature (crossover and mutation) 1/1.5
+Number of initial populations 10
+Maximum population size 10
+Maximum number of epoch 100
+Mutation rate 0.3
+Code2Vec model bert-base-uncased
+Similarity threshold 0.93
+6
+
+===== Page 7 =====
+4.1.2 Metrics
+Given a network G = (V, E), with its node set as V and edge set as E, and a connectivity measure as
+σ, the accumulated normalized connectivity (ANC) is defined as follows:
+R(v1, v2, · · · , vN ) = 1
+N
+NX
+k=1
+σ(G\{v1, v2, · · · , vk})
+σ(G) , (7)
+where N is the total number of the nodes,and σ is the widely used pairwise connectivity.The
+σ : {G} → { R+} is defined as:
+σ(G) =
+X
+Ci∈G
+|Ci|(|Ci| − 1)
+2 , (8)
+where Ci is the ith connected component in network G,and |Ci| means the number of nodes in the
+subgraph Ci. Our goal is to find a removal list that can minimize the ANC of a given network after
+removing selected nodes.
+4.1.3 Baselines
+We compare our proposed method with the following competitive baselines:
+• DC (Degree Centrality) : A heuristic method that iteratively removes nodes with the highest
+degrees.
+• GNDR [30]: Employs a spectral approach to iteratively partition the network into two components.
+• MinSum [3]: Initially creates an acyclic network by removing nodes that form loops, then employs
+greedy tree-breaking algorithms to decompose the resultant forest into smaller, disconnected
+components.
+• CoreHD [43]: Utilizes a k-core decomposition strategy, where the k-core of a network denotes the
+maximal subgraph in which every node has a degree of at least k. CoreHD progressively removes
+nodes with the highest degrees within its k-core to select key nodes.
+• WN (Weak Neighbors) [32]: This algorithm improves upon CoreHD by selecting, for deletion,
+the neighbor node with the minimum degree when multiple nodes have the maximum degree in a
+k-core. Conversely, CoreHD randomly selects one of the nodes with the maximum degree within a
+k-core for deletion.
+• VE [18]: Incorporating concepts from quantum mechanics, VE utilizes an entanglement-based
+metric to quantify the perturbations that individual vertices induce in spectral entropy, and it
+identifies key nodes based on these measurements.
+• GDM [14]: This machine learning-based approach uses graph convolutional networks to understand
+the topological structure of networks and to evaluate the likelihood of node attacks. It is trained
+on small-scale virtual networks, showing favorable transferability to large-scale and real-world
+networks.
+• NIRM [44]: This machine learning-based method conducts a comprehensive assessment of both
+global and local node features in the network, effectively identifying critical nodes.
+Table 2: Statistics of networks
+Network Jazz Twitter Network Science Synthetic Network
+|V | 198 475 1 , 565 1 , 000
+|E| 2, 742 13 , 289 13 , 532 2 , 991
+4.1.4 Datasets
+We selected the following datasets to evaluate our method and baselines, the statistics of which are
+detailed in Table 2.
+• Jazz [13]: Represents a collaboration network among Jazz musicians, where each node corresponds
+to a musician, and an edge signifies that two musicians have collaborated in a band.
+7
+
+===== Page 8 =====
+Table 3: Overall performance of our method. The ANC presented here represents ANC score of
+networks post the removal of 20% of nodes selected by each method and a lower ANC indicates
+greater efficacy.
+Methods
+Datasets Jazz Network Science Twitter Synthetic Network Average RankANC rank ANC rank ANC rank ANC rank
+LLMs+EA 0.65454 1 0.05326 2 0.80762 2 0.65495 2 1.75
+DC 0.79066 8 0.11842 9 0.81125 4 0.67685 5 6.5
+GNDR 0.69697 2 0.05330 3 0.80799 3 0.70592 7 3.75
+MinSum 0.79414 9 0.05291 1 0.80535 1 0.65613 3 3.5
+CoreHD 0.78833 5 0.09932 7 0.81125 4 0.73633 8 6
+WN 0.78833 5 0.10325 8 0.81125 4 0.73795 9 6.5
+VE 0.74837 3 0.08583 6 0.81125 4 0.68259 6 4.75
+GDM 0.78417 4 0.05908 4 0.81125 4 0.65384 1 3.25
+NIRM 0.78855 7 0.06781 5 0.81125 4 0.67446 4 5
+Data highlighted with yellow means its method performs the best on the network, while the bolded data’s method is the second best.
+• Twitter [11]: This dataset quantifies the pairwise probability of influence within a Congressional
+Twitter network.
+• Network-Science [27]: Constitutes a co-authorship network within the field of network science.
+• Synthetic Network: A Barabási-Albert (m = 3) network, randomly generated with 1000 nodes.
+4.2 Overall Performance Comparison (RQ1)
+First, we implement our proposed model and baseline methods on each network dataset, subsequently
+selecting 20% of the total nodes from each network. Following this, we exclude these nodes from
+the network and compute the ANC for each case. Table 3 presents a comparison of the overall
+performance. Based on these results, we make the following observations:
+• The performance of baselines varies across networks.
+The effectiveness of baseline methods differs significantly among networks, where a lower ANC
+value reflects a more substantial impact on network connectivity. Specifically, GNDR outperforms
+others in the Jazz network, followed by the learning-based method VE, with the remaining ap-
+proaches closely trailing. Notably, MinSum shows the least effectiveness here. Conversely, in the
+Network Science dataset, the generally low ANC values suggest a pronounced effect on network
+connectivity by all baseline methods, with MinSum leading in performance and the heuristic DC
+lagging behind. In the Twitter network, MinSum continues to excel, although the ANC values for
+all methods are tightly grouped, indicating less differentiation in the identification of critical nodes.
+Remarkably, six baselines yield identical ANC values in this context, underscoring the distinct
+nature of critical nodes within the Twitter network. For the synthetic network, GDM emerges as
+the most effective, whereas Weak-Neighbors falls short.
+• Superior Overall Performance of Our Model.
+Our method distinguishes itself by surpassing all competitors in the Jazz dataset by a notable margin
+and maintaining robust performance in the Network Science, Twitter, and synthetic networks,
+consistently ranking as a close second to the best-performing methods. Interestingly, MinSum,
+despite its top-tier results in the Network Science and Twitter datasets, ranks at the bottom in
+the Jazz dataset, highlighting its inconsistent efficacy across different networks. The uniform
+excellence of our model across diverse networks suggests its capability to more accurately score
+nodes, thereby more effectively identifying critical nodes within any given network.
+4.3 Function Analysis (RQ2)
+We present the optimal node scoring functions derived from the Jazz and Network-Science datasets
+in Figure 3. For Jazz, the premier scoring function assesses nodes by integrating local features with
+centrality measures. It begins by computing the network’s largest connected component to derive a
+Laplacian matrix (lines 4, 9–10). Utilizing this matrix, the function proceeds to compute the Fiedler
+vector, employing it to establish a new graph (lines 11–13). This new graph identifies a minimum
+8
+
+===== Page 9 =====
+G = nx.Graph(adj_matrix)score = {node_id: 0.0fornode_idinG.nodes()}foru, v inG.edges():degree_u= G.degree(u)degree_v= G.degree(v)score[u] += 1.0/ degree_uifdegree_u!= 0else0.0score[v] += 1.0/ degree_vifdegree_v!= 0else0.0betweenness =nx.betweenness_centrality(G)pagerank= nx.pagerank(G)weight_degree= 0.2weight_betweenness= 0.3weight_pagerank= 0.5scored_nodes = {}fornode_idinG.nodes():score = (weight_degree* score.get(node_id, 0) +weight_betweenness* betweenness[node_id] +weight_pagerank* pagerank[node_id])scored_nodes[node_id] = score
+def score_nodes(adj_matrix):
+return scored_nodes 
+adj_matrix = np.array(adj_matrix)G = nx.from_numpy_array(adj_matrix)LCC = G.subgraph(max(nx.connected_components(G), key=len))eigenvalues, eigenvectors = np.linalg.eig(adj_matrix)max_eigenvalue_index= np.argmax(eigenvalues)eigenvector = eigenvectors[:, max_eigenvalue_index]normalized_eigenvector= eigenvector / np.sum(eigenvector)ii = {v: ifori, v inenumerate(LCC.nodes())}L = nx.normalized_laplacian_matrix(LCC)eigenvalues, eigenvectors = eigsh(L, which='SM', maxiter=1000* L.shape[0])Fiedler = eigenvectors[:, 1]H =nx.Graph([(u, v) foru, v inLCC.edges() ifFiedler[ii[u]] * Fiedler[ii[v]] <= 0.0])forv inH.nodes():     H.nodes[v]['weight'] = 1.0/ H.degree(v)cover = list(nx.algorithms.approximation.min_weighted_vertex_cover(H, weight='weight'))max_degree= max([G.degree(v) forv inG.nodes() ifv notincover])min_weight= min(H.nodes[v]['weight'] forv inH.nodes())scored_nodes = {}forv inG.nodes():      ifv incover:          scored_nodes[v] = H.nodes[v]['weight‘]      else:          scored_nodes[v] = normalized_eigenvector[v] * min_weight
+def score_nodes(adj_matrix):
+return scored_nodes 
+Best function on JazzBest function on Network Science12345678910111213141516171819202122232425
+1234567891011121314151617181920
+Figure 3: The best functions found on Jazz and Network-Science.
+weighted cover to assign scores to its nodes (lines 13–22). Nodes not included in this new graph
+receive scores based on normalized eigenvector centrality (lines 5–8, 24).
+Conversely, the superior node scoring function from the Network-Science dataset determines node
+scores by calculating degree-related metrics (lines 4–8), betweenness centrality (line 9), and PageRank
+values (line 10) independently. These metrics are then aggregated using weighted averages to calculate
+a comprehensive node score (lines 11–19), effectively merging various centrality measures for node
+evaluation.
+This analysis reveals that the scoring functions our method uncovers differ across networks, all
+originating from manually designed initial functions and undergoing diverse modifications to logically
+score nodes. Additional discovered functions are accessible here: https://anonymous.4open.
+science/r/LLM4CN-6520.
+4.4 Case Study (RQ3)
+Figure 4 illustrates the statistics of function populations during the training process on the synthetic
+network, aiding us in understanding the evolutionary process of the function populations. Figure (a),
+(b) and (c) respectively represent the evolution of the population size, the average fitness score, and
+the highest fitness score of each function.
+First, in terms of population size, as evolution progresses, the majority of populations incrementally
+increase, reaching their respective capacities and initiating updates via elimination. However, for
+Population 2, the function count consistently remains at one, indicating the absence of similar
+/uni00000013/uni00000014/uni00000015/uni00000016/uni00000017/uni00000018/uni00000019/uni0000001a/uni0000001b/uni0000001c/uni00000014/uni00000013
+/uni00000028/uni00000053/uni00000052/uni00000046/uni0000004b
+/uni00000013
+/uni00000014
+/uni00000015
+/uni00000016
+/uni00000017
+/uni00000018
+/uni00000019
+/uni0000001a
+/uni0000001b
+/uni0000001c
+/uni00000014/uni00000013
+/uni00000014/uni00000014/uni00000033/uni00000052/uni00000053/uni00000058/uni0000004f/uni00000044/uni00000057/uni0000004c/uni00000052/uni00000051/uni00000003/uni0000004c/uni00000047
+/uni00000019/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013
+/uni00000014/uni00000014
+/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014
+/uni00000019/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013
+/uni00000014/uni00000017/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013
+/uni00000014/uni00000014/uni00000014/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013
+/uni00000014/uni00000014/uni0000001a/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013
+/uni00000014/uni00000016/uni00000016/uni00000017/uni00000018/uni00000019/uni0000001b/uni0000001b/uni0000001b/uni0000001c/uni00000014/uni00000013
+/uni00000015/uni00000018/uni00000018/uni00000018/uni00000018/uni00000018/uni00000018/uni00000018/uni00000019/uni00000019/uni0000001c
+/uni00000015/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013
+/uni00000015/uni00000017/uni00000017/uni00000017/uni00000017/uni00000017/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013/uni00000014/uni00000013
+/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014/uni00000014
+/uni00000014
+/uni00000015
+/uni00000016
+/uni00000017
+/uni00000018
+/uni00000019
+/uni0000001a
+/uni0000001b
+/uni0000001c
+/uni00000014/uni00000013
+(a) Population Size Heatmap
+/uni00000013/uni00000014/uni00000015/uni00000016/uni00000017/uni00000018/uni00000019/uni0000001a/uni0000001b/uni0000001c/uni00000014/uni00000013
+/uni00000028/uni00000053/uni00000052/uni00000046/uni0000004b
+/uni00000013
+/uni00000014
+/uni00000015
+/uni00000016
+/uni00000017
+/uni00000018
+/uni00000019
+/uni0000001a
+/uni0000001b
+/uni0000001c
+/uni00000014/uni00000013
+/uni00000014/uni00000014/uni00000033/uni00000052/uni00000053/uni00000058/uni0000004f/uni00000044/uni00000057/uni0000004c/uni00000052/uni00000051/uni00000003/uni0000004c/uni00000047
+/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013
+/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013
+/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000015
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000015/uni0000001c
+/uni00000013/uni00000011/uni00000015/uni00000019/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001b
+/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000015
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001a/uni00000013/uni00000011/uni00000015/uni0000001c/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b
+/uni00000013/uni00000011/uni00000015/uni00000018
+/uni00000013/uni00000011/uni00000015/uni00000019
+/uni00000013/uni00000011/uni00000015/uni0000001a
+/uni00000013/uni00000011/uni00000015/uni0000001b
+/uni00000013/uni00000011/uni00000015/uni0000001c
+/uni00000013/uni00000011/uni00000016/uni00000013
+/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000016/uni00000015
+ (b) Average Fitness Score Heatmap
+/uni00000013/uni00000014/uni00000015/uni00000016/uni00000017/uni00000018/uni00000019/uni0000001a/uni0000001b/uni0000001c/uni00000014/uni00000013
+/uni00000028/uni00000053/uni00000052/uni00000046/uni0000004b
+/uni00000013
+/uni00000014
+/uni00000015
+/uni00000016
+/uni00000017
+/uni00000018
+/uni00000019
+/uni0000001a
+/uni0000001b
+/uni0000001c
+/uni00000014/uni00000013
+/uni00000014/uni00000014/uni00000033/uni00000052/uni00000053/uni00000058/uni0000004f/uni00000044/uni00000057/uni0000004c/uni00000052/uni00000051/uni00000003/uni0000004c/uni00000047
+/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013
+/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni00000018
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000016
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000015
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000013
+/uni00000013/uni00000011/uni00000015/uni00000018/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000013/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000017
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014/uni00000013/uni00000011/uni00000016/uni00000014
+/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b/uni00000013/uni00000011/uni00000015/uni0000001b
+/uni00000013/uni00000011/uni00000015/uni00000019
+/uni00000013/uni00000011/uni00000015/uni0000001b
+/uni00000013/uni00000011/uni00000016/uni00000013
+/uni00000013/uni00000011/uni00000016/uni00000015
+/uni00000013/uni00000011/uni00000016/uni00000017
+ (c) Highest Fitness Score Heatmap
+Figure 4: Evolution of funciton populations.
+9
+
+===== Page 10 =====
+offspring function generation. Given that Population 2’s score is the lowest among all initial functions,
+it logically follows that its inferior genes are not selected. Furthermore, two new populations emerged
+during evolution, illustrating our population management design’s capability to preserve the diversity
+of function populations.
+Moreover, the analysis of change curves for average and highest fitness scores across populations
+reveals continuous enhancement in the overall function quality. Simultaneously, no instances of
+multiple populations maintaining the same average fitness throughout evolution were observed,
+indicating our design’s effectiveness in circumventing the pitfall of convergent evolution. Around
+the 20th and 100th epochs, there are noticeable increases in the fitness scores of the function
+populations, representing the circulation of superior genes within the populations and enhancing
+overall performance.
+In conclusion, our proposed model ensures that the function populations can evolve continuously
+while preserving diversity, thereby facilitating the generation of superior new functions.
+4.5 Ablation Study (RQ4)
+We conduct ablation studies to evaluate the effectiveness of a node scoring function in iden-
+tifying critical nodes within a network. Our model is built upon three key components,
+and through ablation, we aim to assess the impact of each component as described below.
+/uni00000013/uni00000011/uni00000013/uni00000013/uni00000011/uni00000015/uni00000013/uni00000011/uni00000017/uni00000013/uni00000011/uni00000019/uni00000013/uni00000011/uni0000001b/uni00000014/uni00000011/uni00000013
+/uni00000033/uni00000048/uni00000055/uni00000046/uni00000048/uni00000051/uni00000057/uni00000044/uni0000004a/uni00000048/uni00000003/uni00000052/uni00000049/uni00000003/uni00000051/uni00000052/uni00000047/uni00000048/uni00000056/uni00000003/uni00000055/uni00000048/uni00000050/uni00000052/uni00000059/uni00000048/uni00000047
+/uni00000013/uni00000011/uni00000015
+/uni00000013/uni00000011/uni00000016
+/uni00000013/uni00000011/uni00000017
+/uni00000013/uni00000011/uni00000018
+/uni00000013/uni00000011/uni00000019
+/uni00000013/uni00000011/uni0000001a
+/uni00000013/uni00000011/uni0000001b
+/uni00000013/uni00000011/uni0000001c
+/uni00000014/uni00000011/uni00000013/uni00000024/uni00000031/uni00000026
+/uni00000026/uni00000052/uni00000050/uni00000053/uni0000004f/uni00000048/uni00000057/uni00000048/uni00000003/uni00000030/uni00000052/uni00000047/uni00000048/uni0000004f
+/uni0000003a/uni00000012/uni00000032/uni00000003/uni0000002f/uni0000002f/uni00000030/uni00000056/uni00000010/uni00000045/uni00000044/uni00000056/uni00000048/uni00000047/uni00000003/uni00000028/uni00000059/uni00000052/uni0000004f/uni00000058/uni00000057/uni0000004c/uni00000052/uni00000051
+/uni0000003a/uni00000012/uni00000032/uni00000003/uni00000030/uni00000044/uni00000051/uni00000058/uni00000044/uni0000004f/uni00000003/uni0000002c/uni00000051/uni0000004c/uni00000057/uni0000004c/uni00000044/uni0000004f/uni0000004c/uni0000005d/uni00000044/uni00000057/uni0000004c/uni00000052/uni00000051
+/uni0000003a/uni00000012/uni00000032/uni00000003/uni00000033/uni00000052/uni00000053/uni00000058/uni0000004f/uni00000044/uni00000057/uni0000004c/uni00000052/uni00000051/uni00000003/uni00000030/uni00000044/uni00000051/uni00000044/uni0000004a/uni00000048/uni00000050/uni00000048/uni00000051/uni00000057
+Figure 5: Comparison of ablation study.
+• W/O Manual Initialization: To gauge the significance
+of Manual Initialization, we adopt an alternate strategy.
+Here, we define the task of identifying critical nodes
+to the LLM and instruct it to generate an equivalent
+number of node scoring functions in a predetermined
+format, thereby bypassing manual initialization.
+• W/O Population Management: To explore the neces-
+sity of Population Management, we implement an alter-
+native scheme where all functions are collected without
+any categorization. During the selection phase, parent
+functions are randomly selected from the entire pool of
+individuals, eliminating structured population manage-
+ment.
+• W/O LLMs-based Evolution: Assessing the indispens-
+ability of LLMs-based Evolution, we introduce an alternative method. Initially, all functions are
+treated as parent functions. This is followed by a single epoch of crossover and mutation to produce
+a multitude of offspring functions, from which the most suitable are chosen, simulating a condensed
+version of the evolutionary process.
+The efficacy of the node scoring functions discovered via each ablation strategy versus the compre-
+hensive method was analyzed. Findings, depicted in Figure 5, affirm that every component of our
+proposed model significantly enhances its overall performance.
+5 Related Work
+5.1 Synergy between LLMs and EAs
+Recent research underscores the effectiveness of leveraging Large Language Models (LLMs) for
+optimization tasks via prompt engineering [40, 16]. This method proves particularly advantageous
+for Evolutionary Algorithms (EAs), attributed to the advanced text comprehension and generation
+capabilities of LLMs [5, 37]. For example, recent investigations into discrete prompt optimization
+have shown how LLMs can mimic evolutionary operators, generating innovative candidate prompts
+through crossover and mutation based on fixed prompts [17, 21]. Furthermore, studies have explored
+the use of LLMs in tackling combinatorial optimization problems (COPs) by developing evolved
+heuristic solutions [29, 42]. EvoPrompting [6] utilizes LLMs for Neural Architecture Search (NAS),
+performing crossover and mutation at the code level to discover new architectures. Likewise,
+10
+
+===== Page 11 =====
+FunSearch [31] implements an LLM-powered evolutionary method to determine solution functions
+for mathematical challenges. In addition, Eureka [24] focuses on the design of reinforcement learning
+reward functions using LLM-based evolutionary algorithms, while Fuzz4All [38] applies LLMs in
+fuzz testing to generate and mutate inputs.
+Distinct from previous studies, our research emphasizes the use of LLMs that perform mutation and
+crossover processes on node scoring functions, aiming to evolutionarily determine the most effective
+scoring functions.
+5.2 Critical Nodes Detection
+Identifying critical nodes is of significant importance across various practical domains. Numerous
+approaches have been proposed to tackle this issue. Basic methods such as Degree Centrality, entail
+removing nodes with the highest degrees. Algorithms like CoreHD [43] and WeakNeighbors [32]
+utilize k-core decomposition, in which the k-core of a network is defined as the maximal subgraph
+with every node having a degree of at least k. These methods progressively eliminate nodes with
+the highest degrees within their respective k-cores to identify key nodes. On the other hand, Min-
+Sum [3] focuses on creating an acyclic network by removing nodes that form loops, followed by
+utilizing greedy tree-breaking algorithms to decompose the remaining forest into smaller disconnected
+components. Additionally, GND [30] adopts a spectral approach to iteratively partition the network
+into two components. Learning-based methods like NIRM [44] and GDM [14] utilize neural networks
+to assign scores to network nodes, determining their importance based on these scores.
+Unlike previous studies, our research is not limited to identifying specific algorithms. Rather, it
+leverages LLM-empowered Evolutionary Algorithms (EAs) to investigate a broad spectrum of
+potential algorithms, yielding favorable outcomes across diverse networks.
+5.3 LLMs for Code Generation
+Large Language Models (LLMs) exhibit considerable promise in automating code generation, cap-
+italizing on their capacity for training on vast repositories of publicly available source code. This
+training enables them to acquire a comprehensive understanding of programming concepts and
+patterns, which in turn significantly enhances their capabilities in code generation [ 7, 20]. These
+capabilities are progressively applied to tackle a multitude of code-related challenges. Notably,
+LLMs are employed in tasks such as code debugging [ 8, 23], enhancing code performance [ 25],
+resolving algorithmic competition problems [20, 15], and conducting code deobfuscation [1, 39] and
+translation [28, 33]. Additionally, the capacity to produce task-specific code highlights the versatility
+of LLMs; for instance, their deployment in robotics control [22, 35], domain-specific data curation
+[9], and solving general tasks [46, 41], illustrates their extensive utility across specialized and general
+domains.
+In this paper, we explore in depth the potential of code generation in efficiently identifying optimal
+scoring functions through the use of LLM-based evolutionary algorithms (EAs).
+6 Conclusion and Future Work
+In this study, we employ an evolutionary algorithm enhanced by large language models for generating
+node scoring functions, to identify critical nodes within networks. Initially, the evolution begins
+with a set of functions crafted based on network topology and existing algorithmic approaches.
+Subsequently, the model assesses the fitness scores of the given functions within the network and
+categorizes populations according to the embedding representations of these functions. Following this,
+selections both between and within populations are performed to select parent algorithms for further
+evolution. Finally, the LLMs are utilized to execute crossover and mutation operations, producing
+offspring individuals. Following executable checks, newly generated functions are incorporated into
+the population, and this iterative process persists until the evolution terminates.
+Experimental results across various network datasets reveal that our method effectively balances
+adaptability and utility in comparison to other state-of-the-art algorithms. It is capable of generating
+a variety of both reasonable and efficient node scoring functions.
+11
+
+===== Page 12 =====
+In future work, we aim to delve deeper into distributed designs for the evaluation, management,
+and evolution processes, enabling parallel execution to improve the model’s evolutionary speed and
+performance. Furthermore, we plan to diversify the types of initial algorithms and prompts, aiming to
+create more compelling, high-performance node scoring functions through large language models,
+focusing on the identification of critical nodes within networks.
+References
+[1] Jordi Armengol-Estapé, Jackson Woodruff, Chris Cummins, and Michael FP O’Boyle. Slade:
+A portable small language model decompiler for optimized assembler. arXiv preprint
+arXiv:2305.12520, 2023.
+[2] Ashwin Arulselvan, Clayton W Commander, Lily Elefteriadou, and Panos M Pardalos. Detecting
+critical nodes in sparse graphs. Computers & Operations Research, 36(7):2193–2200, 2009.
+[3] Alfredo Braunstein, Luca Dall’Asta, Guilhem Semerjian, and Lenka Zdeborová. Network
+dismantling. Proceedings of the National Academy of Sciences, 113(44):12368–12373, 2016.
+[4] Yupeng Chang, Xu Wang, Jindong Wang, Yuan Wu, Linyi Yang, Kaijie Zhu, Hao Chen,
+Xiaoyuan Yi, Cunxiang Wang, Yidong Wang, et al. A survey on evaluation of large language
+models. ACM Transactions on Intelligent Systems and Technology, 2023.
+[5] Wang Chao, Jiaxuan Zhao, Licheng Jiao, Lingling Li, Fang Liu, and Shuyuan Yang. A match
+made in consistency heaven: when large language models meet evolutionary algorithms. arXiv
+preprint arXiv:2401.10510, 2024.
+[6] Angelica Chen, David M Dohan, and David R So. Evoprompting: Language models for
+code-level neural architecture search. arXiv preprint arXiv:2302.14838, 2023.
+[7] Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Ponde de Oliveira Pinto, Jared
+Kaplan, Harri Edwards, Yuri Burda, Nicholas Joseph, Greg Brockman, et al. Evaluating large
+language models trained on code. arXiv preprint arXiv:2107.03374, 2021.
+[8] Xinyun Chen, Maxwell Lin, Nathanael Schärli, and Denny Zhou. Teaching large language
+models to self-debug. arXiv preprint arXiv:2304.05128, 2023.
+[9] Zui Chen, Lei Cao, Sam Madden, Tim Kraska, Zeyuan Shang, Ju Fan, Nan Tang, Zihui Gu,
+Chunwei Liu, and Michael Cafarella. Seed: Domain-specific data curation with large language
+models. arXiv e-prints, pages arXiv–2310, 2023.
+[10] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. BERT: pre-training of
+deep bidirectional transformers for language understanding. CoRR, abs/1810.04805, 2018.
+[11] Christian G Fink, Nathan Omodt, Sydney Zinnecker, and Gina Sprint. A congressional twitter
+network dataset quantifying pairwise probability of influence. Data in Brief, 2023.
+[12] Chen Gao, Xiaochong Lan, Nian Li, Yuan Yuan, Jingtao Ding, Zhilun Zhou, Fengli Xu, and
+Yong Li. Large language models empowered agent-based modeling and simulation: A survey
+and perspectives. arXiv preprint arXiv:2312.11970, 2023.
+[13] Pablo M Gleiser and Leon Danon. Community structure in jazz. Advances in complex systems,
+6(04):565–573, 2003.
+[14] Marco Grassia, Manlio De Domenico, and Giuseppe Mangioni. Machine learning dismantling
+and early-warning signals of disintegration in complex systems. Nature Communications,
+12(1):5190, 2021.
+[15] Daya Guo, Canwen Xu, Nan Duan, Jian Yin, and Julian Mcauley. LongCoder: A long-range pre-
+trained language model for code completion. In Andreas Krause, Emma Brunskill, Kyunghyun
+Cho, Barbara Engelhardt, Sivan Sabato, and Jonathan Scarlett, editors, Proceedings of the
+40th International Conference on Machine Learning, volume 202 of Proceedings of Machine
+Learning Research, pages 12098–12107. PMLR, 23–29 Jul 2023.
+[16] Pei-Fu Guo, Ying-Hsuan Chen, Yun-Da Tsai, and Shou-De Lin. Towards optimizing with large
+language models. arXiv preprint arXiv:2310.05204, 2023.
+[17] Qingyan Guo, Rui Wang, Junliang Guo, Bei Li, Kaitao Song, Xu Tan, Guoqing Liu, Jiang
+Bian, and Yujiu Yang. Connecting large language models with evolutionary algorithms yields
+powerful prompt optimizers. arXiv preprint arXiv:2309.08532, 2023.
+12
+
+===== Page 13 =====
+[18] Yiming Huang, Hao Wang, Xiao-Long Ren, and Linyuan Lü. Identifying key players in complex
+networks via network entanglement. Communications Physics, 7(1):19, 2024.
+[19] Mohammed Lalou, Mohammed Amin Tahraoui, and Hamamache Kheddouci. The critical node
+detection problem in networks: A survey. Computer Science Review, 28:92–117, 2018.
+[20] Yujia Li, David Choi, Junyoung Chung, Nate Kushman, Julian Schrittwieser, Rémi Leblond,
+Tom Eccles, James Keeling, Felix Gimeno, Agustin Dal Lago, et al. Competition-level code
+generation with alphacode. Science, 378(6624):1092–1097, 2022.
+[21] Yujian Betterest Li and Kai Wu. Spell: Semantic prompt evolution based on a llm. arXiv
+preprint arXiv:2310.01260, 2023.
+[22] Jacky Liang, Wenlong Huang, Fei Xia, Peng Xu, Karol Hausman, Brian Ichter, Pete Florence,
+and Andy Zeng. Code as policies: Language model programs for embodied control. In 2023
+IEEE International Conference on Robotics and Automation (ICRA), pages 9493–9500. IEEE,
+2023.
+[23] Vadim Liventsev, Anastasiia Grishina, Aki Härmä, and Leon Moonen. Fully autonomous
+programming with large language models. arXiv preprint arXiv:2304.10423, 2023.
+[24] Yecheng Jason Ma, William Liang, Guanzhi Wang, De-An Huang, Osbert Bastani, Dinesh
+Jayaraman, Yuke Zhu, Linxi Fan, and Anima Anandkumar. Eureka: Human-level reward design
+via coding large language models. In Second Agent Learning in Open-Endedness Workshop,
+2023.
+[25] Aman Madaan, Alexander Shypula, Uri Alon, Milad Hashemi, Parthasarathy Ranganathan,
+Yiming Yang, Graham Neubig, and Amir Yazdanbakhsh. Learning performance-improving
+code edits. arXiv preprint arXiv:2302.07867, 2023.
+[26] Jinzhu Mao, Liu Cao, Chen Gao, Huandong Wang, Hangyu Fan, Depeng Jin, and Yong Li.
+Detecting vulnerable nodes in urban infrastructure interdependent network. In Proceedings
+of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining , pages
+4617–4627, 2023.
+[27] Mark EJ Newman. Finding community structure in networks using the eigenvectors of matrices.
+Physical review E, 74(3):036104, 2006.
+[28] Rangeet Pan, Ali Reza Ibrahimzada, Rahul Krishna, Divya Sankar, Lambert Pouguem Wassi,
+Michele Merler, Boris Sobolev, Raju Pavuluri, Saurabh Sinha, and Reyhaneh Jabbarvand.
+Understanding the effectiveness of large language models in code translation. arXiv preprint
+arXiv:2308.03109, 2023.
+[29] Michal Pluhacek, Anezka Kazikova, Tomas Kadavy, Adam Viktorin, and Roman Senkerik.
+Leveraging large language models for the generation of novel metaheuristic optimization algo-
+rithms. In Proceedings of the Companion Conference on Genetic and Evolutionary Computation,
+pages 1812–1820, 2023.
+[30] Xiao-Long Ren, Niels Gleinig, Dirk Helbing, and Nino Antulov-Fantulin. Generalized network
+dismantling. Proceedings of the national academy of sciences, 116(14):6554–6559, 2019.
+[31] Bernardino Romera-Paredes, Mohammadamin Barekatain, Alexander Novikov, Matej Balog,
+M Pawan Kumar, Emilien Dupont, Francisco JR Ruiz, Jordan S Ellenberg, Pengming Wang,
+Omar Fawzi, et al. Mathematical discoveries from program search with large language models.
+Nature, pages 1–3, 2023.
+[32] Christian Schmidt, Henry D Pfister, and Lenka Zdeborová. Minimal sets to destroy the k-core
+in random networks. Physical Review E, 99(2):022310, 2019.
+[33] Zilu Tang, Mayank Agarwal, Alexander G Shypula, Bailin Wang, Derry Wijaya, Jie Chen, and
+Yoon Kim. Explain-then-translate: an analysis on improving program translation with self-
+generated explanations. In The 2023 Conference on Empirical Methods in Natural Language
+Processing, 2023.
+[34] Cullen M Taniguchi, Brice Emanuelli, and C Ronald Kahn. Critical nodes in signalling pathways:
+insights into insulin action. Nature reviews Molecular cell biology, 7(2):85–96, 2006.
+[35] Lirui Wang, Yiyang Ling, Zhecheng Yuan, Mohit Shridhar, Chen Bao, Yuzhe Qin, Bailin
+Wang, Huazhe Xu, and Xiaolong Wang. Gensim: Generating robotic simulation tasks via large
+language models. In 2nd Workshop on Language and Robot Learning: Language as Grounding,
+2023.
+13
+
+===== Page 14 =====
+[36] Douglas Brent West et al. Introduction to graph theory, volume 2. Prentice hall Upper Saddle
+River, 2001.
+[37] Xingyu Wu, Sheng-hao Wu, Jibin Wu, Liang Feng, and Kay Chen Tan. Evolutionary computa-
+tion in the era of large language model: Survey and roadmap. arXiv preprint arXiv:2401.10034,
+2024.
+[38] Chunqiu Steven Xia, Matteo Paltenghi, Jia Le Tian, Michael Pradel, and Lingming Zhang.
+Fuzz4all: Universal fuzzing with large language models. In Proceedings of the 46th Interna-
+tional Conference on Software Engineering, ICSE ’24, 2024.
+[39] Xiangzhe Xu, Zhuo Zhang, Shiwei Feng, Yapeng Ye, Zian Su, Nan Jiang, Siyuan Cheng, Lin
+Tan, and Xiangyu Zhang. Lmpa: Improving decompilation by synergy of large language model
+and program analysis. arXiv preprint arXiv:2306.02546, 2023.
+[40] Chengrun Yang, Xuezhi Wang, Yifeng Lu, Hanxiao Liu, Quoc V Le, Denny Zhou, and Xinyun
+Chen. Large language models as optimizers. arXiv preprint arXiv:2309.03409, 2023.
+[41] John Yang, Akshara Prabhakar, Karthik Narasimhan, and Shunyu Yao. Intercode: Standardizing
+and benchmarking interactive coding with execution feedback.arXiv preprint arXiv:2306.14898,
+2023.
+[42] Haoran Ye, Jiarui Wang, Zhiguang Cao, and Guojie Song. Reevo: Large language models as
+hyper-heuristics with reflective evolution, 2024.
+[43] Lenka Zdeborová, Pan Zhang, and Hai-Jun Zhou. Fast and simple decycling and dismantling of
+networks. Scientific reports, 6(1):37954, 2016.
+[44] Jiazheng Zhang and Bang Wang. Dismantling complex networks by a neural model trained
+from tiny networks. In Proceedings of the 31st ACM International Conference on Information
+& Knowledge Management, pages 2559–2568, 2022.
+[45] Junlong Zhang and Yu Luo. Degree centrality, betweenness centrality, and closeness centrality
+in social network. In 2017 2nd international conference on modelling, simulation and applied
+mathematics (MSAM2017), pages 300–303. Atlantis press, 2017.
+[46] Shun Zhang, Zhenfang Chen, Yikang Shen, Mingyu Ding, Joshua B Tenenbaum, and Chuang
+Gan. Planning with large language models for code generation. In The Eleventh International
+Conference on Learning Representations, 2022.
+[47] Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min,
+Beichen Zhang, Junjie Zhang, Zican Dong, et al. A survey of large language models. arXiv
+preprint arXiv:2303.18223, 2023.
+14

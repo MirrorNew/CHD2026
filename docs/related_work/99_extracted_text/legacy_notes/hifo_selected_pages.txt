@@ -1,0 +1,704 @@
+
+
+===== PDF PAGE 1 =====
+Published as a conference paper at ICLR 2026
+HIFO-PROMPT: PROMPTING WITHHINDSIGHT AND
+FORESIGHT FORLLM-BASEDAUTOMATICHEURISTIC
+DESIGN
+Chentong Chen1∗, Mengyuan Zhong 1∗, Ye Fan 2, Jialong Shi 1†, Jianyong Sun1†
+1Xi’an Jiaotong University
+2Northwest Polytechnical University
+{chengtong.chen, my.zhong}@stu.xjtu.edu.cn,
+fanye@nwpu.edu.cn,{jialong.shi, jy.sun}@xjtu.edu.cn
+ABSTRACT
+This paper investigates the application of Large Language Models (LLMs) in
+Automated Heuristic Design (AHD), where their integration into evolutionary
+frameworks reveals a significant gap in global control and long-term learning.
+We propose the Hindsight-Foresight Prompt (HiFo-Prompt), a novel framework
+for LLM-based AHD designed to overcome these limitations. This is achieved
+through two synergistic strategies:ForesightandHindsight. Foresight acts as a
+high-level meta-controller, monitoring population dynamics(e.g., stagnation and
+diversity collapse) to switch the global search strategy between exploration and
+exploitation explicitly. Hindsight builds a persistent knowledge base by distill-
+ing successful design principles from past generations, making this knowledge
+reusable. This dual mechanism ensures that the LLM is not just a passive op-
+erator but an active reasoner, guided by a global plan (Foresight) while contin-
+uously improving from its cumulative experience (Hindsight). Empirical results
+demonstrate that HiFo-Prompt significantly outperforms a comprehensive suite of
+state-of-the-art AHD methods, discovering higher-quality heuristics with substan-
+tially improved convergence speed and query efficiency. Our code is available at
+https://github.com/Challenger-XJTU/HiFo-Prompt.
+1 INTRODUCTION
+Combinatorial Optimization (CO) problems, which involve finding an optimal solution from a dis-
+crete set of possibilities, are ubiquitous in science and engineering. Because of their NP-hardness,
+designing effective heuristics for these problems is a complex task, traditionally based on extensive
+human experience and intuition (Camacho-Villal´on et al., 2023).
+The advent of Large Language Models (LLMs) has catalyzed a paradigm shift toward Automated
+Heuristic Design (AHD) (Wang & Chen, 2023; Liu et al., 2024c). A particularly potent approach
+marries LLMs with Evolutionary Computation (EC), casting the LLM as a high-level semantic mu-
+tation operator. Foundational works such as FunSearch (Romera-Paredes et al., 2024) and EoH (Liu
+et al., 2024b) established the viability of this LLM+EC paradigm, demonstrating its capacity to
+discover novel and effective heuristics.
+However, as the field progresses, two fundamental challenges have emerged in AHD:the inability
+to steer the heuristic generation process based on population dynamicsandthe failure to distill and
+manage the core design principles of high-performance heuristics to guide the subsequent heuristic
+generation process.
+First, many approaches lack a mechanism for global adaptive guidance. They often rely on local
+or reactive signals; for instance, ReEvo (Ye et al., 2024) performs reflection on a single candi-
+date, while methods such as MCTS-AHD (Zheng et al., 2025) passively embed the exploration-
+∗Equal contribution.
+†Corresponding author.
+1
+
+
+===== PDF PAGE 2 =====
+Published as a conference paper at ICLR 2026
+exploitation trade-off within their search structure. This localized control does not respond to the
+macroscopical dynamics of the population and cannot proactively intervene when the search en-
+counters systemic issues such as premature convergence or a decline in diversity. A more aggressive
+strategy involves in-weight adaptation (e.g., EvoTune ( ˇSurina et al., 2025), CALM (Huang et al.,
+2025)), which uses numerical gradients to fine-tune the LLM. Although powerful, this approach
+incurs high computational costs from repeated fine-tuning and reduces the LLM to an opaque policy
+network. Consequently, learning is implicitly encoded in model weights, preventing the extraction
+of explicit design principles and obscuring the model’s symbolic reasoning process.
+Second, existing frameworks suffer from poor knowledge persistence, a phenomenon we term
+knowledge decay. Successful design strategies often remain entangled within specific code imple-
+mentations; when parent candidates are discarded, the underlying logic is lost. Recent advances,
+such as evolving the optimizer in MoH (Shi et al., 2025) or automating problem reduction in
+RedAHD (Thach et al., 2025), operate in orthogonal dimensions. They do not explicitly decouple
+algorithmic knowledge from executable forms. Consequently, the system fails to achieve cumula-
+tive learning, perpetually rediscovering similar concepts instead of building on proven algorithmic
+strategies.
+To overcome these fundamental limitations, we proposeHiFo-Prompt (Hindsight-Foresight
+Prompt), a framework that establishes a hierarchical control architecture for LLM-based AHD.
+HiFo-Prompt elevates the LLM from a mere code generator to a symbolic meta-optimizer by endow-
+ing it with two synergistic capabilities: First, theForesightmodule addresses the control problem
+by serving as a meta-controller(Evolutionary Navigator) that observes population dynamics. Upon
+detecting states like performance plateaus, it explicitly modulates the generative process by switch-
+ing evolutionary regimes via transparent verbal gradients injected at the prompt level, serving as a
+symbolic alternative to opaque and expensive numerical gradients. Second, the Hindsight module
+addresses knowledge decay by implementing theInsight Pool, an evolving repository of abstracted
+design principles. It distills core algorithmic patterns from specific code implementations, trans-
+forming them into reusable knowledge. This mechanism allows the system to build on validated
+design principles, effectively seeding subsequent generations with proven algorithmic strategies. In
+summary, the contributions of our approach are as follows:
+• We introduce HiFo-Prompt, a novel framework consisting of Hindsight and Foresight mod-
+ules. It dynamically generates prompts for LLMs by decoupling thoughts from code,
+thereby enabling independent updates and evaluations. This mechanism leads to a sig-
+nificant reduction in both training time for heuristics and evaluation costs for LLMs.
+• To improve the Hindsight and Foresight abilities of our method, we introduce the Insight
+Pool and Evolutionary Navigator, respectively. The Insight Pool accumulates knowledge
+from high-performing codes through iterative updates. The Evolutionary Navigator con-
+trols population states by monitoring evolution and balancing exploration-exploitation dy-
+namics.
+• We evaluated the heuristics designed by HiFo-Prompt on complex optimization tasks, com-
+paring them against advanced handcrafted heuristics and existing AHD approaches. Our
+results achieve state-of-the-art performance in the AHD domain, with substantial improve-
+ments over prior AHD methods, particularly excelling in the Traveling Salesman Problem
+(TSP) and Flow Shop Scheduling Problem (FSSP).
+2 RELATEDWORK
+LLM-driven Automatic Heuristic DesignThe integration of Large Language Models (LLMs)
+into Evolutionary Computation (EC) is a vibrant new direction for Automated Heuristic Design
+(AHD) (Liu et al., 2024a; Chauhan et al., 2025). Pioneered by works like FunSearch (Romera-
+Paredes et al., 2024) and EoH (Liu et al., 2024b), this paradigm leverages the LLM as a powerful
+semantic operator to generate heuristics as code. Recent efforts to advance this paradigm can be
+categorized along several axes. Some works focus on refining search control through sophisticated
+prompt engineering and guidance mechanisms (Ye et al., 2024; Dat et al., 2025), or by redesign-
+ing the population structure itself (Zheng et al., 2025). A distinct, more model-centric approach
+directly adapts the LLM’s parameters via reinforcement learning-based fine-tuning ( ˇSurina et al.,
+2
+
+
+===== PDF PAGE 3 =====
+Published as a conference paper at ICLR 2026
+Foundational 
+Prompt
+Hindsight
+Prompt
+Foresight
+Prompt
+Foundational Prompt Strategies
+Insight Pool
+…
+ …
+Composite
+Prompt
+Self-Evolving 
+Prompt with Explore Regime
+Prompt with Exploit Regime
+Prompt with Balance Regime
+Evolution
+Heuristic
+Elitist Heuristic
+LLM
+LLM
+× N
+insight-score
+Synthesize
+Insight 
+Distillation
+insight-score
+insight-score
+insight-score insight-score
+insight-score
+select
+select
+select
+Population State Information
+Figure 1: The framework of HiFo-Prompt, which comprises two core processes. (1)Prompt Con-
+struction: A foundational prompt is dynamically augmented with design directives from theFore-
+sightand insights from theHindsightto form the final composite prompt. (2)Knowledge Evolu-
+tion: A self-evolving loop is established where elite heuristics from the evolutionary process are
+distilled into new insights, continuously enriching the Hindsight module’s knowledge base.
+2025; Huang et al., 2025). At the highest level of abstraction, research has also explored evolving
+other core components of the optimization process, such as the optimizer (Shi et al., 2025) or the
+problem representation (Thach et al., 2025).
+Knowledge Management in Generative SearchHarnessing historical information is a corner-
+stone of efficient search. In classical EC, methods like Cultural Algorithms (Maheri et al., 2021)
+formalize this via a structured Belief Space that stores and evolves collective knowledge. Contem-
+porary LLM-based approaches often rely on in-context reflection mechanisms (Shinn et al., 2023;
+Bo et al., 2024), where the model self-critiques failures to inform its next attempt. However, this
+knowledge is typically transient, unstructured, and instance-specific. Consequently, these methods
+lack a mechanism for accumulating and generalizing insights over time, preventing the formation of
+a persistent, structured knowledge base analogous to those in classical EC.
+Adaptive Control in Evolutionary ComputationDynamically adapting search strategies is a
+long-standing goal in EC. Historically, this has been addressed through low-level, reactive mecha-
+nisms like Adaptive Operator Selection (AOS) (´Alvaro Fialho, 2010; Tian et al., 2023) and parameter
+control (Eiben & Smith, 2015; Aleti & Moser, 2016). These methods rely on numerical credit as-
+signment, effectively voting for strategies that recently performed well, but they lack a semantic
+understanding of the search dynamics (e.g., identifying population stagnation). The reasoning capa-
+bilities of LLMs offer a paradigm shift towards higher-level, proactive control (Eiben et al., 1999;
+Papa, 2021). Instead of merely adjusting parameters, LLMs can interpret population-level statistics
+to suggest symbolic actions, such asincrease mutation rate to escape a local optimum. This marks
+a transition from fine-grained numerical tuning to semantic-based strategic adjustment.
+3 METHODOLOGY
+In this section, we introduce our proposed HiFo-Prompt, a novel framework that equips the evo-
+lutionary process driven by LLM with mechanisms for learning and adaptation (shown in Figure
+1). HiFo-Prompt integrates two synergistic components: a Foresight module for real-time adaptive
+control, which monitors evolutionary dynamics to steer the search strategy, and a Hindsight module
+3
+
+
+===== PDF PAGE 4 =====
+Published as a conference paper at ICLR 2026
+Performance (objective)
+Number of generations
+841 2 3 5 6 7
+6.04697
+5.96625 5.956945.95694
+5.93886 5.93886 5.83838 5.83838
+Design adaptive hybrid meta-heuristics synergistically fusing multiple search paradigms 
+and dynamically tune operator parameters based on search stage or problem features
+Insight 1
+Employ machine learning or pattern recognition to mine deep problem structures and 
+optimal solution patterns then use learned insights to intelligently bias towards 
+promising search regions or constructive choices
+Insight 2
+Explore objective function engineering by introducing auxiliary or surrogate objectives or 
+by dynamically adjusting weights to reshape the search landscape aiding escape from 
+local optima or guiding diverse exploration
+Insight 3
+optimizing objective function evaluation criteria
+……
+considering long-term impact of current decisions
+refining core evaluation and scoring functions
+……
+reducing unnecessary computational overhead and redundancy
+exploring novel solution construction methodologies
+……
+introducing new randomization or adaptive mechanisms
+E1: I have…create a new algorithm that has a totally…
+E2: I have…but can be motivated from them…
+M1: I have one algorithm…a modified version of the …
+M2: I have one algorithm…a different parameter settings…
+M3: First, you need to …simplify the components to…
+……
+Balance
+Exploit
+Explore
+Hindsight——Insight Pool
+Foresight——Regime Set
+Foundational Prompt Strategies
+Synthesize
+Prompt for LLM
+First, you need to identify the main components …… (M3)
+Consider these successful design principles I've observed recently:
+Design adaptive hybrid meta-heuristics synergistically …… (Insight 1)
+Employ machine learning or pattern recognition to ……       (Insight 2)
+Explore objective function engineering by introducing ……  (Insight 3)
+When simplifying, please pay special attention to:
+reducing unnecessary computational overhead and redundancy
+(Exploit Regime)
+LLM
+Figure 2: Dynamic prompt generation process of HiFo-Prompt.
+for long-term knowledge accumulation, which manages a self-evolving repository of successful de-
+sign principles that we term insights. By uniting foresight-driven strategy with hindsight-informed
+knowledge, our framework transforms the generative process into a robust, self-regulating system.
+3.1 GUIDEDPROMPTSYNTHESIS FORAHD
+Our HiFo-Prompt framework applies a Guided Prompt Synthesis mechanism that constructs each
+prompt as a context-aware composite instruction. This mechanism integrates three interlocking
+modules: Foundational prompt strategies, Hindsight, and Foresight. The resulting composite prompt
+provides precise, multifaceted guidance to the LLM. A complete example of prompt generation
+for TSP with step-by-step construction is provided in Figure 2, and the specific templates for all
+operators (e.g., I1, E1, M1) are detailed in Appendix E.
+Foundational prompt strategies.Our framework’s generative foundation is a set of Foundational
+Prompt Strategies, which function as the LLM-equivalent of genetic operators. We first generate
+heuristics from scratch using the initial prompt strategyI1, then evolve them with five foundational
+prompts adapted from EoH (Liu et al., 2024b). These prompts are organized into two primary
+strategies: 1)Reorganization Strategies, which includeE1, synthesizing a new algorithm with
+a novel structure from multiple parents, andE2, abstracting shared core ideas to generate con-
+ceptually distinct variants; and 2)Mutation Strategies, which encompassM1, making structural
+modifications for functionally equivalent variants;M2, tuning critical parameters; andM3, simpli-
+fying components prone to overfitting. While this curated set provides the raw generative capability,
+its effectiveness depends on contextual guidance. This is the role of the Hindsight and Foresight
+modules, which inject insights and a design directive into the prompts to align each action with the
+search’s current needs.
+Hindsight Module.This module incorporates valid heuristic experience in the form of insights,
+which are abstract and generalizable design principles distilled from successful heuristics. These
+insights are managed in a dynamic Insight Pool, where each is assigned and continuously updated
+with a credibility score based on its empirical performance. Before generation, high-scoring insights
+are retrieved and embedded into the prompt. They serve as validated priors to steer the LLM toward
+4
+
+
+===== PDF PAGE 5 =====
+Published as a conference paper at ICLR 2026
+promising designs. While effective for historical guidance, this module cannot address real-time
+evolutionary needs.
+Foresight Module.The Foresight module implements real-time evolutionary state control, or-
+chestrated by its core component, the Evolutionary Navigator. The Navigator continuously monitors
+macroscopic evolutionary indicators, such as performance stagnation and population diversity, to as-
+sess the state of the search. Based on this analysis, it selects the governing evolutionary regime for
+the subsequent generation. This regime dictates the evolutionary search direction by choosing one
+of three explicit modes ( ˇCrepinˇsek et al., 2013): 1)Explore, to foster novelty when diversity is low
+or progress has stalled; 2)Exploit, to refine high-performing solutions when progress is consistent;
+3)Balance, to maintain a synergistic application of all operators. This directive guides the prompt,
+ensuring the LLM adapts to the current search phase.
+3.2 HINDSIGHT: MECHANISMS OF THESELF-EVOLVINGINSIGHTPOOL
+Initially, HiFo-Prompt initializes the Insight Pool with seed insights(See Section F.3) to bootstrap
+the generative process. Serving as an initial scaffold, these seeds allow the framework to immedi-
+ately shift focus to autonomously evolving novel heuristics. This is achieved through a continuous
+lifecycle that systematically transforms transient evolutionary successes into reusable knowledge as-
+sets, governed by three integrated phases: insight extraction, utility-driven application, and adaptive
+pruning.
+Initially, HiFo-Prompt initializes the Insight Pool with seed insights(See Section F.3) to bootstrap the
+generative process. Serving as an initial scaffold, these seeds allow the framework to immediately
+shift focus to autonomously evolving novel, problem-specific heuristics. This is achieved through
+a continuous lifecycle that systematically transforms transient evolutionary successes into explicit,
+reusable knowledge assets, governed by three integrated phases: insight extraction, utility-driven
+application, and adaptive pruning.
+Insight Extraction and Admission.The lifecycle begins by expanding the knowledge base. At
+the end of each generation, we prompt an LLM to distill generalizable design principles (insights)
+from the elite individuals of the population (See Section F.1). To preserve informational diversity,
+a candidate insightk new is admitted to the insight poolK pool only if its Jaccard similarity to all
+existing pool members falls below a novelty thresholdθ novelty. For this comparison, each insight’s
+text is preprocessed by converting it to lowercase and tokenizing it based on whitespace. The insights
+themselves become active candidates for the guidance of future generations.
+Insight Retrieval and Credit Assignment.To guide heuristic generation, we employ a utility-
+based retrieval mechanism. For each new generation attempt, the mechanism selects the top-sin-
+sights with the highest adaptive utility scoreU(k i, t). This contributing set of insights, denoted as
+Kc, is then injected into the LLM’s prompt. Following the evaluation of the offspring generated, we
+use credit assignment (Whitacre et al., 2006) to update the utility scores of all the insights inK c.
+The utility function is formulated to balance exploitation and exploration:
+U(k i, t) =E i(t)|{z}
+Effectiveness
+−w u log(Ni(t) + 1)| {z }
+Usage Penalty
++B r(t, tlast
+i )| {z }
+Recency Bonus
+(1)
+whereE i(t)is the learned effectiveness of insighti. The penalty term, weighted byw u, discourages
+overuse by penalizing an insight based on its total retrieval countN i(t), thus promoting exploration
+of less-used ideas. The recency bonusB r offers a temporary reward for insights used recently;
+specifically, it grants a fixed bonus if the insight was used within a small generation windowT w
+(that is, ift−t last
+i ≤T w), promoting strategic coherence.
+The effectiveness scoreE i(t)is updated via credit assignment. This process first converts the raw
+fitnessg(h new)of an offspring into a normalized, problem-agnostic score˜ρ, scaling its performance
+relative to the best (g(hbest)) and worst (g(hworst)) solutions of the current population:
+˜ρ= g(hworst)−g(h new)
+g(hworst)−g(h best) +ϵ (2)
+5
+
+
+===== PDF PAGE 6 =====
+Published as a conference paper at ICLR 2026
+whereϵis a small constant to prevent division by zero. Drawing upon techniques for handling
+sparse rewards in Hierarchical Reinforcement Learning, we posit that an offspring’s evolutionary
+contribution is non-linear. Therefore, we map˜ρto a final credit signal,geff, using a tiered, piecewise
+function. This design creates distinct reward regimes for qualitatively different outcomes:
+graw
+eff =
+
+
+
+0.8 + 0.2·˜ρifg(h new)≥g(h best)
+0.2 + 0.6·˜ρifg(h best)> g(h new)≥g(h avg)
+−0.3 + 0.5·˜ρifg(h new)< g(h avg)
+(3)
+This structure provides strong positive signals for paradigm-changing improvements (˜ρ≥1), mod-
+erate rewards for incremental progress (0≤˜ρ <1), and penalties for below-average performance.
+The allowance of negative credit is a deliberate design choice to accelerate the pruning of detrimental
+ideas.
+This piecewise reward structure incorporates techniques for handling sparse rewards in Hierarchical
+Reinforcement Learning. It provides discrete and explicit signals for distinct performance levels to
+enhance interpretability. The coefficients follow a specific asymmetric philosophy where the reward
+for elite solutions is significantly larger than the penalty magnitude, which is in turn larger than the
+reward for incremental improvements. This prioritization provides a strong signal for paradigm-
+shifting breakthroughs while effectively pruning unproductive directions. Furthermore, the parame-
+ter sensitivity analysis detailed in Appendix C.7 demonstrates that the framework maintains robust
+performance across a range of coefficient settings. This confirms that the structural logic of the
+reward mechanism is more critical than precise tuning.
+To ensure stable updates, the raw credit is then clipped to a final valueg eff =
+max(−1.0,min(1.0, g raw
+eff )). Finally, for each insightjin the contributing setK c, its effectiveness
+score is updated through an Exponential Moving Average (EMA):
+Ej(t+ 1) = (1−α)·E j(t) +α·g eff (4)
+where the learning rateα∈[0,1]smooths the stochastic credit signals from individual evaluations.
+This allows an insight’s long-term utility to emerge statistically, preventing its score from being
+skewed by outlier performances.
+Adaptive Pruning and Pool Maintenance.To maintain quality within its finite capacityC pool, the
+pool employs an adaptive pruning mechanism triggered when|Kpool|> C pool. This process removes
+the insight with the minimum eviction score,S evict, which balances the proven performance of an
+insight against the risk of its obsolescence:
+Sevict(ki, t) =E i(t)−R decay ·(t−t last used(ki))(5)
+whereE i(t)is the current effectiveness of the insight,t last used(ki)is the generation of its last use,
+and the time decay rateR decay targets not only low-effectiveness insights, but also those that have
+become inactive. The decay rate is set conservatively to prevent the premature removal of valuable
+but temporarily dormant knowledge. Additionally, to prevent the premature elimination of under-
+explored principles, insights with usage counts below a thresholdT usage are exempt from pruning,
+allowing sufficient iterations to establish their true utility.
+3.3 FORESIGHT: THEEVOLUTIONARYNAVIGATOR FORSTATE-AWAREGUIDANCE
+While the Hindsight module grounds the search in historically validated principles, the Foresight
+module acts as anEvolutionary Navigator, providing real-time, state-aware guidance. Its primary
+role is to modulate the exploration-exploitation trade-off via a control policy,π:S t →θ t. This pol-
+icy maps the current evolutionary stateS t to a high-level search orientation, denoted as theEvolu-
+tionary Regimeθ t. Unlike traditional adaptive EAs that solely tune numerical parameters, Foresight
+establishes a semantic feedback loop that directly steers the conceptual strategy of the LLMs. We
+defineπas a rule-based system that selects the appropriate strategic modes based on evolutionary
+state :
+θt =
+
+
+
+θexplore ifC stag(t)≥τ stag or∆ p(t)< δ p
+θexploit ifC prog(t)≥τ prog
+θbalance otherwise
+(6)
+6
+
+
+===== PDF PAGE 7 =====
+Published as a conference paper at ICLR 2026
+To implement this policy, the Navigator continuously monitors two primary aspects of the evolu-
+tionary search: its performance trajectory and its population diversity. The performance trajectory
+is tracked via two mutually exclusive counters,C prog andC stag, based on the improvement in the
+best raw fitness∆g. If∆g >10 −4, it is a generation ofprogress(incrementC prog, resetC stag);
+otherwise, it isstagnation(incrementC stag, resetC prog). Simultaneously, the Navigator assesses
+population health through a novel measure of phenotypic diversity,∆ p(t). This metric is crucial
+because relying on fitness alone can be misleading; a population of high-fitness but structurally
+similar individuals often indicates entrapment in a local optimum. To counteract this, our metric
+quantifies the semantic variety within the population by measuring the dissimilarity of the generated
+algorithms’ textual forms, rather than their fitness values. It is computed as the normalized fraction
+of unique pairs of algorithms in the populationPwhose textual descriptions are non-identical:
+∆p(t) = 1
+|P|(|P| −1)/2
+|P|X
+i=1
+|P|X
+j=i+1
+I(algi ̸=alg j)(7)
+whereI(·)is the indicator function and alg i denotes the textual description of thei-th algorithm.
+Unlike embedding-based metrics, which risk obscuring critical logical alterations (e.g.,dynamicvs.
+static) through semantic smoothing (Agarwal et al., 2025), this metric relies on exact string matching
+of the generated algorithmic descriptions. By enforcing a standardized prompt template to eliminate
+trivial syntactic noise, any remaining lexical difference indicates a deliberate structural modification
+by the LLM. Consequently, this approach provides a robust and computationally efficient proxy for
+phenotypic diversity, ensuring that even subtle yet functional changes are preserved.
+This hybrid state representation, which marries quantitative performance trends with a qualitative
+measure of semantic diversity, provides the Navigator with a much more holistic understanding
+of the search landscape than fitness-based metrics alone can. These state indicators are evaluated
+against empirically determined thresholds, with their specific values detailed in our experimental
+setup. The progress and stagnation counters are designed to track immediate performance trends.
+This focus on recent history is crucial for capturing the rapid dynamics inherent in LLM-based evo-
+lution, enabling swift strategic adjustments in response to even short periods of stagnation or consis-
+tent improvement. Similarly, the diversity threshold is calibrated to detect a significant collapse in
+semantic variety. It acts as an early warning mechanism against premature convergence, triggering
+stronger exploratory pressure when a substantial portion of the population becomes homogeneous.
+Once the regimeθ t is determined, it is translated into a natural languageDesign Directive(See
+Section F.2) that is injected into the LLM’s prompt. For instance,θ explore might yield a directive
+totry a significantly different approach from conventional solutions, whereasθ exploit would instruct
+the model tofocus on refining and optimizing the most effective patterns. This mechanism ensures
+the LLM’s generative focus is explicitly aligned with the high-level strategy dictated by the current
+evolutionary state.
+4 EXPERIMENTS
+In this section, we present the results of heuristics designed by our proposed HiFo-Prompt on dif-
+ferent complex tasks, including Traveling Salesman Problem (TSP) (Matai et al., 2010), Online Bin
+Packing Problem (Online BPP) (Seiden, 2002), Flow Shop Scheduling Problem (FSSP) (Emmons
+& Vairaktarakis, 2012), and Bayesian Optimization (BO) (Shahriari et al., 2016). Task definitions
+and details are given in Appendix B. Results on TSP, online BPP, and FSSP are presented in this
+section, while the results on BO are provided in Appendix C.4, where HiFo-Prompt demonstrates
+competitive and reliable performance.
+Experimental Settings.Experiments were conducted on a workstation equipped with anIntel
+Core i7-12700 CPU, employingQwen2.5-Maxas the core LLM. The evolutionary process main-
+tains a population size of 8, running for 8 generations on Combinatorial Optimization (CO) tasks and
+4 generations on Bayesian Optimization (BO) tasks. Regarding specific module hyperparameters,
+theHindsight Modulemaintains an Insight Pool of capacityC pool = 30(Jaccard threshold0.7),
+with retrieval parameters set to selection counts= 3, usage penaltyw u = 0.1, recency bonus mag-
+nitudeτ r = 0.2, EMA rateα= 0.3, decayR decay = 0.01, and probationT usage = 3. TheForesight
+Moduleutilizes Navigator thresholds ofτ stag = 3(stagnation),τ prog = 2(progress), andδ p = 0.3
+7
+
+
+===== PDF PAGE 8 =====
+Published as a conference paper at ICLR 2026
+Table 1: Results on TSP with step-by-step construction. Gap(%) denotes the performance gap
+compared to advanced heuristic algorithms. Time(s) represents the running time of the designed
+heuristics. This result of LLM-based AHD method is the average of three runs. The best-performing
+LLM-based AHD results are shown in bold.
+Method
+TSP50 TSP100 TSP200
+Gap Time(s) Gap Time(s) Gap Time(s)
+LKH3 0.000% 323.3 0.000% 1450 0.000% 6312
+POMO 0.163% - 1.636% - 13.961% -
+LEHD 0.117% - 0.452% - 0.367% -
+EoH 12.820% 1.4 15.361% 9 16.658% 78
+ReEvo 10.239% 21.5 12.577% 224 14.890% 3013
+HSEvo 10.467% 89.5 12.008% 1286 13.578% 24835
+MCTS-AHD 10.642% 91.5 12.521% 1084 13.510% 14521
+Ours 6.625%244.7 8.582%1843 8.877%16099
+Table 2: Results on TSP with GLS. Comparison relative to the results of advanced heuristic on
+TSP100, TSP200 and TSP500. The result of the LLM-based AHD method is the average of three
+runs. The best results are shown in bold.
+Method
+TSP100 TSP200 TSP500
+Gap Time(s) Gap Time(s) Gap Time(s)
+LKH3 0.000% - 0.000% - 0.000% -
+EoH 0.026% 210.3 0.453% 368.1 2.037% 1100.7
+ReEvo 0.049% 357.1 0.424% 775.8 2.090% 1103.4
+HSEvo 0.087% 543.4 0.886% 792.9 2.507% 1105.1
+Ours 0.015%217.0 0.382%392.4 1.520%1100.8
+(diversity). To ensure fair comparison, all LLM-based AHD baselines utilize the same underlying
+LLM, while their hyperparameters follow the settings reported in their original publications.
+Baselines.To demonstrate the effectiveness of our proposed method in designing heuristics, we in-
+troduce several approaches for solving these complex optimization tasks. (1) handcrafted heuristics,
+e.g., LKH3(Lin & Kernighan, 1973) for TSP, First Fit and Best Fit (Romera-Paredes et al., 2024)
+for Online BPP, NEH (Nawaz et al., 1983) and NEHFF (Fernandez-Viagas & Framinan, 2014) for
+FSSP. (2) Neural Combinatorial Optimization (NCO) methods, e.g., POMO (Kwon et al., 2020)
+and LEHD (Luo et al., 2023) for TSP, PFSPNet NEH (Pan et al., 2022) for FSSP. (3) LLM-based
+AHD methods, e.g., Funsearch (Romera-Paredes et al., 2024), EoH (Liu et al., 2024b), ReEvo (Ye
+et al., 2024), HSEvo (Dat et al., 2025) and MCTS-AHD (Zheng et al., 2025). Most of our test
+datasets follow EoH. Notably, Funsearch, ReEvo, and HSEvo require a seed function to initialize
+their populations, while EoH, MCTS-AHD, and our method can run without it.
+Traveling Salesman Problem.Step-by-Step Construction (Asani et al., 2023) and Guided Lo-
+cal Search (GLS) (Alsheddy et al., 2016) are two different strategies for solving TSP. The detailed
+procedure of the two strategies can be found in the Appendix B.1. We design key heuristics for
+these two strategies. Table 1 compares the results of our method with other baselines in step-by-step
+construction. We evaluated the performance on 100 instances at each of three sizes. To demon-
+strate performance on out-of-distribution instances, we also conducted experiments on the TSPLib
+dataset (Reinelt, 1991), and the results can be found in the Appendix C.1. We further evaluated our
+method on 100 instances of TSP100, TSP200, and TSP500 in GLS. The results are shown in Table
+2. The heuristic designed by our method achieves a significant performance improvement compared
+to LLM-based AHD methods.
+Online Bin Packing Problem.The key function of Online BPP is a scoring function that outputs
+a score for each bin, based on the current item’s size and the remaining capacities of the bins. We
+8
+
+
+===== PDF PAGE 39 =====
+Published as a conference paper at ICLR 2026
+normalized_cost = distance_matrix[current_node][node] /
+(np.max(distance_matrix[current_node]) + 1e-9)
+# 3. Simulation Cost
+simulation_cost = perform_cluster_aware_simulation(node)
+# Dynamic Weighting based on search progress
+progress_ratio =len(unvisited_nodes) /len(distance_matrix)
+weight_mst = 0.4 - 0.15 * progress_ratio
+weight_normalized = 0.3 + 0.1 * progress_ratio
+weight_simulation = 0.3
+return(weight_mst * pruned_mst_cost +
+weight_normalized * normalized_cost +
+weight_simulation * simulation_cost)
+# Beam search filtering to reduce computation
+beam_width =max(2,min(6,len(unvisited_nodes) // 3))
+# Pre-filter candidates using a simple heuristic
+candidates =sorted(
+unvisited_nodes,
+key=lambdax: distance_matrix[current_node][x] /
+(np.mean(distance_matrix[current_node]) + 1e-9)
+)[:beam_width * 3]
+scored_candidates = []
+forcandidateincandidates:
+eval_score = evaluate_candidate(candidate)
+scored_candidates.append((eval_score, candidate))
+# Select the node with the minimum weighted score
+next_node =min(scored_candidates, key=lambdax: x[0])[1]
+returnnext_node 
+H.2 THEBESTONLINEBINPACKINGHEURISTIC
+Listing 2: Evolved Scoring Function for Online BPP 
+importnumpyasnp
+defscore(item, bins):
+"""
+Calculates the placement scores for candidate bins given an item.
+Higher scores indicate better placement suitability.
+"""
+# Compute residuals (remaining space) after placing the item
+residuals = bins - item
+# Stochastic perturbation for enhanced exploration
+# Helps break ties and avoid deterministic local optima
+perturbation = np.random.normal(1.0, 0.2, size=len(bins))
+# Cubic residual scoring to emphasize finer space usage precision
+# Smaller residuals yield significantly higher base scores
+residual_scores = 1 / (1 + residuals ** 3) * perturbation
+# Delayed penalty adjustment based on long-term impact of
+underutilization
+# Adaptive threshold with increased sensitivity
+threshold = np.mean(bins) * 0.4
+delayed_penalty = np.where(residuals > threshold,
+1 / (1 + residuals ** 2),
+0)
+39
+
+
+===== PDF PAGE 40 =====
+Published as a conference paper at ICLR 2026
+# Reward function for bins maintaining balanced utilization over time
+# Gaussian-like reward centered around the threshold
+balanced_utilization_reward = np.exp(
+-np.abs(residuals - threshold) ** 2 / (threshold ** 2)
+)
+# Dynamic scaling factor based on cumulative fit ratio and trends
+fit_ratios = item / bins
+scaling_factor = 0.6 + 0.4 * np.tanh(fit_ratios * 5) # Sharper
+scaling
+# Combine components:
+# Emphasizes long-term efficiency via scaling and delayed penalties
+scores = (scaling_factor * (residual_scores +
+balanced_utilization_reward)
+- delayed_penalty)
+returnscores 
+H.3 THEBESTTSP-GLS HEURISTIC
+Listing 3: Hybrid Edge Update Function for TSP 
+importnumpyasnp
+defupdate_edge_distance(edge_distance, local_opt_tour, edge_n_used):
+"""
+Updates the edge distance matrix to penalize edges used in local
+optima,
+facilitating escape from local basins using a hybrid penalty strategy
+.
+"""
+# Parameters for the novel hybrid strategy
+learning_rate = 0.3
+diversity_factor = 0.4
+penalty_decay = 0.85
+min_penalty = 0.01
+smoothing_term = 1e-6
+# Compute normalized edge usage probabilities
+total_usage = np.sum(edge_n_used) + smoothing_term
+edge_probabilities = edge_n_used / total_usage
+# Measure global asymmetry to gauge search bias
+asymmetry = np.abs(edge_probabilities - edge_probabilities.T).mean()
+# Normalize asymmetry to [0, 1] range
+normalized_asymmetry = asymmetry / (1 + smoothing_term)
+# Identify edges in the local optimal tour
+tour_edges = [
+(local_opt_tour[i], local_opt_tour[i+1])
+foriin range(len(local_opt_tour)-1)
+]
+tour_edges.append((local_opt_tour[-1], local_opt_tour[0])) # Close
+loop
+updated_edge_distance = edge_distance.copy()
+for(i, j)intour_edges:
+ifi > j: # Ensure symmetry handling
+i, j = j, i
+40
+
+
+===== PDF PAGE 41 =====
+Published as a conference paper at ICLR 2026
+# Phase 1: Adaptive learning penalty
+learning_penalty = learning_rate * (
+1 - np.exp(-edge_probabilities[i, j])
+)
+# Phase 2: Diversity-driven modulation
+diversity_penalty = (diversity_factor * normalized_asymmetry *
+np.log(1 + edge_probabilities[i, j]))
+# Dynamic weight modulation based on edge usage frequency
+modulation_factor = penalty_decay ** (
+edge_n_used[i, j] + smoothing_term
+)
+combined_penalty = (learning_penalty + diversity_penalty) * \
+modulation_factor
+# Add stochastic noise to encourage exploration
+noise = np.random.uniform(0, 1.5)
+exploration_noise = min_penalty + noise * modulation_factor
+# Combine penalties and update edge distance (symmetric)
+total_penalty = combined_penalty + exploration_noise
+updated_edge_distance[i, j] += total_penalty
+updated_edge_distance[j, i] += total_penalty
+returnupdated_edge_distance 
+H.4 THEBESTFSSP-GLS HEURISTIC
+Listing 4: Chaotic Matrix Adjustment and Job Selection 
+importnumpyasnp
+fromsklearn.clusterimportKMeans
+defget_matrix_and_jobs(current_sequence, time_matrix, m, n):
+"""
+Generates a perturbed time matrix using chaotic dynamics and
+identifies
+critical jobs to disturb based on clustering dispersion patterns.
+"""
+defcalculate_makespan(sequence, matrix, m):
+"""Helper to compute the makespan of a sequence."""
+machine_times = [0] * m
+forjobinsequence:
+machine_times[0] += matrix[job, 0]
+foriin range(1, m):
+machine_times[i] = (max(machine_times[i], machine_times[i
+-1])
++ matrix[job, i])
+return max(machine_times)
+# Step 1: Compute current makespan baseline
+current_makespan = calculate_makespan(current_sequence, time_matrix,
+m)
+# Step 2: Chaotic adjustment using Logistic Map dynamics
+# Introduces non-linear variance to escape local optima
+new_matrix = time_matrix.copy()
+chaos_factor = 3.99 # Parameter near the edge of chaos
+chaotic_values = np.random.rand(n, m)
+for_in range(10): # Iterative chaotic updates
+41
+
+
+===== PDF PAGE 42 =====
+Published as a conference paper at ICLR 2026
+chaotic_values = chaos_factor * chaotic_values * (1 -
+chaotic_values)
+# Scale chaotic values to a perturbation range [0.9, 1.1]
+chaotic_perturbation = 0.9 + 0.2 * chaotic_values
+new_matrix *= chaotic_perturbation
+new_matrix = np.clip(new_matrix, 1, None) # Ensure valid processing
+times
+# Step 3: Cluster jobs based on execution time patterns
+# Fit KMeans on the perturbed matrix regarding the current sequence
+kmeans = KMeans(
+n_clusters=max(2, n // 10),
+random_state=42,
+n_init=’auto’
+).fit(new_matrix[current_sequence])
+job_labels = kmeans.labels_
+# Calculate dispersion: average std deviation within each cluster
+cluster_dispersion = np.array([
+np.std(new_matrix[current_sequence][job_labels == c], axis=0).
+mean()
+forcin range(kmeans.n_clusters)
+])
+# Assign scores: jobs in highly dispersed clusters get higher
+priority
+job_scores = np.array([cluster_dispersion[label]forlabelin
+job_labels])
+# Select top diverse jobs for structural perturbation
+num_perturb =max(1, n // 6)
+perturb_jobs = np.argsort(-job_scores)[:num_perturb]
+returnnew_matrix, perturb_jobs 
+42

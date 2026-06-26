@@ -1,0 +1,134 @@
+PUCT相关LLM树搜索框架的新增文献与新颖性再评估
+执行摘要
+本次检索以你指定的优先站点为起点，并扩展到官方论文页、会议页面、ACL Anthology、OpenReview、GitHub 和基准项目页；结论很明确：到 2025–2026 年，LLM+树搜索领域的主问题已经不再是“是否使用 PUCT”，而是“如何替换或改造 PUCT 的节点选择、预算分配、反馈整合与搜索对象表示”。与 Google 的 An AI system to help scientists write expert-level empirical software 最接近、且对你“网络瓦解 heuristics 自动发现”最有直接借鉴价值的新增工作，主要是 MCTS-AHD、Clade-AHD、A2DEPT、CodeTree、RethinkMCTS、HeuriGym/BLADE；其中 Clade-AHD 和 ReSCALE 对 PUCT 的替代意义最强，因为它们直接把问题指向 不确定性建模 与 预算可扩展性。基于新增文献，我对 PUCT 的再评估是：作为搜索规则本身，独创性偏中低；作为“可评分科学软件”系统中的工程骨架，独创性中高；作为跨学科应用系统（文献检索+重组+代码搜索+自动评分）的系统贡献，则仍然很强。对你的课题而言，最值得升级的不是继续“沿用 PUCT”，而是把 评价函数设计、树上不确定性、分阶段搜索、跨图分布泛化验证 一起纳入新的框架设计。 [1]
+优先网站初检结果
+按你的要求，我先在 arXiv、Google、dblp、X 上做了首轮检索，再决定扩展方向。首轮结果已经足以说明研究脉络正在从“AlphaZero 式 PUCT 树搜索”转向“预算/不确定性/反馈结构感知”的新一代框架。需要特别说明的是：Google 这篇论文在论文中把方法称为 PUCT tree search，而其开源仓库后来将参考实现命名为 Flat UCB Tree Search, FUTS；仓库原路径 google-research/score 现已重定向为 google-research/era。这不是两套不同系统，而是同一系统在“论文表述”和“开源实现命名”上的演化，且仓库 README 明确说该实现对应论文的 Algorithm 1，并在实现节再次写成 “Flat UCB (PUCT)” 。 [2]
+从这一步就可以做出一个与你课题直接相关的判断：如果目标是“用 LLM+搜索自动发现网络瓦解 heuristic”，最该优先引用的不是通用 ToT/ReAct，而是 AHD/算法发现/代码搜索三类工作中真正处理“可评分程序搜索”的论文。 对应到文献层级，建议把 ERA、MCTS-AHD、Clade-AHD、A2DEPT、CodeTree、RethinkMCTS、HeuriGym/BLADE 放在第一梯队，把 ToT、ReAct、LATS、TS-LLM、PG-TD 放在方法学背景层。 [7]
+新增论文清单
+下表只列相对更可能属于你“已有列表之后”的新增工作，并优先保留与 PUCT、MCTS、ToT、代码搜索、AHD、可评分任务、实证比较、基准与开源 直接相关的条目。基础锚点如 ReAct、Tree of Thoughts、LATS、TS-LLM、PG-TD、EoH、ReEvo、MEoH 不在此表展开，但建议在正式论文中作为前史与定位使用。 [8]
+如果你需要在正式“相关工作”中再补 3–4 个旁系文献，建议补的是 CodeEvolve、MoH、GEAR、CiT：它们分别代表 开源 AlphaEvolve 复现、元优化器级搜索、单路径研究代理的群体化替代、按预算自适应分支，但与“PUCT 本体”距离稍远，所以我将其放在正文说明而未挤入主表核心位。 [26]
+关键论文的深入比较
+下面这张关系图可以先帮助你把新增工作放到一个统一框架里理解。它最核心的区分不是“有没有树”，而是 树上搜索的对象是什么：代码、思路、heuristic 家族、整程序，还是元优化器。相应地，它们改造 PUCT 的方法也不同：有的改选择公式，有的改树节点语义，有的改反馈环路，有的干脆改成演化/agentic RL。
+上图对应的文献证据分别来自 ERA/Google、MCTS-AHD、Clade-AHD、CodeTree、RethinkMCTS、ReSCALE 与 A2DEPT。 [27]
+核心比较表
+关键观察
+最接近你课题、也最值得主引的三篇，其实不是最热的通用 reasoning 论文，而是 ERA、MCTS-AHD、Clade-AHD。原因很简单：你的任务是“给图、给评分器、自动发现 node-removal heuristic”，这正是 AHD + scorable task 的交叉区域；而 ToT、ReAct、LATS 更多是通用 reasoning/agent 背景。 [37]
+从“算法替代 PUCT”的角度看，最重要的新增认识有两个。第一，单节点均值 + UCB/PUCT 在 LLM 场景未必稳健，因为预算盖得更大时不一定更好，ReSCALE 已经给出明确反例；第二，有限预算下应该显式模型化不确定性，Clade-AHD 用 clade-level posterior + Thompson sampling 给出了一个很强的替代方向。对于你的网络瓦解场景，这两点都高度相关，因为 evaluator 通常耗时较高，图间分布差异也容易让“早期高分样本”误导后续扩展。 [38]
+从“代码搜索对象”角度看，CodeTree 与 RethinkMCTS 提供了另外一种重要提醒：搜索不一定要直接在最终 heuristic code 上进行，也可以在思路、子目标、修复动作上搜索。这对你尤其关键，因为你现在的真正创新点很可能不是“找到某个神奇公式”，而是把 指标构造 与 启发式构造 联动起来，让树搜索同时探索“删点指标”与“评价指标”的解释性配合。 [39]
+对 PUCT 的新颖性重新评估
+先给结论
+如果把“PUCT”本身当作论文的核心算法创新点，我给出的评分是 中低。如果把 Google 这篇工作理解为“把 LLM、树搜索、可评分科学任务、文献 idea injection、方法重组与大规模执行评估整合成一个科学软件发现系统”，我给出的评分是 中高到高。换句话说：PUCT 不是这条工作线中最独特的部分；真正独特的是系统化任务定义与实证落地能力。 [40]
+分项评分
+对你论文写作的更精确表述建议
+你在相关工作里不宜写成“Google 提出了新型 PUCT 算法”。更稳妥、也更符合新增文献事实的写法是：
+Google ERA 将 AlphaZero 启发的 PUCT/FUTS 适配到 可评分 empirical software 搜索中，并通过文献想法注入、方法重组和大规模执行评估展示了强系统能力；但后续文献显示，PUCT 本身并不是这一方向的终点，围绕预算可扩展性、不确定性建模、分阶段思路搜索和整程序树搜索，已经出现多条比标准 PUCT 更适合 LLM 场景的替代路线。 [44]
+对你的课题再往前一步说，真正应该被你宣称为“新颖性核心”的，也不应是“我们用了 PUCT/Tree Search”，而应是两点：一是把 network dismantling 重新定义为 evaluator-sensitive scorable task；二是把 evaluator 从 GCC/R 拓展到 cNBI 这种更细粒度的深碎片化指标。 这两点在当前新增文献中仍然是相对空白的。AHD 文献大量优化 heuristic，但很少把 evaluator 设计本身当作第一等公民；而 HeuriGym、BLADE 反过来恰好提醒我们，没有强 benchmark 与强评价器，搜索框架的结论会很脆弱。 [45]
+研究空白与未来工作建议
+下面这部分，我专门按“是否直接服务你的网络瓦解工作”来排序，而不是按通用 LLM 热度排序。
+这些建议并不是空泛地“再加点 agent/再加点 tree search”，而是与新增文献形成一一对应：Clade-AHD / ReSCALE 对应“替代 PUCT”；CodeTree / RethinkMCTS 对应“阶段化搜索与负反馈修树”；HeuriGym / BLADE 对应“标准化 benchmark”；A2DEPT / AlphaEvolve 对应“从 heuristic 发现走向 solver/system 发现”；ERA 对应“文献想法注入与重组”。 [46]
+参考与资源
+下面只列最值得你在论文和项目中直接保留的入口。为保持可点击性，我用引文链接而不是裸 URL。
+首先是 Google 主线。论文与官方 publication page 适合作为系统主引；博客适合作为系统定位与应用补充；仓库与交互网站适合作为“开源实现与结果浏览”证据。 [47]
+其次是 最相关的 AHD/树搜索论文与代码。MCTS-AHD 是你最该优先主引的 AHD 树搜索文献；CodeTree 和 RethinkMCTS 是代码搜索侧最值得并列比较的两篇；Clade-AHD、ReSCALE 则是你在“为什么不能默认 PUCT 最优”这一段最需要的证据。 [48]
+再往上位一层，A2DEPT、AHD Agent、AlphaEvolve 分别代表三种替代思路：整程序树搜索、agentic RL 搜索、演化式代码代理。若你后续把网络瓦解从“单公式 heuristic”升级到“完整 solver”，它们会变得比 ToT/ReAct 更重要。 [49]
+最后，HeuriGym、BLADE 与算法设计综述 推荐作为“为什么需要新 benchmark/新 evaluator”的佐证。HeuriGym 给出 agentic heuristic benchmark 与 QYI；BLADE 提供标准化 AAD 评测框架；ACM Computing Surveys 的综述则适合放在 related work 的统领性段落。 [50]
+开放问题与局限
+本报告也有边界。第一，若干 2026 年工作仍是 arXiv 预印本，例如 Clade-AHD、ReSCALE、A2DEPT、AHD Agent、Novelty-based ToT；我已优先引用原始预印本，但它们的最终会议版本、实验补充和代码成熟度仍可能变化。 [51]
+第二，并不是所有论文都有官方代码。本报告只把我能从原始论文页或明确 GitHub 仓库确认的实现标为“有”；对其余条目，我只保守写成“本轮未见官方代码”，而没有推断其不可复现。 [52]
+第三，目前仍缺少一篇直接在“heuristic discovery for graph/network dismantling”上，把 PUCT、Thompson-style clade selection、Gumbel+Sequential Halving、agentic RL、整程序树搜索放在同一预算与同一 evaluator 下做严格对比的论文。这恰好意味着：如果你下一步把 cNBI/BPSD 与上述替代树策略结合，并做系统对比，你会非常有机会贡献一篇真正“不是换提示词，而是改搜索范式与评价范式”的工作。
+[1] [2] [3] [27] [28] [40] [41] [44] https://arxiv.org/html/2509.06503v1
+https://arxiv.org/html/2509.06503v1
+[4] [7] [29] [37] [47] https://research.google/pubs/an-ai-system-to-help-scientists-write-expert-level-empirical-software/
+https://research.google/pubs/an-ai-system-to-help-scientists-write-expert-level-empirical-software/
+[5] https://dblp.org/pid/169/9975
+https://dblp.org/pid/169/9975
+[6] https://x.com/BiologyAIDaily/status/1965391322350858554
+https://x.com/BiologyAIDaily/status/1965391322350858554
+[8] https://arxiv.org/abs/2210.03629
+https://arxiv.org/abs/2210.03629
+[9] https://arxiv.org/abs/2605.06040
+https://arxiv.org/abs/2605.06040
+[10] https://arxiv.org/html/2605.08756v1
+https://arxiv.org/html/2605.08756v1
+[11] [49] https://arxiv.org/abs/2604.24043
+https://arxiv.org/abs/2604.24043
+[12] [35] [36] [38] [42] https://arxiv.org/abs/2603.21162
+https://arxiv.org/abs/2603.21162
+[13] [46] [51] https://arxiv.org/abs/2602.00549
+https://arxiv.org/abs/2602.00549
+[14] https://arxiv.org/abs/2512.08609
+https://arxiv.org/abs/2512.08609
+[15] https://openreview.net/forum?id=1yrYnaQSzi
+https://openreview.net/forum?id=1yrYnaQSzi
+[16] [33] https://aclanthology.org/2025.emnlp-main.410/
+https://aclanthology.org/2025.emnlp-main.410/
+[17] https://arxiv.org/abs/2507.20541
+https://arxiv.org/abs/2507.20541
+[18] [45] [50] https://arxiv.org/abs/2506.07972
+https://arxiv.org/abs/2506.07972
+[19] https://arxiv.org/abs/2506.13131
+https://arxiv.org/abs/2506.13131
+[20] https://arxiv.org/abs/2505.12285
+https://arxiv.org/abs/2505.12285
+[21] https://arxiv.org/abs/2505.20242
+https://arxiv.org/abs/2505.20242
+[22] https://arxiv.org/abs/2504.20183
+https://arxiv.org/abs/2504.20183
+[23] [32] [39] https://aclanthology.org/2025.naacl-long.189.pdf
+https://aclanthology.org/2025.naacl-long.189.pdf
+[24] https://arxiv.org/abs/2502.11169
+https://arxiv.org/abs/2502.11169
+[25] [30] [31] [48] https://arxiv.org/abs/2501.08603
+https://arxiv.org/abs/2501.08603
+[26] https://arxiv.org/abs/2510.14150
+https://arxiv.org/abs/2510.14150
+[34] https://arxiv.org/abs/2409.09584
+https://arxiv.org/abs/2409.09584
+[43] [52] https://github.com/google-research/score
+https://github.com/google-research/score
+优先站点 | 首轮代表性命中 | 对后续扩展的意义
+arXiv | Google ERA 论文、MCTS-AHD、ReSCALE、Clade-AHD、A2DEPT、Novelty-based ToT、CMCTS 等。 [3] | 确认了“PUCT 不是终点”，后续重点应放在 替代选择策略、约束搜索、分阶段搜索、整程序树搜索。
+Google 官方 | Google Research publication page、Google Research blog、DeepMind AlphaEvolve blog。 [4] | 给出 Google 自身的系统定位：不是单纯代码生成，而是 可评分科学软件；同时 AlphaEvolve 提供了非树搜索但非常接近的“演化式代码发现”参照系。
+dblp | MCTS-AHD 已进入 ICML 2025；CodeTree 为 NAACL 2025；RethinkMCTS 为 EMNLP 2025；CogMCTS 已有 dblp 条目。 [5] | 说明相关方向已从零散 arXiv 走向主流会议，尤其是 AHD 与 code-tree-search 两条线都在快速成型。
+X | 检索到的结果主要是 ERA 论文发布与二手解读，技术细节没有超出论文与官方博客。 [6] | 适合作为发现线索，不宜作为技术证据主源。
+论文标题 | 作者 | 时间 | 来源 | 核心方法要点 | 与 PUCT 的主要相同/不同点 | 开源实现 | 链接
+Novelty-based Tree-of-Thought Search for LLM Reasoning and Planning | Leon Hamm, Zlatan Ajanovic | 2026-05 | arXiv | 在 ToT 中显式估计“新颖度”，用新颖度做剪枝，以减少树规模与 token 成本。 | 相同点：都用树搜索；不同点：核心不在 UCB/PUCT，而在 novelty pruning，更像宽度搜索思想进入 LLM 树搜索。 | 本轮未见官方代码 | 论文 [9]
+AHD Agent: Agentic Reinforcement Learning for Automatic Heuristic Design | Haoze Lv 等 | 2026-05 | arXiv + GitHub | 让 LLM 作为多轮 agent 主动决定“生成 heuristic / 调工具 / 何时终止”，并用 GRPO 训练跨任务 heuristic-design policy。 | 相同点：都围绕可评分 heuristic 搜索；不同点：不以 PUCT 为核心调度器，而转成 agentic RL + tool-use。 | 有 | 论文/代码 [10]
+A2DEPT: Large Language Model-Driven Automated Algorithm Design via Evolutionary Program Trees | Bin Chen 等 | 2026-04 | arXiv | 把搜索对象从“算法组件”提升到“完整程序树”，并加入 hybrid selection、hierarchical operators、repair loop。 | 相同点：都用树结构探索程序空间；不同点：搜索对象是整程序树，并用演化操作替代 PUCT 式单节点选择。 | 本轮未见官方代码 | 论文 [11]
+Revisiting Tree Search for LLMs: Gumbel and Sequential Halving for Budget-Scalable Reasoning | Leonid Ugadiarov 等 | 2026-03 | arXiv | 指出 AlphaZero 式 LLM 树搜索存在“预算增加反而性能下降”的 scaling failure，用 Gumbel sampling + Sequential Halving 替换 Dirichlet noise + PUCT。 | 最直接的 PUCT 替代：认为 PUCT 在 LLM 推理里会导致预算扩展失效。 | 本轮未见官方代码 | 论文 [12]
+Beyond the Node: Clade-level Selection for Efficient MCTS in Automatic Heuristic Design | Kezhao Lai, Yutao Lai, Hai-Lin Liu | 2026-02 | arXiv | 用“clade-level Bayesian beliefs”替代 node-level point estimate；以 Beta 分布聚合后代评价，再用 Thompson Sampling 选 clade。 | 相同点：仍属 MCTS/AHD；不同点：不再信赖节点均值+UCB/PUCT，而改为 家族级不确定性建模。 | 有 | 论文/代码 [13]
+CogMCTS: A Novel Cognitive-Guided Monte Carlo Tree Search Framework for Iterative Heuristic Evolution with Large Language Models | Hui Wang 等 | 2025-12 | arXiv + dblp | 在 MCTS 中加入多轮 cognitive feedback、dual-track expansion、elite management、strategic mutation。 | 相同点：仍是 MCTS 主骨架；不同点：反馈结构更“认知化”，而非只靠分数回传。 | 本轮未见官方代码 | 论文/索引 [14]
+Generalizable Heuristic Generation Through Large Language Models with Meta-Optimization | Yiding Shi 等 | 2025-10 | OpenReview Workshop | 不再手工指定进化优化器，而让 LLM 迭代发现“元优化器”，再由它构造下游 heuristic 搜索器。 | 与 PUCT 差异很大：把“搜索策略本身”上提为元层对象。 | 本轮未见官方代码 | 论文 [15]
+RethinkMCTS: Refining Erroneous Thoughts in Monte Carlo Tree Search for Code Generation | Qingyao Li 等 | 2025-11 发表；2024-09 预印本 | EMNLP 2025 + arXiv + GitHub | 在代码生成前先做 thought-level MCTS，再把细粒度执行反馈转成 verbal feedback 去“修正错误思路”。 | 相同点：仍是 MCTS；不同点：搜索对象从代码节点转到 thought 节点，并显式利用负反馈修树。 | 有 | 论文/代码 [16]
+MeLA: A Metacognitive LLM-Driven Architecture for Automatic Heuristic Design | Zishang Qiu 等 | 2025-07 | arXiv + GitHub | 把搜索中心从“heuristic code”转向“生成 heuristic 的 prompt”，用元认知框架做 prompt evolution。 | 与 PUCT 差异明显：优化的是 生成策略/提示词，不是树上节点访问公式。 | 有 | 论文/代码 [17]
+HeuriGym: An Agentic Benchmark for LLM-Crafted Heuristics in Combinatorial Optimization | Hongzheng Chen 等 | 2025-06 | arXiv + ICLR 2026 benchmark + GitHub/site | 提出 agentic benchmark 与 QYI 指标，用于评价 LLM 生成 heuristic 的“通过率+质量”。 | 不是 PUCT 替代算法，但它解决了一个更根本问题：如何科学评估 LLM heuristic search。 | 有 | 论文/站点/代码 [18]
+AlphaEvolve: A coding agent for scientific and algorithmic discovery | Alexander Novikov 等 | 2025-06 | arXiv + DeepMind 官方博客 + GitHub results | 用演化式代码代理持续改写程序，通过 evaluator 迭代优化科学和算法问题。 | 非树搜索主线，但与 ERA 极接近：都是 可评分程序搜索；差异是主控制思想更偏 evolutionary agent。 | 有结果仓库，非完整训练/控制栈开源 | 论文/博客/结果仓库 [19]
+CALM: Co-evolution of Algorithms and Language Model for Automatic Heuristic Design | Ziyao Huang 等 | 2025-05 | arXiv | 把 verbal guidance 与 RL 数值反馈结合，让 LLM 与 heuristic population 共同进化。 | 与 PUCT 不同：核心在 co-evolution + RL fine-tuning，不是树策略。 | 本轮未见官方代码 | 论文 [20]
+RedAHD: Reduction-Based End-to-End Automatic Heuristic Design with Large Language Models | Nguyen Thach 等 | 2025-05 | arXiv | 通过“问题规约”把原问题转向更熟悉的 COP，再在规约后空间里自动设计 heuristic。 | 与 PUCT 不同：强调 problem reduction，不是树上选择。 | 本轮未见官方代码 | 论文 [21]
+BLADE: Benchmark suite for LLM-driven Automated Design and Evolution of iterative optimisation heuristics | Niki van Stein 等 | 2025-04 | GECCO 2025 / arXiv + GitHub | 建立 AAD/LLM-driven heuristic 评测基准，强调标准化 logging、generalization/specialization 测试和过程分析。 | 不是 PUCT 替代；但对你最重要的启示是：必须把搜索框架评测做成标准 benchmark。 | 有 | 论文/代码 [22]
+CodeTree: Agent-guided Tree Search for Code Generation with Large Language Models | Jierui Li 等 | 2025-05 | NAACL 2025 + GitHub | 统一树结构覆盖 strategy planning、solution generation、debug/refine，多 agent 分工。 | 相同点：树搜索和执行反馈；不同点：多阶段、多角色、显式树化代码流程，不依赖单一 PUCT 叙事。 | 有 | 论文/代码 [23]
+Leveraging Constrained Monte Carlo Tree Search to Generate Reliable Long Chain-of-Thought for Mathematical Reasoning | Qingwen Lin 等 | 2025-02 | arXiv / Applied Intelligence | 通过受限动作空间、PRM、动作子集偏序去降低 MCTS 的 action-space 爆炸。 | 相同点：仍是 MCTS；不同点：约束 action space 而非继续调 PUCT 常数。 | 本轮未见官方代码 | 论文/刊物索引 [24]
+Monte Carlo Tree Search for Comprehensive Exploration in LLM-Based Automatic Heuristic Design | Zhi Zheng 等 | 2025-01；ICML 2025 | arXiv + ICML 2025 + GitHub | 将所有 LLM 生成 heuristic 保存在树中，避免种群法只保留 top-k 而丢掉“暂时弱但可继续优化”的候选。 | 这是与你课题最接近的 PUCT/MCTS-AHD 直接祖系文献；仍属树搜索，但强调保留全树候选与全面探索。 | 有 | 论文/会议/代码 [25]
+框架 | 搜索对象 | 选择/扩展机制 | 反馈类型 | 代表实验与结果 | 主要优点 | 主要局限 | 对你的网络瓦解任务的启示
+ERA / Google PUCT-FUTS | 可执行科学软件代码 | 论文称 PUCT；实现名 FUTS；全局平坦节点选择、分数 rank 化、无随机 rollout。 [2] | sandbox 执行分数、日志、外部研究想法、重组。 [28] | 在 6 类科学任务上给出 expert-level 结果；如 scRNA-seq 中发现 40 个新方法、COVID 预测中 14 个模型超过 CDC ensemble。 [29] | 系统完整、应用强、与“scorable task”匹配极好。 | 树策略本身创新有限；缺少与更强树策略的直接 ablation。 | 你的任务与其“可评分 empirical software”设定高度同构，最值得借鉴的是 任务形式化，其次才是 PUCT。
+MCTS-AHD | heuristic 代码/函数 | 用树保存所有候选，避免种群法只保留 top-k；强调全面探索。 [30] | heuristic 质量评分 | 在多类 COP 上显著优于既有 LLM-AHD 方法，并已进入 ICML 2025。 [31] | 与你的“搜索启发式函数”最同构。 | 仍然主要把 evaluator 视为固定黑盒，很少讨论 evaluator 自身设计。 | 对你最直接的引用价值最高，尤其适合衔接“我们搜索的是 dismantling heuristic 而非一般代码”。
+Clade-AHD | heuristic 家族 / clade | clade-level Beta belief + Thompson Sampling，显式建模不确定性。 [13] | 稀疏且噪声较大的评估分数 | 声称在复杂 COP 上一致优于 SOTA 且显著降成本。 [13] | 直接解决有限预算下 PUCT 容易过度利用的问题。 | 仍是预印本；跨任务鲁棒性还需更多独立复现。 | 非常适合 你的场景，因为网络瓦解评估往往昂贵、噪声不小、数据集数量有限。
+CodeTree | 多阶段代码策略 | 统一树覆盖 planning / coding / debugging；Thinker/Solver/Debugger 协作。 [32] | 执行反馈 + agent 反馈 | 7 个代码基准上显著提升；HumanEval 95.1%、MBPP 98.7%、CodeContests 43.0。 [32] | 把“搜索对象”从最终代码扩展到全过程。 | 主要面向代码 benchmark，而非 OR/图算法。 | 很适合启发你把搜索拆成 指标构思 → 局部特征设计 → 公式组合 → 代码实现 四阶段。
+RethinkMCTS | thought / reasoning path | thought-level MCTS；把 fine-grained execution feedback 转成 rethink verbal feedback。 [33] | 正负执行反馈、错误定位 | HumanEval 上 GPT-3.5-turbo 从 70.12 提到 89.02，GPT-4o-mini 从 87.20 提到 94.51。 [34] | 非常重视“负反馈如何修树”。 | 面向代码题，指标比较偏 pass/fail 与测试用例。 | 对你特别有价值，因为你现在的关键恰恰是 评价函数 cNBI 的反馈解释性。
+ReSCALE | LLM 推理树 | 以 Gumbel sampling + Sequential Halving 替代 PUCT/Dirichlet。 [35] | 任务正确率/预算曲线 | 指出 AlphaZero-style tree search 随预算增加反而劣化；在 GSM8K、Game24 上恢复单调扩展。 [36] | 是对 PUCT 可扩展性 最明确的反证之一。 | 主要是 reasoning benchmark，不是 AHD benchmark。 | 如果你准备把搜索预算从几十/几百节点扩到更大，这篇是必须引用的“为什么不能默认 PUCT 会越搜越好”。
+A2DEPT | 完整算法/程序树 | tree-structured evolutionary search + hierarchical operators + repair。 [11] | 评估分数 + 可执行性修复反馈 | 报告称相对最强 AHD baseline 的 mean normalized optimality gap 再降 9.8%。 [11] | 把搜索空间从“组件级”扩到“系统级 solver”。 | 当前更像开放式 algorithm discovery，实验复杂。 | 适合你后续从 BPSD 这种单一公式 heuristic 走向“多阶段 dismantling solver”时作为上位框架。
+评价维度 | 评分 | 理由
+算法层面的独创性 | 中低 | PUCT 本身来自 AlphaZero 传统；ERA 的真正改动是把它改造成 flat/global node selection、rank-score normalization、无 rollout 的 empirical-code search。这是一种有效适配，但不是从零提出一种新的树策略。后续工作如 ReSCALE、Clade-AHD、CMCTS 已直接给出更强的替代机制。 [41]
+理论层面的独创性 | 低 | ERA 强在工程而非理论。论文没有给出树策略的 regret、sample-efficiency 或 scaling 分析；而 ReSCALE 至少明确识别出了 AlphaZero-style/PUCT 的 scaling failure，CMCTS 也从 action-space 约束角度解释了为什么常规 MCTS 在长链推理里会失效。 [42]
+实证层面的独创性 | 高 | ERA 的实证覆盖 6 类科学问题，且不是单一 benchmark；Google Research 页面与博客都强调其在 scRNA-seq、COVID forecasting、时间序列、神经活动预测等多任务上的 expert-level 结果。这个广度在同类工作里依然突出。 [29]
+应用层面的独创性 | 高 | “scorable scientific tasks / empirical software” 这一定义非常强，把程序发现问题转为了可自动评分的闭环科学工作流。对你这种网络瓦解任务尤为契合。 [29]
+开源与可复用性 | 中高 | ERA 已开放论文、交互网站、最佳候选结果与参考实现；但完整内部实验环境、模型接入、计算基础设施与全部任务流水线仍不能完全由仓库复现。 [43]
+优先级 | 研究方向 | 具体可做内容 | 预期难度 | 潜在影响
+高 | 用不确定性感知策略替代 PUCT | 直接把 Clade-AHD 的 clade posterior + Thompson sampling 或 ReSCALE 的 budget-scalable selection 引入 network dismantling heuristic search，比较在固定 evaluator budget 下的 sample efficiency。 | 中 | 高
+高 | 把 evaluator 设计也纳入搜索闭环 | 不只搜索 heuristic，还搜索 cNBI 的参数化形式、组件惩罚项、top-k mass 惩罚、HHI/断连项权重，形成 bi-level search。现有 AHD 多默认 evaluator 固定，这恰好留出你的原创空间。 | 高 | 高
+高 | 分阶段树搜索 | 借鉴 CodeTree / RethinkMCTS，把搜索拆成 图结构信号发现 → 指标原语组合 → 公式实现 → 运行时约束修复 四层，而不是一次性搜完整 Python 函数。 | 中高 | 高
+高 | 网络瓦解专用 benchmark | 借鉴 HeuriGym / BLADE，构建 hidden-test 图族、跨规模、跨网络机制、runtime budget、鲁棒性与 multiple-seed 标准化评测。 | 中 | 高
+中高 | 文献检索与方法重组注入 | 借鉴 ERA 的 idea injection / recombination，把 CI、CoreHD、GND、EI、BPD、图分割、社区切分等思路作为 parent ideas，搜索“重组 heuristic”。 | 中 | 中高
+中高 | 分布泛化验证 | 不只在 12 个命名数据集报告结果，而做 按生成机制/规模/同配性/社区强度分层 的外推实验，检验 BPSD 与 cNBI 的稳定性。 | 中 | 高
+中 | 评价解释性的理论化 | 给出 cNBI 与 pairwise disconnectedness、effective components、top-k mass/HHI 的关系式，分析其单调性、边界行为、与 GCC AUC 的不可替代性。 | 中高 | 中高
+中 | 从单 heuristic 走向求解器级搜索 | 借鉴 A2DEPT/AlphaEvolve，尝试让系统搜索 多阶段 dismantling solver，例如“预筛节点集 + 局部重排 + look-ahead 修正 + budget-aware recalibration”。 | 高 | 高

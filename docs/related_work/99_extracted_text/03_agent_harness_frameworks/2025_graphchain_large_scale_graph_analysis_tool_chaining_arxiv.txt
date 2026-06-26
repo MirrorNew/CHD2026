@@ -1,0 +1,1928 @@
+
+
+===== Page 1 =====
+GraphChain: Large Language Models for Large-scale
+Graph Analysis via Tool Chaining
+Chunyu Wei1, Wenji Hu1, Xingjia Hao2, Xin Wang1, Yifan Yang3, Yueguo Chen1
+Yang Tian2,Yunhai Wang 1∗
+1Renmin University of China, China 2Guangxi University, China
+3Beijing Jiaotong University, China
+weicy15@icloud.com,2024000991@ruc.edu.cn,haoxingjia@st.gxu.edu.cn
+2023103702@ruc.edu.cn,23281027@bjtu.edu.cn
+chenyueguo@ruc.edu.cn,ytian@gxu.edu.cn,cloudseawang@gmail.com
+Abstract
+Large Language Models (LLMs) face significant limitations when applied to large-
+scale graphs, struggling with context constraints and inflexible reasoning. We
+present GraphChain, a framework that enables LLMs to analyze complex graphs
+through dynamic sequences of specialized tools, mimicking human exploratory
+intelligence. Our approach introduces two key innovations: (1) Progressive Graph
+Distillation, a reinforcement learning mechanism that generates optimized tool se-
+quences balancing task relevance with information compression, and (2) Structure-
+aware Test-Time Adaptation, which efficiently tailors tool selection strategies to
+diverse graph topologies using spectral properties and lightweight adapters without
+costly retraining. Experiments show GraphChain significantly outperforms prior
+methods, enabling scalable and adaptive LLM-driven graph analysis. 2
+1 Introduction
+Graph-structured data represents a fundamental paradigm across diverse domains, from social
+networks and molecular structures to knowledge bases and recommendation systems. While large
+language models (LLMs) have demonstrated remarkable reasoning capabilities, they encounter
+significant challenges when processing graph data.
+Recent approaches to enhancing LLMs’ graph processing capabilities have taken two primary
+directions. The first attempts to adapt LLMs to directly process graph structures—either through
+tokenization or natural language descriptions [Chai et al., 2023, Wang et al., 2023b]. However, this
+approach facesContext Exhaustion: large-scale graphs with millions of nodes and edges cannot be
+effectively compressed within LLMs’ context limitations, making it computationally infeasible to
+load entire subgraphs into their context windows (Figure 1, left).
+Recognizing these limitations, a second direction draws inspiration from tool learning paradigms.
+Approaches like Graph-ToolFormer [Zhang, 2023a] and GraphForge [Wang et al., 2024b] pioneered
+integrating specialized tools with LLMs for graph reasoning, enabling models to call external graph
+processing functions. However, these methods primarily conceptualize tool learning as text generation,
+relying on single-step tool invocations with textually described graph structures. This approach leads
+toReasoning Hallucination(Figure 1, middle), as it places unrealistic demands on individual tools
+to provide comprehensive functionality for complex graph analysis.
+∗Corresponding author.
+2The code is available in https://github.com/wuanjunruc/GraphChain
+39th Conference on Neural Information Processing Systems (NeurIPS 2025).
+arXiv:2511.00457v2  [cs.AI]  8 Nov 2025
+
+===== Page 2 =====
+① Context Exhaustion ② Reasoning Hallucination
+Simple Question：Which account has the most 
+transactions in the network?
+Complex Question：
+Identify potential fraud accounts.
+A
+E
+C
+D
+B
+F
+A
+E
+C
+D
+B
+F
+Large-scale Complex Graph
+Large-scale Complex Graph
+A
+E
+C
+D
+B
+F
+Large-scale Complex Graph
+Tokenizing Graph Component
+Prompt: 
+Given a transaction graph: <graph>, which 
+account has the most transactions in the 
+network?
+Graph 
+Encoder
+Account F has the most transactions.
+Single-Tool Approach
+Prompt: 
+You are going to… The graph is 
+loaded in memory as parameter G, 
+you can use the tool to analyze… 
+Identify potential fraud accounts.
+Structured 
+Tool List 
+I need to find potential fraud accounts 
+by analyzing circular patterns. 
+The fraud accounts is
+<api>find_circular_patterns(G)</api>
+Graph analysis complete
+Describing graphs in natural language
+Prompt: 
+The network contains 500,000 accounts. 
+Account A connects to accounts B, C, D, and E 
+with transaction values of $500, $300…
+Account B connects… 
+…
+Sequence length exceeded
+GraphChain
+Prompt: 
+You are going to… The graph is 
+loaded in memory as parameter G, 
+you can use the tool to analyze… 
+Identify potential fraud accounts.
+Structured 
+Tool List 
+I need to find potential fraud 
+accounts by multiple steps:
+Tool Call: <api>find_simple_cycles(G)<api>
+Result: [circle_list]
+Tool Call: <api>filter([circle_list], 
+value=time, filter='>5')<api>
+Result: [filter_list]
+According to the analysis, there are 
+following potential fraud account: 
+AK, CF, DD, …
+Figure 1:Comparison of Graph Processing Approaches with LLMs. Left: Methods suffer from Context
+Exhaustion where large graphs exceed LLM context windows. Center: Single-tool approaches face Reasoning
+Hallucination with fixed, predefined tools. Right: Our GraphChain framework enables human-like exploratory
+analysis through sequential tools that progressively narrow focus in large-scale graphs.
+Complex graph analysis parallels human exploration of unknown environments. Just as humans
+navigate unfamiliar territories through interactive, adaptive exploration—where each step reveals in-
+formation that guides subsequent decisions—effective graph analysis requires progressive, sequential
+information gathering rather than comprehensive analysis in one operation. A field researcher might
+first survey an area broadly before focusing on regions of interest; similarly, graph analysis benefits
+from incremental understanding built through sequential operations.
+Inspired by human exploratory cognition, we propose GraphChain, a novel framework enabling
+LLMs to process large-scale graphs through dynamic tool-chaining (Figure 1, right). GraphChain
+decomposes complex graph problems into sequences of specialized operations, activating LLMs’
+reasoning capabilities to create, refine, and execute chains of graph processing tools. This approach
+allows progressive refinement and deeper exploration of graph structures, mimicking how human
+experts methodically investigate complex systems layer by layer.
+The implementation ofGraphChainaddresses two significant technical challenges:
+1. Informative Tool Sequence Generationrequires determining optimal tool sequences for diverse
+analytical tasks, navigating an exponentially growing space of possible combinations. Traditional
+approaches struggle with this challenge due to scarce labeled data for complex graph analysis.
+2. Adaptive Graph Structure Sensingmust address real-world graph data exhibiting distributional
+shifts and structural variations. Unlike natural data types, graph structures are heavily human-
+defined with domain-specific schemas, leading to severe distribution shifts across domains.
+To generate informative tool sequences, we propose a progressive graph distillation training mecha-
+nism. Our key insight is that effective graph analysis mirrors human exploration: beginning broadly
+and systematically narrowing focus as relevant information emerges. This approach transforms the
+exponential tool-selection problem into a principled information bottleneck optimization, iteratively
+refining both structural scope and representational complexity while preserving only task-critical
+information—similar to how humans selectively attend to relevant environmental cues.
+For adapting to diverse graphs, we introduce a structure-aware test-time adaptation mechanism. We
+leverage the insight that graph topology fundamentally influences optimal analysis strategies, just as
+explorers adjust techniques for different terrains. Our lightweight adapter dynamically modifies tool
+selection policy based on spectral properties capturing essential structural characteristics, enabling
+GraphChainto maintain effectiveness across diverse graphs while preserving efficiency.
+Our main contributions include:
+2
+
+===== Page 3 =====
+•GraphChain , a novel framework leveraging Graph-Oriented Reinforcement Learning with pro-
+gressive information distillation, enabling systematic exploration of large-scale graphs through
+interconnected tool sequences.
+• A structure-aware test-time adaptation mechanism that adjusts tool-chaining strategies based on
+graph topology, enabling efficient transfer to diverse graph structures without costly retraining.
+• Extensive experimentation demonstrating that GraphChain significantly outperforms existing
+methods by an average of 20.7%, with exceptional scalability handling graphs up to 200,000 nodes
+while maintaining consistent performance.
+2 Related Work
+Tool Learning for LLMsTool learning for LLMs encompasses tuning-free methods using prompt-
+ing strategies like Chain-of-Thought [Wei et al., 2022], ReAct [Yao et al., 2023], and DFSDT [Qin
+et al., 2023], alongside approaches integrating tools into conversations [Chen et al., 2023] or em-
+ploying structured selection via graphs [Liu et al., 2024], hierarchies [Du et al., 2024], or intent
+filtering [Fore et al., 2024]. Meanwhile, tuning-based methods directly adapt LLM parameters [Xu
+et al., 2023] through behavior cloning with reinforcement learning [Qiao et al., 2024, Yu et al.,
+2024], fine-tuning on specialized decision data [Qin et al., 2023], frameworks for varying tool
+complexities [Gao et al., 2024], and self-verification mechanisms [Mekala et al., 2024].
+Graph Processing with LLMsRecent work enhances LLMs for graph processing via: (1) Direct
+processing with text or visual graph descriptions [Wang et al., 2023b, Guo et al., 2023] or specialized
+token sequences [Chen et al., 2024b, Wang et al., 2024a]; (2) Tool integration and agent-based
+methods for external function calls [Zhang, 2023b] or multi-step reasoning [Gu et al., 2024]; (3)
+GNN-LLM combinations using GNNs as encoders [Tang et al., 2024] or aligning representation
+spaces [Su et al., 2022].
+Test-time AdaptationTraditional machine learning assumes identical training and testing distribu-
+tions, but real-world deployments often encounter distribution shifts [Kulinski and Inouye, 2023].
+Test-Time Adaptation (TTA) addresses this challenge [Liang et al., 2025, Alfarra et al., 2025]. For
+LLMs, adaptation techniques include test-time prompt tuning [Shu et al., 2022, Ma et al., 2023],
+Parameter-Efficient Fine-Tuning methods like adapters or LoRA [Hu et al., 2022] for efficient updates
+[Shi et al., 2024, Muhtar et al., 2024], and "test-time compute scaling" with iterative refinement,
+search, or self-correction [Jaech et al., 2024, Guo et al., 2025, Suzgun et al., 2025].
+3 Preliminaries and Problem Formulation
+Graph NotationLet G= (V,E) represent a graph, where V={v 1, v2, . . . , vn} is the set of
+n=|V| nodes and E ⊆ V × V is the set of m=|E| edges. The adjacency matrix A∈ {0,1} n×n (or
+Rn×n for weighted graphs) has entries Aij = 1 (or edge weight) if (vi, vj)∈ E , and 0 otherwise.
+Node features are represented by matrix X∈R n×d. The degree matrix D is diagonal with Dii =Pn
+j=1 Aij, and the normalized graph Laplacian is defined as L=I−D −1/2AD−1/2. A node’s
+neighborhood is N(v) ={u∈ V |(v, u)∈ E} , and a subgraph G′ = (V ′,E ′) consists of node
+subsetV ′ ⊆ Vand edge subsetE ′ ⊆ E ∩(V ′ × V ′).
+Graph Processing Tool LibraryWe define a library of graph processing tools T=
+{T1, T2, . . . , TK}, which are implemented based on functions from the NetworkX library 3, and
+operate on tensor representations within the currentmemory state m. NetworkX is a widely-used
+open-source Python library that provides a comprehensive set of graph processing functions, including
+node and edge operations, graph property calculations, and advanced analytical tools. The tools in the
+library are based on 45 carefully selected NetworkX functions, with details provided in Appendix E.
+The tools operate on tensor representations, typically containing the adjacency matrix A′ and feature
+matrixX ′ for a subgraphG ′ = (V ′,E ′):
+m≈(A ′ ∈R n′×n′
+,X ′ ∈R n′×d, . . .)wheren ′ =|V ′|(1)
+3https://networkx.org.
+3
+
+===== Page 4 =====
+① Training Phase
+Task 
+Query
+Tool 1
+Tool 2
+Tool K
+Graph 
+Distilling
+Step 1
+m1 
+m1 
+m1
+Graph 
+Distilling
+Tool 5
+Tool 6
+Step 2
+Graph 
+Distilling
+Step N-1
+mN
+mN
+mN
+d < 
+Thres ?
+Answer
+Answer
+Answer
+Answer
+PPO 
+Optimization
+Execution
+Success
+Execution
+Success
+Execution
+Success
+Step N
+A
+E
+C
+D
+B
+F
+A
+E
+C
+D
+B
+F
+Large-scale Complex Graph
+Large-scale Complex Graph
+A
+E
+C
+D
+B
+F
+Large-scale Complex Graph
+ U ∊ ℝN×k V ∊ ℝk×N ∑ ∊ ℝk×k 
+StateStateActionAction RewardRewardStateAction Reward GraphChainStateAction Reward GraphChain
+Adapter
+Graph 
+Signature
+Task 
+Query
+Execution
+Success
+Chain 
+Length
+Execution
+Success
+Chain 
+Length
+② Test-Time Adaption
+Generate
+k
+① Training Phase
+Task 
+Query
+Tool 1
+Tool 2
+Tool K
+Graph 
+Distilling
+Step 1
+m1 
+m1 
+m1
+Graph 
+Distilling
+Tool 5
+Tool 6
+Step 2
+Graph 
+Distilling
+Step N-1
+mN
+mN
+mN
+d < 
+Thres ?
+Answer
+Answer
+Answer
+Answer
+PPO 
+Optimization
+Execution
+Success
+Execution
+Success
+Execution
+Success
+Step N
+A
+E
+C
+D
+B
+F
+A
+E
+C
+D
+B
+F
+Large-scale Complex Graph
+Large-scale Complex Graph
+A
+E
+C
+D
+B
+F
+Large-scale Complex Graph
+ U ∊ ℝN×k V ∊ ℝk×N ∑ ∊ ℝk×k 
+StateStateActionAction RewardRewardStateAction Reward GraphChainStateAction Reward GraphChain
+Adapter
+Graph 
+Signature
+Task 
+Query
+Execution
+Success
+Chain 
+Length
+Execution
+Success
+Chain 
+Length
+② Test-Time Adaption
+Generate
+k
+Figure 2:(1) Training Phase:Progressive graph distillation where the RL agent learns to select tool sequences
+that iteratively reduce the memory state’s (m) Graph Description Length (GDL) while maximizing task relevance.
+(2) Structure-aware Test-Time Adaptation:A lightweight adapter (Aψ) tuned by minimizing chain length and
+KL divergence generates a structure-specific soft prompt PG based on the graph’s SVD-derived fingerprintzG.
+A tool T takes the current memory state m and tool-specific parameters θT as input, producing
+two outputs: (1) A concise natural language summary d of the execution outcome; (2) An updated
+memory statem ′. Formally, the tool function is defined as:T: (m, θ T )7→(d,m ′).
+This dual output mechanism allows our framework to provide context-window-friendly summaries to
+the LLM via d, while managing potentially large-scale intermediate graph data within m′, mitigating
+context exhaustion when processing large graphs.
+Sequential Graph Exploration as an MDPGiven an analytical query Q and input graph G, we
+model sequential graph exploration as a Markov Decision Process (MDP)M= (S,A, P, R, γ):
+• State Space S: State st encapsulates query Q, graph reference, action history {(ai, di)}t−1
+i=0, and
+memory statem t−1.
+• Action Space A: Actions at = (T, θT ) select a tool T∈ T with parameters θT , or ’TERMINATE’.
+• Transition Dynamics P : Tool execution produces (dt,m t) =T(m t−1, θT ), updating state st+1
+with new history and memory.
+•Reward FunctionR(s t, at, st+1): Evaluates actions based on progress and task success.
+•Discount Factorγ∈[0,1]: Balances immediate vs. future rewards.
+The agent’s policy πθ(at|st), parameterized by θ, generates a trajectory τ=
+{s1, a1, s2, a2, ..., sT , aT } representing sequential tool interactions. To maximize performance, we
+optimize the expected reward:
+∇Rθ =
+X
+τ
+R(τ)∇π θ(τ) =E τ∼π θ ,(st,at)∼τ
+"
+R(τ)
+TX
+t=1
+∇θ logπ θ(at|st)
+#
+(2)
+4 Methodology
+GraphChain addresses the challenges of applying LLMs to large-scale graph analysis by formulating
+the problem as a sequential decision-making task solvable via reinforcement learning. Our approach
+centers on two core technical innovations: (1)Progressive Graph Distillation, which promotes
+informative yet compact state representations, and (2)Structure-aware Test-Time Adaptation,
+enabling dynamic adjustment to diverse graph topologies. Figure 2 provides a conceptual overview.
+4
+
+===== Page 5 =====
+4.1 Progressive Graph Distillation
+Generating effective tool sequences for complex graph queries involves navigating an exponentially
+large action space. To provide denser learning signals and emulate human-like analytical workflows
+that progress from coarse to fine, we introduce Progressive Graph Distillation.
+This approach incentivizes the RL agent to pursue both the query objective and manage the complexity
+of its memory state m. We train the agent to prioritize tool sequences that systematically reduce m’s
+data volume while retaining task-critical information, transforming exploration into a guided search
+characterized by iterative refinement. The aim is to progressively shrink m step-by-step, eventually
+yielding a compact final statem N suitable for direct processing within the LLM’s context window.
+4.1.1 Quantifying Memory State Volume and Relevance
+Implementing progressive distillation requires quantifying two key aspects of memory statemt at
+each stept: itsdata volumeand itsrelevanceto queryQ.
+Graph Description Length (GDL(mt)):Drawing from the Minimum Description Length princi-
+ple, we introduce Graph Description Length to measure the data size needed to represent the current
+graph state. Assuming memory state mt contains subgraph G′
+t = (V ′
+t,E ′
+t) with n′
+t =|V ′
+t| nodes and
+m′
+t =|E ′
+t|edges, plus node featuresX ′
+t ∈R n′
+t×df , we define:
+GDL(mt) =L(structure) +L(features)≈α sm′
+t +α f n′
+tdf (3)
+Coefficientsα s, αf ≥0weight the relative contribution of structural versus feature information.
+Task Relevance (Rel(mt,Q) ):We employ an auxiliary LLM scorer to assess the utility of mt for
+answering query Q. Since mt may exceed the LLM’s context limits, we use the concise description
+dt produced by the executed tool. We estimate the task relevance by:
+Rel(mt,Q)≈LLMScore(prompt(Q, H t, dt))∈[0,1](4)
+whereH t ={d 0, . . . , dt−1}is the history of preceding descriptions.
+4.1.2 Distillation-based Reward Shaping
+We incorporate progressive distillation into the RL reward functionRt =R(s t, at, st+1). The reward
+structure provides feedback during exploration while assessing final task completion:
+Rt =
+(
+w1 ·ˆrSucc
+t +w 2 ·ˆr∆GDL
+t +w 3 ·ˆr∆Rel
+t ift < N
+wsolve ·EvaluateTaskSuccess(Q, s N+1 )ift=N (5)
+whereNis the final step index, and the intermediate reward components are:
+•ˆrSucc
+t =I(ExecutionSuccess(a t, st+1)): Binary reward for valid tool execution.
+•ˆr∆GDL
+t = tanh
+
+β GDL(mt−1)−GDL(mt)
+GDL(mt−1)+ϵ
+
+∈(−1,1): Rewards reduction in relative GDL.
+•ˆr∆Rel
+t =Rel t −Rel t−1: Rewards increase in estimated task relevance.
+Weights w1, w2, w3 balance the importance of execution success, volume reduction, and relevance
+gain. Weightw solve scales the final reward based on overall success in addressing queryQ.
+4.1.3 Information Bottleneck Perspective
+Our progressive distillation mechanism aligns with the Information Bottleneck principle, advocating
+for representations that are maximally informative about a target while being maximally compressive
+of input. Our reward function operationalizes this trade-off by incentivizing high task relevance while
+rewarding reductions in state volume.
+Proposition 4.1.Let the input be X= (G,Q) , containing task-relevant information Y=A Q
+(the answer) and task-irrelevant information IR, with the Markov structure (Y, IR)→X→m t.
+Assuming the relevance proxy Relt positively correlates with the mutual information I(m t;Y) and
+the GDL serves as a complexity measure encouraging smaller I(X;m t), optimizing policy πθ with
+reward function Rt guides the generation of memory states mt that tend to minimize irrelevant
+informationI(IR;m t|Y)while preserving relevant informationI(m t;Y).
+5
+
+===== Page 6 =====
+Detailed proof is provided in Appendix A. This proposition provides theoretical support for our
+distillation approach. By rewarding both relevance gain and volume reduction, the RL process steers
+the agent toward behaviors that effectively filter graph data—reducing the representational footprint
+of task-irrelevant components while preserving critical information.
+4.1.4 Policy Optimization
+To optimize the LLM agent’s policyπθ, we implement Proximal Policy Optimization (PPO), using
+Generalized Advantage Estimation (GAE) for improved stability:
+ˆAGAE
+t (θ, ω) =
+N−tX
+l=0
+(γλ)lδt+l,whereδ t =R t+1 +γV ω(st+1)−V ω(st)(6)
+Here, λ∈[0,1] is the GAE trace decay parameter, Vω is the learned value function, γ is the discount
+factor, andR t+1 is the distillation-aware reward.
+Following the PPO-clip approach, we maximize a clipped surrogate objective based on trajectories τ
+sampled from policyπ θ:
+LCLIP(θ) = ˆEτ∼π θ
+" NX
+t=0
+min
+ πθ(at|st)
+πθold (at|st)
+ˆAGAE
+t ,clip
+ πθ(at|st)
+πθold (at|st) ,1−ϵ,1 +ϵ
+
+ˆAGAE
+t
+#
+(7)
+whereπ θold is the old policy used for generating trajectories, andϵis the clipping hyperparameter.
+4.2 Structure-aware Test-Time Adaptation
+4.2.1 Graph Structural Fingerprinting
+To provide global structural awareness for large-scale graphs, we derive a concise graph fingerprint.
+We compute the normalized graph LaplacianL=I−D −1/2AD−1/2 and consider its Singular Value
+Decomposition, L=UΣV T . The smallest singular values σi capture dominant, low-frequency
+components reflecting macroscopic graph properties. We define thestructural fingerprintas:
+zG = (σ0, σ1, . . . , σM)∈R M+1 .
+While full SVD is intractable for very large graphs, these M+ 1 smallest singular values (where
+M≪N ) can be computed efficiently using iterative algorithms, effectively distilling essential global
+topology into a compact vector. We provide complexity analysis in Appendix G.
+4.2.2 Structure-Conditioned Prompt Generation
+STTA employs a continuous adaptation mechanism through adapter networkAψ, which maps the
+graph’s structural fingerprintzG to a soft promptP G =A ψ(zG)∈R Lp×demb:
+This generated prompt is prepended to the standard embedding E(st) of the agent’s state, modifying
+the input to the frozen LLM policy: LLMInput(s t, G) = [PG;E(s t)] = [Aψ(zG);E(s t)].
+The agent’s action is then sampled from the policy conditioned on this augmented input. During
+adaptation, only the smaller set of adapter parametersψare tuned, enabling efficient adaptation.
+4.2.3 Self-Supervised Adaptation
+Given the absence of ground-truth rewards for user queryQ on unseen test graph Gtest, STTA employs
+a self-supervised strategy using auxiliary queries. We leverage a general-purpose LLM to generate
+diverse auxiliary graph analysis queries relevant toG test’s structure.
+For each auxiliary query, we perform rollouts using the frozen base policy conditioned on the graph-
+specific prompt, yielding trajectories. The adaptation objective balances planning efficiency and
+policy regularization:
+LSTTA(ψ) =E Qaux,i,τi∼πψ(·|s;Gtest)
+
+wLNτi +w KL
+Nτi −1X
+t=0
+DKL (πψ(·|st;G test)||πorig(·|st))
+
+ (8)
+The components of this objective are: (1)Chain Length ( Nτi)encouraging efficient planning, and
+(2)KL Divergence Regularizationensuring helpful but not drastic changes.
+6
+
+===== Page 7 =====
+We minimize this objective using the REINFORCE algorithm, tuningAψ to generate prompts that
+enhance efficiency while maintaining fidelity to learned behaviors, effectively adapting the frozen
+policy toG test’s specific structure.
+5 Experiment
+5.1 Experimental Setting
+Graph Dataset.We evaluate GraphChain on five diverse graph datasets representing different
+real-world domains, as illustrated in Table 1.
+Table 1:Statistics of graph datasets used in our experiments.
+Scenario Dataset #Nodes #Edges #Features Type Description
+Citation Graphs
+Cora 2,708 10,556 1,433
+Directed
+Academic papers connected by
+citation relationships [Yang
+et al., 2016]
+CiteSeer 3,327 9,104 3,703
+PubMed 19,717 88,648 500
+Social Networks Facebook 4,039 88,234 - Undirected Online interactions [Leskovec
+and Mcauley, 2012]Twitter 81,306 1,768,149 - Directed
+Chemical Molecules QM9∼18.0/graph∼37.3/graph 11 Undirected Molecular structures with bonds
+between atoms [Wu et al., 2018]
+Traffic Networks METR-LA 207 1,515 - Directed Road networks with geographic
+constraints [Chen et al., 2020]
+Financial Networks Elliptic 203,769 234,355 165 Directed Transaction networks [Weber
+et al., 2019]
+Instruction Data.We constructed two complementary datasets: (1) an SFT dataset comprising
+9,986 (query, tool sequence, answer) triplets based on 45 carefully selected NetworkX functions, and
+(2) an RL dataset containing 3,000 expert-annotated (query, answer) pairs (600 per graph scenario).
+We allocated 500 pairs per scenario for training and 100 for testing, with domain experts crafting
+exemplary instruction templates to ensure ecological validity. See Appendix F for details.
+Baselines.We evaluatedGraphChainagainst state-of-the-art methods from two categories:
+(1). For Text-Instruction methods, we tested leading closed-source LLMs ( Claude-series [An-
+thropic, 2024], GPT-series [OpenAI, 2023], and GLM4-0520 [GLM, 2024]) using two-shot
+prompting with Chain-of-Thought reasoning, and reproduced specialized graph reasoning meth-
+ods (NLGraph[Wang et al., 2023a],GraphWiz[Chen et al., 2024a]).
+(2). For Tool-Instruction methods, we compared against recent tool-augmented approaches
+(Graph-ToolFormer [Zhang, 2023a], GraphForge [Wang et al., 2024b], and ToolGen [Wang
+et al., 2025]).
+To ensure fair comparisons with existing baselines—all requiring the entire graph in the context
+window—we partitioned original graphs into subgraphs with fewer than 100 nodes for overall
+comparison. We use the same input for both baseline methods and GraphForge. In our scalability
+experiment (Section 5.4), GraphChain maintains comparable performance even when scaling to
+graphs with approximately 200,000 nodes. Further details are provided in Appendix D.
+Training Setup.We used two NVIDIA A800 GPUs with LoRA-based fine-tuning (rank r=16,
+alpha=32) on theQwen2.5-7B-instructionmodel. Further details are provided in Appendix C.
+5.2 Main Results
+Table 2 presents performance comparisons of GraphChain against state-of-the-art baselines, with
+statistical significance confirmed by two-sample t-tests (p <0.05). Key insights include:
+•GraphChain substantially outperforms all baselines, achieving 84.7% average accuracy compared
+to 70.2% for the best baseline (GraphForge), representing a 20.7% relative improvement.
+• Among text-instruction baselines, GPT-4o with approximately 200B parameters demonstrates
+superior performance (59.4% average accuracy), confirming the applicability of scaling laws to
+graph reasoning tasks.
+7
+
+===== Page 8 =====
+Table 2:Performance comparison (accuracy %) across five real-world graph reasoning scenarios.
+Text-Instruction Methods
+Model Parameters Financial Network Chemical Molecule Social Network Citation Graph Traffic Network Average
+Claude-3-Sonnet- 21.7±1.8 47.0±2.2 21.5±3.2 17.7±2.1 16.8±2.0 24.9±2.3GPT-3.5-turbo∼175B 36.6±2.1 23.0±3.7 18.2±3.6 12.2±0.8 19.4±1.9 21.9±2.4Claude-3-Haiku∼20B 12.2±3.0 52.9±3.2 50.3±3.4 19.8±2.0 13.9±2.4 29.8±2.8Claude-3-Opus∼137B 23.6±2.1 42.4±1.4 51.9±1.3 36.7±3.1 43.4±3.3 39.6±2.2GraphWiz13B 41.1±3.9 52.4±2.6 61.5±3.5 68.0±2.1 38.4±1.9 52.3±2.9NLGraph∼100B 52.1±3.4 58.4±2.5 65.2±2.3 59.4±0.5 39.8±1.8 55.0±2.1GPT-4o∼200B 57.5±1.9 62.7±3.6 65.2±3.9 71.5±3.4 43.4±1.6 59.4±2.6Claude-4-Sonnet- 58.2±2.1 62.9±1.7 61.7±4.3 77.5±1.4 32.8±1.9 58.6±2.3GPT-4.1- 52.2±1.5 63.4±2.6 67.4±2.3 70.0±1.9 55.5±3.1 61.7±2.2Gemini-2.5-Flash- 25.1±1.3 67.3±1.6 28.1±2.1 24.1±1.8 24.9±1.8 33.9±1.7
+Tool-Instruction Methods
+Graph-ToolFormer8B 47.5±1.9 68.1±4.8 74.7±4.2 61.4±3.4 65.8±4.5 62.4±3.5GraphForge8B 63.5±3.5 70.9±5.4 80.4±4.2 63.4±4.4 73.5±3.1 70.2±3.8ToolGen8B 75.8±1.1 57.9±2.9 79.4±2.3 61.2±1.3 62.7±1.5 67.4±1.8
+GraphChain7B81.5±2.2 81.1±0.7 89.6±2.0 83.6±2.6 84.1±0.3 84.7±1.8
+Relative improvement (%)-+7.5% +14.4% +11.4% +7.9% +14.4% +20.7%
+†Boldfacedenotes the highest score, and underlineindicates the best result among baselines.
+• Specialized graph reasoning approaches like GraphForge (70.2% average accuracy) significantly
+outperform even the largest general-purpose LLMs.
+•GraphChain achieves these results with only 7B parameters, compared to GraphForge’s 8B and
+GPT-4o’s 200B, demonstrating remarkable parameter efficiency.
+5.3 Ablation Study
+We introduced two variants: (1)w/o graph distillation, where the progressive graph distillation
+mechanism is disabled; and (2)w/o test-time adaptation, where the Structure-aware Test-Time
+Adaptation (STTA) component is removed during inference. Figure 3 reveals several key insights:
+First, GraphChain consistently outperforms GraphForge across all graph scenarios, demonstrating
+the superiority of our approach. Second, Removing either component leads to performance degra-
+dation, confirming that both play critical roles in enabling effective tool-chaining and structural
+understanding. Third, The performance drop is more severe when graph distillation is removed
+compared to when disabling STTA, highlighting that progressive distillation is particularly crucial
+for graph analysis. Lastly, GraphChain without test-time adaptation still outperforms GraphForge
+in most scenarios, indicating that our multi-step tool-chaining approach with graph distillation is
+inherently more effective than single-step tool invocation patterns.
+Financial
+Network
+Social
+Network
+Citation
+Graph
+Traffic
+Network
+40
+50
+60
+70
+80
+90Accuracy (%)
+GraphForge
+GraphChain
+w/o graph distillation
+w/o test-time adaptation
+Figure 3:Impact of removing graph distillation
+or test-time adaptation.
+50 100 150 200
+Graph Size (#Node)
+55
+60
+65
+70
+75
+80
+85Accuracy (%)
+Traffic Network
+GPT-4
+GraphForge
+GraphChain
+1 2 3 4 5
+Query Complexity (#T ool)
+40
+50
+60
+70
+80
+90Accuracy (%)
+Traffic Network
+GPT-4
+GraphForge
+GraphChain
+50 100 150 200 200k
+Graph Size (#Node)
+50
+60
+70
+80
+90Accuracy (%)
+79.5% @200k
+Financial Network
+GPT-4
+GraphForge
+GraphChain
+1 2 3 4 5
+Query Complexity (#T ool)
+50
+60
+70
+80
+90Accuracy (%)
+Financial Network
+GPT-4
+GraphForge
+GraphChain
+Figure 4:Comparison with varying Graph Sizes and Query
+Complexity.
+8
+
+===== Page 9 =====
+5.4 Scalability Analysis
+We stratified our evaluation dataset based on graph size (node count) and reasoning complexity (tool
+sequence length) to assess how performance scales with these dimensions. Figure 4 reveals:
+(1). As graph size increases, baselines exhibit significant performance degradation, with GPT-4o
+declining more dramatically, demonstrating the limitations of text-instruction for larger graphs.
+(2). GraphChain maintains its performance advantage consistently across all graph sizes tested,
+including graphs with up to 200,000 nodes. This exceptional scalability stems from representing
+memory states through concise natural language summaries rather than direct graph descriptions.
+(3). While all methods perform well on simple queries (requiring 1-2 tool calls), performance
+disparities increase with query complexity. Both GPT-4o and GraphForge show steep declines
+for queries requiring 4-5 tool calls, while GraphChain maintains higher accuracy, demonstrating
+superior capability for multi-step reasoning.
+5.5 Transfer Learning Evaluation
+To assess transfer capabilities, we fine-tuned GraphChain exclusively on Financial Network and
+evaluated on three unseen domains, comparing performance with and without the STTA module.
+Table 3:Results (accuracy %) when training on Financial Network and testing on other domains.
+Model Social Network Citation Graph Traffic Network
+GraphChain(in-domain) 89.6 83.6 84.1GraphChainw/ STTA 86.8 (-3.1%) 79.2 (-4.3%) 80.3 (-4.5%)GraphChainw/o STTA 84.5 (-5.7%) 75.1 (-10.2%) 77.4 (-8.0%)
+Results in Table 3 demonstrateGraphChain’s strong transfer learning capabilities, with cross-domain
+performance closely approaching in-domain results. The STTA mechanism substantially improves
+transfer performance, reducing accuracy drops by 2.6%, 5.9%, and 3.5% across the three target
+domains compared to the variant without STTA, confirming its effectiveness in adapting to diverse
+graph structures without domain-specific retraining.
+5.6 Tool Chain Analysis
+To understand how GraphChain adapts its exploration strategy across domains, we categorized tools
+into six functional clusters and analyzed their usage patterns.
+13.9% 10.8%
+26.7%
+24.3%
+17.6%
+6.7%
+Financial Network
+16.5% 13.1%
+10.2%
+28.8%
+20.4%
+11.0%
+Social Network
+19.6%
+8.6%
+20.9%
+16.1%15.9%
+18.9%
+Citation Graph
+13.7% 17.5%
+33.8%
+18.6%
+6.3%
+10.1%
+Traffic Network
+Graph Statistics Subgraph Extraction Path Planning Centrality Measures Community Detection Connectivity
+Figure 5:Distribution of tool types utilized byGraphChainacross different graph domains.
+Figure 5 reveals distinct exploration patterns adapted to each domain’s characteristics. Path Planning
+tools dominate in Traffic Network (33.8%) and Financial Network (26.7%), reflecting the importance
+of traversal analysis. Social Network analysis relies on Centrality Measures (28.8%) and Community
+Detection (20.4%), aligning with the importance of influence and clustering. Citation Graph process-
+ing shows a more balanced distribution with significant usage of Connectivity tools (18.9%). These
+domain-specific variations demonstrate GraphChain’s ability to adaptively construct appropriate
+tool sequences on different graph scenarios.
+Our framework is designed to be inherently robust to variations in the tool library. The core of
+GraphChain employs a reinforcement learning policy that learns to select optimal tool sequences
+from the available action space, rather than being hard-coded to specific tools.To empirically validate
+9
+
+===== Page 10 =====
+this robustness, we conducted an additional experiment with a reduced toolset (removing 50% of
+tools from Centrality and Community Detection categories). Table 4 demonstrate that GraphChain
+maintains strong performance even with a reduced toolset, showcasing the adaptability of our RL
+agent in finding alternative tool sequences to solve tasks.
+Table 4:Robustness to Tool Library Composition (accuracy %).
+Model Financial
+Network
+Chemical
+Molecule
+Social
+Network
+Citation
+Graph
+Traffic
+Network Average
+GraphForge(Baseline) 63.5±3.5 70.9±5.4 80.4±4.2 63.4±4.4 73.5±3.1 70.2±3.8GraphChain(Full Toolset)81.5±2.2 81.1±0.7 89.6±2.0 83.6±2.6 84.1±0.3 84.7±1.8GraphChain(Reduced Toolset) 77.3±2.8 78.4±1.8 82.7±3.1 80.1±3.2 80.6±0.9 79.8±2.4
+5.7 Robustness Study
+In order to validate the robustness of GraphChain, we evaluated GraphChain with different base
+models. The results are shown in Table 5.
+Table 5:Performance with Different Base LLMs (accuracy %)
+Base Model Financial
+Network
+Chemical
+Molecule
+Social
+Network
+Citation
+Graph
+Traffic
+Network Average
+Qwen2.5-7B 70.5 81.1 90.4 79.0 82.0 80.6
+Llama3.1-8B 69.3 81.7 93.7 82.5 81.7 81.8
+GLM4-9B 70.2 78.9 93.8 79.7 79.9 80.5
+The consistent superior results across different base models demonstrate the robustness and general
+applicability of our approach. We also conducted supplementary experiments using Qwen2.5 models
+of varying sizes (3B, 7B, and 14B). The Table 6 show that GraphChain’s performance improves
+with larger model sizes. Notably, even the smaller 3B model still maintain reasonable performance
+under our framework.
+Table 6: Comparison of Base Models with Different Sizes (accuracy %)
+Model
+Size
+Financial
+Network
+Chemical
+Molecule
+Social
+Network
+Citation
+Graph
+Traffic
+Network
+Qwen2.5-3B 63.1% 56.9% 70.2% 74.4% 73.4%
+Qwen2.5-7B 81.5% 81.1% 89.6% 83.6% 84.1%
+Qwen2.5-14B 85.7% 85.4% 92.2% 83.2% 89.7%
+6 Conclusions and Limitation
+In this paper, we introduced GraphChain, a novel framework that enables LLMs to effectively
+process and reason over large-scale graph data through dynamic tool-chaining. By integrating
+progressive graph distillation with structure-aware test-time adaptation, GraphChain addresses the
+fundamental challenges of context exhaustion and reasoning hallucination that plague existing
+graph processing approaches. Our extensive experiments across diverse domains demonstrate that
+GraphChain significantly outperforms prior methods.
+Our current implementation primarily focuses on static graphs and may require adaptation for
+dynamic or temporal graph structures that evolve over time. The tool library used in our experiments,
+though comprehensive, could be expanded to include more domain-specific operations for specialized
+applications. These limitations present valuable directions for future research.
+Acknowledgments and Disclosure of Funding
+This research was supported by NSFC (No.6250072448, No.62132017 and No.U2436209), the
+Shandong Provincial Natural Science Foundation (No.ZQ2022JQ32), the Beijing Natural Science
+10
+
+===== Page 11 =====
+Foundation (L247027), the Fundamental Research Funds for the Central Universities, the Research
+Funds of Renmin University of China, and the Young Elite Scientists Sponsorship Program by CAST
+under contract No. 2022QNRC001. It was also supported by Big Data and Responsible Artificial
+Intelligence for National Governance, Renmin University of China.
+References
+M. Alfarra, A. Correia, B. Ghanem, and C. Louizos. Test-time adaptation with source based auxiliary
+tasks.Transactions on Machine Learning Research, 2025.
+A. Anthropic. The claude 3 model family: Opus, sonnet, haiku. InClaude-3 Model Card, 2024.
+N. J. Beaudry and R. Renner. An intuitive proof of the data processing inequality.arXiv preprint
+arXiv:1107.0740, 2011.
+Z. Chai, T. Zhang, L. Wu, K. Han, X. Hu, X. Huang, and Y . Yang. Graphllm: Boosting graph
+reasoning ability of large language model.arXiv preprint arXiv:2310.05845, 2023.
+N. Chen, Y . Li, J. Tang, and J. Li. Graphwiz: An instruction-following language model for graph
+problems.CoRR, abs/2402.16029, 2024a.
+R. Chen, T. Zhao, A. K. Jaiswal, N. Shah, and Z. Wang. Llaga: Large language and graph assistant.
+InInternational Conference on Machine Learning, pages 7809–7823. PMLR, 2024b.
+W. Chen, L. Chen, Y . Xie, W. Cao, Y . Gao, and X. Feng. Multi-range attentive bicomponent graph
+convolutional network for traffic forecasting. InProceedings of the AAAI conference on artificial
+intelligence, volume 34, pages 3529–3536, 2020.
+Z. Chen, K. Zhou, B. Zhang, Z. Gong, W. X. Zhao, and J.-R. Wen. Chatcot: Tool-augmented chain-
+of-thought reasoning on chat-based large language models.arXiv preprint arXiv:2305.14323,
+2023.
+Y . Du, F. Wei, and H. Zhang. Anytool: Self-reflective, hierarchical agents for large-scale api calls. In
+International Conference on Machine Learning, pages 11812–11829. PMLR, 2024.
+M. Fore, S. Singh, and D. Stamoulis. Geckopt: Llm system efficiency via intent-based tool selection.
+InProceedings of the Great Lakes Symposium on VLSI 2024, pages 353–354, 2024.
+S. Gao, Z. Shi, M. Zhu, B. Fang, X. Xin, P. Ren, Z. Chen, J. Ma, and Z. Ren. Confucius: Iterative
+tool learning from introspection feedback by easy-to-difficult curriculum. InProceedings of the
+AAAI Conference on Artificial Intelligence, volume 38, pages 18030–18038, 2024.
+T. GLM. Chatglm: A family of large language models from glm-130b to glm-4 all tools, 2024.
+Y . Gu, Y . Shu, H. Yu, X. Liu, Y . Dong, J. Tang, J. Srinivasa, H. Latapie, and Y . Su. Middleware for
+llms: Tools are instrumental for language agents in complex environments. InProceedings of the
+2024 Conference on Empirical Methods in Natural Language Processing, pages 7646–7663, 2024.
+D. Guo, D. Yang, H. Zhang, J. Song, R. Zhang, R. Xu, Q. Zhu, S. Ma, P. Wang, X. Bi, et al.
+Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning.arXiv preprint
+arXiv:2501.12948, 2025.
+J. Guo, L. Du, H. Liu, M. Zhou, X. He, and S. Han. Gpt4graph: Can large language models
+understand graph structured data? an empirical evaluation and benchmarking.arXiv preprint
+arXiv:2305.15066, 2023.
+E. J. Hu, Y . Shen, P. Wallis, Z. Allen-Zhu, Y . Li, S. Wang, L. Wang, W. Chen, et al. Lora: Low-rank
+adaptation of large language models.ICLR, 1(2):3, 2022.
+A. Jaech, A. Kalai, A. Lerer, A. Richardson, A. El-Kishky, A. Low, A. Helyar, A. Madry, A. Beutel,
+A. Carney, et al. Openai o1 system card.arXiv preprint arXiv:2412.16720, 2024.
+S. Kulinski and D. I. Inouye. Towards explaining distribution shifts. InInternational Conference on
+Machine Learning, pages 17931–17952. PMLR, 2023.
+11
+
+===== Page 12 =====
+J. Leskovec and J. Mcauley. Learning to discover social circles in ego networks.Advances in neural
+information processing systems, 25, 2012.
+J. Liang, R. He, and T. Tan. A comprehensive survey on test-time adaptation under distribution shifts.
+International Journal of Computer Vision, 133(1):31–64, 2025.
+X. Liu, Z. Peng, X. Yi, X. Xie, L. Xiang, Y . Liu, and D. Xu. Toolnet: Connecting large language
+models with massive tools via tool graph.arXiv preprint arXiv:2403.00839, 2024.
+X. Ma, J. Zhang, S. Guo, and W. Xu. Swapprompt: Test-time prompt adaptation for vision-language
+models.Advances in Neural Information Processing Systems, 36:65252–65264, 2023.
+D. Mekala, J. Weston, J. Lanchantin, R. Raileanu, M. Lomeli, J. Shang, and J. Dwivedi-Yu. Toolveri-
+fier: Generalization to new tools via self-verification. InFindings of the Association for Computa-
+tional Linguistics: EMNLP 2024, pages 5026–5041, 2024.
+D. Muhtar, Y . Shen, Y . Yang, X. Liu, Y . Lu, J. Liu, Y . Zhan, H. Sun, W. Deng, F. Sun, et al. Strea-
+madapter: Efficient test time adaptation from contextual streams.arXiv preprint arXiv:2411.09289,
+2024.
+OpenAI. GPT-4 technical report.CoRR, abs/2303.08774, 2023.
+S. Qiao, H. Gui, C. Lv, Q. Jia, H. Chen, and N. Zhang. Making language models better tool learners
+with execution feedback. InProceedings of the 2024 Conference of the North American Chapter of
+the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long
+Papers), pages 3550–3568, 2024.
+Y . Qin, S. Liang, Y . Ye, K. Zhu, L. Yan, Y . Lu, Y . Lin, X. Cong, X. Tang, B. Qian, et al. Toolllm: Facil-
+itating large language models to master 16000+ real-world apis.arXiv preprint arXiv:2307.16789,
+2023.
+W. Shi, R. Xu, Y . Zhuang, Y . Yu, H. Sun, H. Wu, C. Yang, and M. D. Wang. Medadapter: Efficient
+test-time adaptation of large language models towards medical reasoning. InProceedings of the
+2024 Conference on Empirical Methods in Natural Language Processing, pages 22294–22314,
+2024.
+M. Shu, W. Nie, D.-A. Huang, Z. Yu, T. Goldstein, A. Anandkumar, and C. Xiao. Test-time prompt
+tuning for zero-shot generalization in vision-language models.Advances in Neural Information
+Processing Systems, 35:14274–14289, 2022.
+B. Su, D. Du, Z. Yang, Y . Zhou, J. Li, A. Rao, H. Sun, Z. Lu, and J.-R. Wen. A molecular
+multimodal foundation model associating molecule graphs with natural language.arXiv preprint
+arXiv:2209.05481, 2022.
+M. Suzgun, M. Yuksekgonul, F. Bianchi, D. Jurafsky, and J. Zou. Dynamic cheatsheet: Test-time
+learning with adaptive memory.arXiv preprint arXiv:2504.07952, 2025.
+J. Tang, Y . Yang, W. Wei, L. Shi, L. Su, S. Cheng, D. Yin, and C. Huang. Graphgpt: Graph instruction
+tuning for large language models. InProceedings of the 47th International ACM SIGIR Conference
+on Research and Development in Information Retrieval, pages 491–500, 2024.
+H. Wang, S. Feng, T. He, Z. Tan, X. Han, and Y . Tsvetkov. Can language models solve graph
+problems in natural language? In A. Oh, T. Naumann, A. Globerson, K. Saenko, M. Hardt, and
+S. Levine, editors,Advances in Neural Information Processing Systems 36: Annual Conference on
+Neural Information Processing Systems 2023, NeurIPS 2023, New Orleans, LA, USA, December
+10 - 16, 2023, 2023a.
+H. Wang, S. Feng, T. He, Z. Tan, X. Han, and Y . Tsvetkov. Can language models solve graph problems
+in natural language?Advances in Neural Information Processing Systems, 36:30840–30861, 2023b.
+J. Wang, J. Wu, Y . Hou, Y . Liu, M. Gao, and J. McAuley. Instructgraph: Boosting large language mod-
+els via graph-centric instruction tuning and preference alignment. InFindings of the Association
+for Computational Linguistics ACL 2024, pages 13492–13510, 2024a.
+12
+
+===== Page 13 =====
+R. Wang, S. Liang, Q. Chen, J. Zhang, and K. Qin. Graphtool-instruction: Revolutionizing graph
+reasoning in llms through decomposed subtask instruction.arXiv preprint arXiv:2412.12152,
+2024b.
+R. Wang, X. Han, L. Ji, S. Wang, T. Baldwin, and H. Li. Toolgen: Unified tool retrieval and calling
+via generation. InThe Thirteenth International Conference on Learning Representations, ICLR
+2025, Singapore, April 24-28, 2025. OpenReview.net, 2025.
+M. Weber, G. Domeniconi, J. Chen, D. K. I. Weidele, C. Bellei, T. Robinson, and C. E. Leiserson.
+Anti-money laundering in bitcoin: Experimenting with graph convolutional networks for financial
+forensics.arXiv preprint arXiv:1908.02591, 2019.
+J. Wei, X. Wang, D. Schuurmans, M. Bosma, F. Xia, E. Chi, Q. V . Le, D. Zhou, et al. Chain-of-thought
+prompting elicits reasoning in large language models.Advances in neural information processing
+systems, 35:24824–24837, 2022.
+Z. Wu, B. Ramsundar, E. N. Feinberg, J. Gomes, C. Geniesse, A. S. Pappu, K. Leswing, and V . Pande.
+Moleculenet: a benchmark for molecular machine learning.Chemical science, 9(2):513–530,
+2018.
+Q. Xu, F. Hong, B. Li, C. Hu, Z. Chen, and J. Zhang. On the tool manipulation capability of
+open-source large language models.arXiv preprint arXiv:2305.16504, 2023.
+Z. Yang, W. Cohen, and R. Salakhudinov. Revisiting semi-supervised learning with graph embeddings.
+InInternational conference on machine learning, pages 40–48. PMLR, 2016.
+S. Yao, J. Zhao, D. Yu, N. Du, I. Shafran, K. Narasimhan, and Y . Cao. React: Synergizing reasoning
+and acting in language models. InInternational Conference on Learning Representations (ICLR),
+2023.
+Y . Yu, Z. Wang, W. Ma, Z. Guo, J. Zhan, S. Wang, C. Wu, Z. Guo, and M. Zhang. Steptool:
+A step-grained reinforcement learning framework for tool learning in llms.arXiv preprint
+arXiv:2410.07745, 2024.
+J. Zhang. Graph-toolformer: To empower llms with graph reasoning ability via prompt augmented
+by chatgpt.CoRR, abs/2304.11116, 2023a.
+J. Zhang. Graph-toolformer: To empower llms with graph reasoning ability via prompt augmented
+by chatgpt.arXiv preprint arXiv:2304.11116, 2023b.
+13
+
+===== Page 14 =====
+NeurIPS Paper Checklist
+1.Claims
+Question: Do the main claims made in the abstract and introduction accurately reflect the
+paper’s contributions and scope?
+Answer: [Yes]
+Justification: Our abstract and introduction clearly claim our task (scope), contributions and
+solutions.
+Guidelines:
+• The answer NA means that the abstract and introduction do not include the claims
+made in the paper.
+• The abstract and/or introduction should clearly state the claims made, including the
+contributions made in the paper and important assumptions and limitations. A No or
+NA answer to this question will not be perceived well by the reviewers.
+• The claims made should match theoretical and experimental results, and reflect how
+much the results can be expected to generalize to other settings.
+• It is fine to include aspirational goals as motivation as long as it is clear that these goals
+are not attained by the paper.
+2.Limitations
+Question: Does the paper discuss the limitations of the work performed by the authors?
+Answer: [Yes]
+Justification: We discuss the limitation in Conclusion.
+Guidelines:
+• The answer NA means that the paper has no limitation while the answer No means that
+the paper has limitations, but those are not discussed in the paper.
+• The authors are encouraged to create a separate "Limitations" section in their paper.
+• The paper should point out any strong assumptions and how robust the results are to
+violations of these assumptions (e.g., independence assumptions, noiseless settings,
+model well-specification, asymptotic approximations only holding locally). The authors
+should reflect on how these assumptions might be violated in practice and what the
+implications would be.
+• The authors should reflect on the scope of the claims made, e.g., if the approach was
+only tested on a few datasets or with a few runs. In general, empirical results often
+depend on implicit assumptions, which should be articulated.
+• The authors should reflect on the factors that influence the performance of the approach.
+For example, a facial recognition algorithm may perform poorly when image resolution
+is low or images are taken in low lighting. Or a speech-to-text system might not be
+used reliably to provide closed captions for online lectures because it fails to handle
+technical jargon.
+• The authors should discuss the computational efficiency of the proposed algorithms
+and how they scale with dataset size.
+• If applicable, the authors should discuss possible limitations of their approach to
+address problems of privacy and fairness.
+• While the authors might fear that complete honesty about limitations might be used by
+reviewers as grounds for rejection, a worse outcome might be that reviewers discover
+limitations that aren’t acknowledged in the paper. The authors should use their best
+judgment and recognize that individual actions in favor of transparency play an impor-
+tant role in developing norms that preserve the integrity of the community. Reviewers
+will be specifically instructed to not penalize honesty concerning limitations.
+3.Theory assumptions and proofs
+Question: For each theoretical result, does the paper provide the full set of assumptions and
+a complete (and correct) proof?
+Answer: [Yes]
+14
+
+===== Page 15 =====
+Justification: We provide all the proof in Appendix A.
+Guidelines:
+• The answer NA means that the paper does not include theoretical results.
+• All the theorems, formulas, and proofs in the paper should be numbered and cross-
+referenced.
+• All assumptions should be clearly stated or referenced in the statement of any theorems.
+• The proofs can either appear in the main paper or the supplemental material, but if
+they appear in the supplemental material, the authors are encouraged to provide a short
+proof sketch to provide intuition.
+• Inversely, any informal proof provided in the core of the paper should be complemented
+by formal proofs provided in appendix or supplemental material.
+• Theorems and Lemmas that the proof relies upon should be properly referenced.
+4.Experimental result reproducibility
+Question: Does the paper fully disclose all the information needed to reproduce the main ex-
+perimental results of the paper to the extent that it affects the main claims and/or conclusions
+of the paper (regardless of whether the code and data are provided or not)?
+Answer: [Yes]
+Justification: We provide our code in the supplementary material.
+Guidelines:
+• The answer NA means that the paper does not include experiments.
+• If the paper includes experiments, a No answer to this question will not be perceived
+well by the reviewers: Making the paper reproducible is important, regardless of
+whether the code and data are provided or not.
+• If the contribution is a dataset and/or model, the authors should describe the steps taken
+to make their results reproducible or verifiable.
+• Depending on the contribution, reproducibility can be accomplished in various ways.
+For example, if the contribution is a novel architecture, describing the architecture fully
+might suffice, or if the contribution is a specific model and empirical evaluation, it may
+be necessary to either make it possible for others to replicate the model with the same
+dataset, or provide access to the model. In general. releasing code and data is often
+one good way to accomplish this, but reproducibility can also be provided via detailed
+instructions for how to replicate the results, access to a hosted model (e.g., in the case
+of a large language model), releasing of a model checkpoint, or other means that are
+appropriate to the research performed.
+• While NeurIPS does not require releasing code, the conference does require all submis-
+sions to provide some reasonable avenue for reproducibility, which may depend on the
+nature of the contribution. For example
+(a) If the contribution is primarily a new algorithm, the paper should make it clear how
+to reproduce that algorithm.
+(b) If the contribution is primarily a new model architecture, the paper should describe
+the architecture clearly and fully.
+(c) If the contribution is a new model (e.g., a large language model), then there should
+either be a way to access this model for reproducing the results or a way to reproduce
+the model (e.g., with an open-source dataset or instructions for how to construct
+the dataset).
+(d) We recognize that reproducibility may be tricky in some cases, in which case
+authors are welcome to describe the particular way they provide for reproducibility.
+In the case of closed-source models, it may be that access to the model is limited in
+some way (e.g., to registered users), but it should be possible for other researchers
+to have some path to reproducing or verifying the results.
+5.Open access to data and code
+Question: Does the paper provide open access to the data and code, with sufficient instruc-
+tions to faithfully reproduce the main experimental results, as described in supplemental
+material?
+15
+
+===== Page 16 =====
+Answer: [Yes]
+Justification: We provide our code in the supplementary material. And we provide a github
+repository containing the code in https://github.com/GraphChain651/GraphChain.
+Guidelines:
+• The answer NA means that paper does not include experiments requiring code.
+• Please see the NeurIPS code and data submission guidelines ( https://nips.cc/
+public/guides/CodeSubmissionPolicy) for more details.
+• While we encourage the release of code and data, we understand that this might not be
+possible, so “No” is an acceptable answer. Papers cannot be rejected simply for not
+including code, unless this is central to the contribution (e.g., for a new open-source
+benchmark).
+• The instructions should contain the exact command and environment needed to run to
+reproduce the results. See the NeurIPS code and data submission guidelines (https:
+//nips.cc/public/guides/CodeSubmissionPolicy) for more details.
+• The authors should provide instructions on data access and preparation, including how
+to access the raw data, preprocessed data, intermediate data, and generated data, etc.
+• The authors should provide scripts to reproduce all experimental results for the new
+proposed method and baselines. If only a subset of experiments are reproducible, they
+should state which ones are omitted from the script and why.
+• At submission time, to preserve anonymity, the authors should release anonymized
+versions (if applicable).
+• Providing as much information as possible in supplemental material (appended to the
+paper) is recommended, but including URLs to data and code is permitted.
+6.Experimental setting/details
+Question: Does the paper specify all the training and test details (e.g., data splits, hyper-
+parameters, how they were chosen, type of optimizer, etc.) necessary to understand the
+results?
+Answer: [Yes]
+Justification: In the Appendix C and F.
+Guidelines:
+• The answer NA means that the paper does not include experiments.
+• The experimental setting should be presented in the core of the paper to a level of detail
+that is necessary to appreciate the results and make sense of them.
+• The full details can be provided either with the code, in appendix, or as supplemental
+material.
+7.Experiment statistical significance
+Question: Does the paper report error bars suitably and correctly defined or other appropriate
+information about the statistical significance of the experiments?
+Answer: [Yes]
+Justification: We conduct two-sample t-tests, and p-value < 0.05 indicates that the improve-
+ments are statistically significant.
+Guidelines:
+• The answer NA means that the paper does not include experiments.
+• The authors should answer "Yes" if the results are accompanied by error bars, confi-
+dence intervals, or statistical significance tests, at least for the experiments that support
+the main claims of the paper.
+• The factors of variability that the error bars are capturing should be clearly stated (for
+example, train/test split, initialization, random drawing of some parameter, or overall
+run with given experimental conditions).
+• The method for calculating the error bars should be explained (closed form formula,
+call to a library function, bootstrap, etc.)
+• The assumptions made should be given (e.g., Normally distributed errors).
+16
+
+===== Page 17 =====
+• It should be clear whether the error bar is the standard deviation or the standard error
+of the mean.
+• It is OK to report 1-sigma error bars, but one should state it. The authors should
+preferably report a 2-sigma error bar than state that they have a 96% CI, if the hypothesis
+of Normality of errors is not verified.
+• For asymmetric distributions, the authors should be careful not to show in tables or
+figures symmetric error bars that would yield results that are out of range (e.g. negative
+error rates).
+• If error bars are reported in tables or plots, The authors should explain in the text how
+they were calculated and reference the corresponding figures or tables in the text.
+8.Experiments compute resources
+Question: For each experiment, does the paper provide sufficient information on the com-
+puter resources (type of compute workers, memory, time of execution) needed to reproduce
+the experiments?
+Answer: [Yes]
+Justification: In the Appendix C.
+Guidelines:
+• The answer NA means that the paper does not include experiments.
+• The paper should indicate the type of compute workers CPU or GPU, internal cluster,
+or cloud provider, including relevant memory and storage.
+• The paper should provide the amount of compute required for each of the individual
+experimental runs as well as estimate the total compute.
+• The paper should disclose whether the full research project required more compute
+than the experiments reported in the paper (e.g., preliminary or failed experiments that
+didn’t make it into the paper).
+9.Code of ethics
+Question: Does the research conducted in the paper conform, in every respect, with the
+NeurIPS Code of Ethicshttps://neurips.cc/public/EthicsGuidelines?
+Answer: [Yes]
+Justification: This research conforms, in every respect, with the NeurIPS Code of Ethics.
+Guidelines:
+• The answer NA means that the authors have not reviewed the NeurIPS Code of Ethics.
+• If the authors answer No, they should explain the special circumstances that require a
+deviation from the Code of Ethics.
+• The authors should make sure to preserve anonymity (e.g., if there is a special consid-
+eration due to laws or regulations in their jurisdiction).
+10.Broader impacts
+Question: Does the paper discuss both potential positive societal impacts and negative
+societal impacts of the work performed?
+Answer: [Yes]
+Justification: In appendix H.
+Guidelines:
+• The answer NA means that there is no societal impact of the work performed.
+• If the authors answer NA or No, they should explain why their work has no societal
+impact or why the paper does not address societal impact.
+• Examples of negative societal impacts include potential malicious or unintended uses
+(e.g., disinformation, generating fake profiles, surveillance), fairness considerations
+(e.g., deployment of technologies that could make decisions that unfairly impact specific
+groups), privacy considerations, and security considerations.
+17
+
+===== Page 18 =====
+• The conference expects that many papers will be foundational research and not tied
+to particular applications, let alone deployments. However, if there is a direct path to
+any negative applications, the authors should point it out. For example, it is legitimate
+to point out that an improvement in the quality of generative models could be used to
+generate deepfakes for disinformation. On the other hand, it is not needed to point out
+that a generic algorithm for optimizing neural networks could enable people to train
+models that generate Deepfakes faster.
+• The authors should consider possible harms that could arise when the technology is
+being used as intended and functioning correctly, harms that could arise when the
+technology is being used as intended but gives incorrect results, and harms following
+from (intentional or unintentional) misuse of the technology.
+• If there are negative societal impacts, the authors could also discuss possible mitigation
+strategies (e.g., gated release of models, providing defenses in addition to attacks,
+mechanisms for monitoring misuse, mechanisms to monitor how a system learns from
+feedback over time, improving the efficiency and accessibility of ML).
+11.Safeguards
+Question: Does the paper describe safeguards that have been put in place for responsible
+release of data or models that have a high risk for misuse (e.g., pretrained language models,
+image generators, or scraped datasets)?
+Answer: [NA]
+Justification: Not Applicable.
+Guidelines:
+• The answer NA means that the paper poses no such risks.
+• Released models that have a high risk for misuse or dual-use should be released with
+necessary safeguards to allow for controlled use of the model, for example by requiring
+that users adhere to usage guidelines or restrictions to access the model or implementing
+safety filters.
+• Datasets that have been scraped from the Internet could pose safety risks. The authors
+should describe how they avoided releasing unsafe images.
+• We recognize that providing effective safeguards is challenging, and many papers do
+not require this, but we encourage authors to take this into account and make a best
+faith effort.
+12.Licenses for existing assets
+Question: Are the creators or original owners of assets (e.g., code, data, models), used in
+the paper, properly credited and are the license and terms of use explicitly mentioned and
+properly respected?
+Answer: [Yes]
+Justification: We cite the original papers or website links about the dataset and open-source
+codes.
+Guidelines:
+• The answer NA means that the paper does not use existing assets.
+• The authors should cite the original paper that produced the code package or dataset.
+• The authors should state which version of the asset is used and, if possible, include a
+URL.
+• The name of the license (e.g., CC-BY 4.0) should be included for each asset.
+• For scraped data from a particular source (e.g., website), the copyright and terms of
+service of that source should be provided.
+• If assets are released, the license, copyright information, and terms of use in the
+package should be provided. For popular datasets, paperswithcode.com/datasets
+has curated licenses for some datasets. Their licensing guide can help determine the
+license of a dataset.
+• For existing datasets that are re-packaged, both the original license and the license of
+the derived asset (if it has changed) should be provided.
+18
+
+===== Page 19 =====
+• If this information is not available online, the authors are encouraged to reach out to
+the asset’s creators.
+13.New assets
+Question: Are new assets introduced in the paper well documented and is the documentation
+provided alongside the assets?
+Answer: [NA]
+Justification: Not Applicable.
+Guidelines:
+• The answer NA means that the paper does not release new assets.
+• Researchers should communicate the details of the dataset/code/model as part of their
+submissions via structured templates. This includes details about training, license,
+limitations, etc.
+• The paper should discuss whether and how consent was obtained from people whose
+asset is used.
+• At submission time, remember to anonymize your assets (if applicable). You can either
+create an anonymized URL or include an anonymized zip file.
+14.Crowdsourcing and research with human subjects
+Question: For crowdsourcing experiments and research with human subjects, does the paper
+include the full text of instructions given to participants and screenshots, if applicable, as
+well as details about compensation (if any)?
+Answer: [NA]
+Justification: Not Applicable.
+Guidelines:
+• The answer NA means that the paper does not involve crowdsourcing nor research with
+human subjects.
+• Including this information in the supplemental material is fine, but if the main contribu-
+tion of the paper involves human subjects, then as much detail as possible should be
+included in the main paper.
+• According to the NeurIPS Code of Ethics, workers involved in data collection, curation,
+or other labor should be paid at least the minimum wage in the country of the data
+collector.
+15. Institutional review board (IRB) approvals or equivalent for research with human
+subjects
+Question: Does the paper describe potential risks incurred by study participants, whether
+such risks were disclosed to the subjects, and whether Institutional Review Board (IRB)
+approvals (or an equivalent approval/review based on the requirements of your country or
+institution) were obtained?
+Answer: [NA]
+Justification: Not Applicable.
+Guidelines:
+• The answer NA means that the paper does not involve crowdsourcing nor research with
+human subjects.
+• Depending on the country in which research is conducted, IRB approval (or equivalent)
+may be required for any human subjects research. If you obtained IRB approval, you
+should clearly state this in the paper.
+• We recognize that the procedures for this may vary significantly between institutions
+and locations, and we expect authors to adhere to the NeurIPS Code of Ethics and the
+guidelines for their institution.
+• For initial submissions, do not include any information that would break anonymity (if
+applicable), such as the institution conducting the review.
+16.Declaration of LLM usage
+19
+
+===== Page 20 =====
+Question: Does the paper describe the usage of LLMs if it is an important, original, or
+non-standard component of the core methods in this research? Note that if the LLM is used
+only for writing, editing, or formatting purposes and does not impact the core methodology,
+scientific rigorousness, or originality of the research, declaration is not required.
+Answer: [NA]
+Justification: Not Applicable.
+Guidelines:
+• The answer NA means that the core method development in this research does not
+involve LLMs as any important, original, or non-standard components.
+• Please refer to our LLM policy ( https://neurips.cc/Conferences/2025/LLM)
+for what should or should not be described.
+20
+
+===== Page 21 =====
+A Proof of Proposition 4.1
+We start with the fundamental assumptions:
+1. The input X is generated from underlying factors including task-relevant information Y and
+task-irrelevant informationIR.
+2. The process forms a Markov chain: (Y, IR)→X→m t. This signifies that the memory
+state mt is generated based on the input X, which itself is derived from the underlying
+factors(Y, IR).
+3. The optimization objective derived from the reward function Rt (Eq. 5) encourages policies
+that produce trajectories where intermediate states mt have high task relevance Rel(mt,Q)
+and low complexity/volumeGDL(m t).
+4. Based on the proposition’s statement, maximizing relevance correlates with maximizing
+I(Y;m t), and minimizing GDL correlates with minimizing the overall information captured
+from the input,I(X;m t).
+According to the Data Processing Inequality (DPI) [Beaudry and Renner, 2011] applied to the Markov
+chain(Y, IR)→X→m t, the information that the final representationm t retains about the initial
+factors(Y, IR)cannot exceed the information it retains about the intermediate variableX:
+I((Y, IR);m t)≤I(X;m t)(9)
+Now, we apply the chain rule for mutual information to the term on the left-hand side:
+I((Y, IR);m t) =I(Y;m t) +I(IR;m t|Y)(10)
+Here, I(Y;m t) represents the information that the memory state mt contains about the relevant
+variable Y . The term I(IR;m t|Y) represents theadditionalinformation that mt contains about
+the irrelevant variable IR, given that the relevant information Y is already known. This term
+quantifies the amount of irrelevant information captured by mt beyond what is already explained by
+its correlation withY.
+Substituting the expansion from Eq. 10 into the DPI (Eq. 9), we obtain:
+I(Y;m t) +I(IR;m t|Y)≤I(X;m t)(11)
+Rearranging this inequality gives us an upper bound on the conditional mutual information involving
+the irrelevant component:
+I(IR;m t|Y)≤I(X;m t)−I(Y;m t)(12)
+This inequality shows that the amount of irrelevant information retained inmt (conditioned on the
+relevant part Y ) is upper-bounded by the difference between the total information mt captures from
+the inputXand the useful information it captures about the targetY.
+Now, let’s consider the optimization objective implied by the progressive distillation reward function
+(Eq. 5). This objective aims to find a policy πϕ that maximizes the expected return. The reward
+structure encourages steps that increase relevance (proxy for I(Y;m t)) and decrease GDL (proxy
+for I(X;m t)). Thus, the optimization process implicitly seeks intermediate states mt that achieve a
+trade-off, aiming for:
+• HighI(Y;m t)(maximize information about the answer)
+• LowI(X;m t)(minimize total information stored, i.e., compress the input)
+By striving to maximize I(Y;m t) and minimize I(X;m t), the optimization process is effectively
+attempting to minimize the upper boundI(X;m t)−I(Y;m t)found in Eq. 12.
+Minimizing this upper bound serves as a direct mechanism to suppress the amount of irrelevant
+informationI(IR;m t|Y)contained in the memory statem t. Therefore, optimizing the distillation-
+aware reward function encourages the policy to generate representations that form an information
+bottleneck, preserving task-relevant information while actively discarding task-irrelevant information,
+as quantified by the bound derived from the Data Processing Inequality.
+21
+
+===== Page 22 =====
+Query: 
+Help me identify the largest simple cycle in this transfer graph, and then determine which transactions within this cycle have amounts exceeding 1,000,000.
+Step 1GraphChain’s Analysis Process
+Step 2
+Step 3
+Step 4
+Thought:
+First, clarify that the type of the graph is a multidigraph. To facilitate the subsequent cycle detection, it needs to be converted to an undirected graph, which 
+can avoid the complexity caused by direction issues during cycle detection. Use the to_undirected function from the NetworkX library to convert the 
+multidigraph G into an undirected graph.
+Action:
+<API>to_undirected()</API>
+Result:
+The result is not a dictionary object, but a graph object named undirectedgraph.
+Result_Description:
+undirectedgraph is the undirected graph obtained after conversion, with the direction of edges removed to facilitate subsequent cycle detection operations.
+You can proceed with cycle detection and other operations on undirectedgraph, such as using other functions from NetworkX to process this graph.
+(The number of tokens in the result exceeds the limit of the context window at this point.)
+Thought:
+After obtaining the undirected graph, it is necessary to find all the simple cycles within the graph. The simple_cycles function is used for this purpose, which 
+returns a list of all simple cycles in the graph, with each simple cycle represented as a list of nodes.
+Action:
+<API>simple_cycles()</API>
+Result:
+The variable largestcycle stores the list of the largest cycle, where the cycle is represented as a list of nodes.
+Result_Description:
+largestcycle contains the largest cycle in the graph, represented as a list of nodes.
+You can proceed with further operations on largestcycle, such as checking the weights of the edges within the cycle.
+(The number of tokens in the result exceeds the limit of the context window at this point.)
+Thought:
+For the largest cycle, it is necessary to tally the weights of all edges within the cycle. The get_edge_data() function is required to obtain the weight of each 
+edge. Subsequently, each edge in the cycle is iterated over to determine whether its weight exceeds 1,000,000.
+Action:
+<API>get_edge_data()</API>
+Result:
+For the largest cycle, it is necessary to tally the weights of all edges within the cycle. The get_edge_data() function is required to obtain the weight of each 
+edge, and then determine whether the weight of an edge exceeds 1,000,000 by iterating through each edge in the cycle.
+Result_Description:
+filteredges is a list that stores the filtered edges. Each edge is represented as a dictionary composed of source, target, and weight.
+You can iterate through filteredges to output the final results.
+(The number of tokens in the result is less than the limit of the context window, and the input to the large language model is in the form of text.)
+Thought:
+Through the first three steps, we have successfully extracted the largest cycle in the graph and filtered out the edges with weights exceeding 1,000,000, 
+which are as follows:[{"source": 249, "target": 963, "weight": 6393000}, {"source": 1, "target": 92, "weight": 8975610}, {"source": 72, "target": 647, "weight": 
+2402500}, {"source": 31, "target": 96, "weight": 1297921}, {"source": 96, "target": 0, "weight": 2553000}]
+Action:
+<API>Finish->answer</API>
+Answer: After analyzing the cycles in the given transfer graph, we identified the largest cycle and filtered it based on weight. The results are as follows:
+The list of edges with weights exceeding 1,000,000 is [{"source": 249, "target": 963, "weight": 6393000}, {"source": 1, "target": 92, "weight": 8975610}, 
+{"source": 72, "target": 647, "weight": 2402500}, {"source": 31, "target": 96, "weight": 1297921}, {"source": 96, "target": 0, "weight": 2553000}]。
+Figure 6:A typical case ofGraphChainon Financial Networks.
+B Case Study
+We present a case study in Figure 6 involving a transmission network from the Elliptic Dataset,
+comprising 11,896 nodes and 31,054 edges—exceeding the context processing capabilities of current
+LLMs. GraphChain demonstrates robust capability to systematically handle this task through a
+series of tool invocations. The Progressive Graph Distillation mechanism enables iterative reduction
+of information complexity, focusing on the most salient features.
+Due to context window limitations, we store intermediate processing results in memory rather than
+directly inputting them into the LLM. The model outputs detailed descriptions of current processing
+results and their usage methods to facilitate further analysis. Only when intermediate results’ token
+count falls below the maximum context window limit are they directly input into the LLM, maximizing
+the model’s advantages while minimizing limitations.
+C Details of Experimental Setup
+We provide comprehensive details on our experimental setup to ensure reproducibility. All experi-
+ments were conducted on 2 NVIDIA A800 80GB GPUs, using LoRA-based fine-tuning (rank r=16,
+alpha=32) on theQwen2.5-7B-instructionmodel.
+C.1 Training Configuration
+Our training pipeline consisted of three main stages:
+22
+
+===== Page 23 =====
+Table 7:Comparison of baseline methods and their corresponding models for graph reasoning.
+LLM Type Open Source Method Base Model
+Text Instruction
+✗Two-shotClaude-series[Anthropic, 2024]
+✗Two-shotGPT-series[OpenAI, 2023]
+✓NLGraph[Wang et al., 2023a]GPT-4-turbo
+✓GraphWiz[Chen et al., 2024a]Llama2-13B
+Tool Instruction
+✗Function CallingGPT-3.5-turbo[OpenAI, 2023]
+✗Function CallingGPT-4o[OpenAI, 2023]
+✗Function CallingGLM4-0520[GLM, 2024]
+✓Graph-ToolFormer[Zhang, 2023a]Llama3-8B
+✓GraphForge[Wang et al., 2024b]Llama3-8B
+• Supervised Fine-Tuning (SFT) Stage:We used a learning rate of 5×10 −5 with 4% warmup and
+a cosine scheduler for 8 epochs. This initial phase established the model’s ability to follow graph
+reasoning instructions.
+• Reinforcement Learning (RL) Stage:We implemented Proximal Policy Optimization (PPO) with
+step-level rewards, departing from traditional RLHF approaches that apply rewards solely to the
+final step. Our implementation used:
+–Learning rate:1×10 −5
+–Batch size: 8
+–Initial KL coefficient: 0.3
+–Loss coefficient (β): 0.15
+–GAE parameter (λ): 0.95
+–Discount factor (γ): 0.99
+•Test-Time Adaptation Stage:For the structure-aware adaptation mechanism, we configured:
+–Learning rate: 0.01
+–Batch size: 10
+C.2 Inference Settings
+During inference, we used a temperature of 0.7 and top-p value of 1.0, optimizing for a balance
+between diversity and coherence in the generated tool chains.
+Complete configuration files and scripts are available in our code repository to facilitate reproduction
+of our results.
+D Baseline Implementation
+To comprehensively evaluateGraphChain, we implemented several state-of-the-art graph reasoning
+baselines spanning both Text-Instruction and Tool-Instruction paradigms. Table 7 summarizes these
+baseline methods and their corresponding backbone models.
+D.1 Text-Instruction Methods
+For closed-source LLMs ( Claude-series, GPT-series, and GLM4-0520), we employed two-
+shot Chain-of-Thought (CoT) prompting to stimulate structured reasoning. Table 8 illustrates our
+prompting approach with an example.
+For specialized graph reasoning methods, we reproduced:
+•GraphWiz : We reimplemented using the Llama2-13B backbone with a learning rate of 2e-5 for 3
+epochs and maximum sequence length of 2048. During inference, temperature was set to 0 with
+maximum output tokens of 1024 to ensure stable generation.
+23
+
+===== Page 24 =====
+Table 8:Example of two-shot prompting used for text-instruction baselines.
+Prompt Template
+You are an AI assistant specialized in graph reasoning. For each problem, first extract the graph structure,
+then solve the task step by step.
+Example 1:
+Input:Given a weighted directed graph with edges: [(0, 2, {’weight’: 3}), (0, 3,
+{’weight’: 7}), (1, 0, {’weight’: 2}), (1, 4, {’weight’: 8}), (2, 4,
+{’weight’: 1}), (3, 4, {’weight’: 3})] . Find the shortest path from node 1 to
+node 4.
+Reasoning:First, I’ll extract the graph structure.
+Graph: [(0, 2, {’weight’: 3}), (0, 3, {’weight’: 7}), (1, 0,
+{’weight’: 2}), (1, 4, {’weight’: 8}), (2, 4, {’weight’: 1}), (3,
+4, {’weight’: 3})]
+Now I’ll find the shortest path from node 1 to node 4.
+• Direct path:1→4with weight8
+• Indirect path:1→0→2→4with weight2 + 3 + 1 = 6
+• Indirect path:1→0→3→4with weight2 + 7 + 3 = 12
+The shortest path is1→0→2→4with total weight6.
+Answer:The shortest path from node 1 to node 4 is1→0→2→4with total weight 6.
+Example 2:
+Input:Given an undirected graph with edges: [(0, 1), (0, 3), (1, 2), (1, 4), (2,
+5), (3, 4), (4, 5)]. Determine if there exists a cycle in this graph.
+Reasoning:Let me extract the graph structure.
+Graph: [(0, 1), (0, 3), (1, 2), (1, 4), (2, 5), (3, 4), (4, 5)]
+To check for cycles, I’ll trace possible paths:
+Starting from node 0:0→1→2→5→4→3→0
+This forms a cycle:0→1→2→5→4→3→0
+Answer:Yes, there exists a cycle in the graph.
+Now solve the following problem:
+Input:[Problem description]
+•NLGraph : Following the original implementation, we provided 4 exemplars for connectivity and
+cycle tasks, and 5 exemplars for other tasks due to context size limitations. For fair comparison, we
+used the standardized test set across all experiments.
+D.2 Tool-Instruction Methods
+We implemented tool-augmented approaches including:
+•Graph-ToolFormer : We reimplemented this approach based on the Llama3-8B model using
+LoRA (rank r=16, alpha=32) with a learning rate of 1e-5 and weight decay of 1e-2 for 3 epochs.
+For generation, we used beam search with 5 beams, top-k of 5, top-p of 0.95, and temperature of
+0.7.
+•GraphForge : We implemented based on Llama3-8B using LoRA (rank r=16, alpha=32) with a
+learning rate of 5e-5 for 5 epochs. Inference settings matched our GraphChain configuration with
+temperature of 0.7 and top-p of 1.0.
+• Function Calling: For closed-source models supporting function calling (GPT-3.5-turbo, GPT-4o,
+and GLM4-0520), we implemented the same graph processing functions used in GraphChain as
+external API tools, allowing these models to leverage structured tool invocation capabilities during
+inference.
+All baseline implementations were executed using the same hardware setup as GraphChain: two
+NVIDIA A800 GPUs for fine-tuning and inference with open-source models. For closed-source
+models, we utilized their respective official API interfaces. To ensure fair comparison across all
+methods, we partitioned original graphs into subgraphs with fewer than 100 nodes for evaluation,
+24
+
+===== Page 25 =====
+Table 9: NetworkX Functions Categorized by Graph Analysis Task
+Category NetworkX Functions
+Basic Graph Properties G.number_of_nodes(),G.number_of_edges(),
+G.has_node(n),G.has_edge(u, v),G.degree(),
+G.in_degree(),G.out_degree(),
+G.get_edge_data(u, v)
+Centrality Metrics nx.betweenness_centrality(),
+nx.closeness_centrality(),
+nx.degree_centrality(),
+nx.eigenvector_centrality(),
+nx.harmonic_centrality(),
+nx.percolation_centrality(),
+nx.second_order_centrality(),
+nx.subgraph_centrality()
+Connectivity and Compo-
+nents
+nx.strongly_connected_components(),
+nx.weakly_connected_components(),
+nx.articulation_points(),nx.bridges(),
+nx.k_edge_components(),
+nx.k_node_components(),
+nx.node_connectivity(),
+nx.edge_connectivity()
+Shortest Paths and Distances nx.all_pairs_shortest_path(),
+nx.all_pairs_shortest_path_length(),
+nx.dijkstra_path(),
+nx.dijkstra_path_length(),
+nx.floyd_warshall()
+Clustering and Communities nx.average_clustering(),nx.clustering(),
+nx.transitivity(),nx.triangles(),
+nx.label_propagation_communities(),
+nx.louvain_communities()
+Flow Algorithms nx.boykov_kolmogorov_min_cut(),
+nx.dinic_min_cut(),
+nx.edmonds_karp_min_cut(),nx.minimum_cut()
+Cycle Detection nx.simple_cycles(),nx.cycle_basis()
+Topological Sorting nx.topological_sort(),
+nx.is_directed_acyclic_graph(),
+nx.all_topological_sorts(),
+nx.topological_generations()
+while separately testing GraphChain’s scalability on full-sized graphs with up to 200,000 nodes in
+Section 5.4.
+E Graph Analysis Tool Library
+To construct an effective graph question-answering system, we selected 45 functions from the
+NetworkX library through a systematic review of graph analysis tasks prevalent in academic research
+and practical applications. Table 9 shows the complete list of selected functions. The selection
+process prioritized coverage of eight core dimensions of graph analytics:
+•Basic Graph Properties – Functions providing structural metadata, including node/edge
+counts, degree distributions, and adjacency queries.
+•Centrality Metrics – Measures for node influence, spanning degree centrality to advanced
+methods (eigenvector, percolation, and Katz centrality).
+25
+
+===== Page 26 =====
+•Connectivity and Components – Tools for evaluating graph robustness, such as articulation
+points, bridges, and strongly/weakly connected components.
+•Shortest Paths and Distances – Algorithms for unweighted and weighted paths, critical for
+routing and diffusion modeling.
+•Clustering and Communities – Modular structure analysis via clustering coefficients and
+detection algorithms (e.g., label propagation, Louvain).
+•Flow Algorithms – Maximum flow and minimum cut computations using multiple methodolo-
+gies (e.g., Edmonds-Karp).
+•Cycle Analysis– Feedback loop identification in directed and undirected graphs.
+•Topological Sorting– Dependency resolution for directed acyclic graphs (DAGs).
+While not exhaustive, this set was carefully selected to balanceanalytical breadthandcomputational
+efficiency, ensuring system responsiveness and interpretability. Future work may integrate domain-
+specific or higher-order analytics, but this toolset is representative and sufficient for general-purpose
+graph analysis.
+F Data Construction
+This section details the creation of datasets used for training and evaluating GraphChain, including
+fine-tuning data and graph datasets across five real-world scenarios.
+F.1 Fine-tuning Dataset
+We constructed a comprehensive and robust dataset for fine-tuningGraphChain through a systematic,
+multi-faceted approach:
+F.1.1 SFT Dataset Construction
+We curated 45 commonly used APIs from the NetworkX library based on relevance and usage
+frequency in graph-related tasks. To ensure diverse instruction coverage, we employed ChatGPT to
+generate various instructions tailored to these APIs. For each iteration, we randomly sampled APIs and
+prompted ChatGPT to reverse-engineer instructions centered around them, ensuring comprehensive
+coverage across the API set.
+To enhance practical relevance, human experts crafted three exemplar instructions for each subgroup
+within five distinct real-world graph scenarios. These expertly designed prompts served as high-
+quality references, grounding the dataset in realistic use cases.
+Our structured prompting strategy guidedChatGPTto produce outputs in a standardized format:
+{Thought: ...Action: ...}
+Each action explicitly invoked an API with required parameters (e.g., G.get_edge_data(8, 0,
+default=None)). The outputs were fed into a code generator to produce executable code, which
+was then executed to obtain results formatted as:
+{"error": "...", "response": "..."}
+These results were appended to the input for subsequent steps, creating a coherent action sequence.
+We introduced two auxiliary functions: Finish->answer (signaling successful task completion) and
+Finish->giveup_and_restart(allowing model reset and retry in cases of persistent errors).
+Through this pipeline, we generated 9,986 (instruction, solution path) pairs that encapsulate a wide
+range of API-driven tasks reflecting the complexity of real-world graph-based problem-solving.
+Table 11 shows an example from our SFT dataset.
+F.1.2 RL Dataset Construction
+For the reinforcement learning phase, we constructed a dataset with reward values for each step. We
+used GPT-4 to score each step based on three dimensions:
+26
+
+===== Page 27 =====
+Table 10:The prompt template for constructing the SFT dataset.
+Category Description
+Dataset Name Citation-Network.txt
+Dataset Type MultiDirected Graph
+Dataset Con-
+tent
+The citation data between research papers. Directed edge A to B means that
+paper A cites paper B. The graph construction operation is:
+G = nx.MultiDiGraph(), G.add_edge(paper1, paper2),
+where paper1 and paper2 are research papers. String type is used to
+store nodes.
+Task Generate a complex graph problem and its step-by-step solution process.
+Output Type JSON
+Output Rules (1)The output must be a JSON containing a series of "from" and "value" as
+shown in the example, using English.
+(2)Provide the user problem in "value" under "user", generate the re-
+sponse in "value" under "assistant", and generate API return results in
+"value" under "function".
+(3)The output can have only this JSON data with no additional informa-
+tion.
+(4)Follow the format of the example but exclude the key name "exam-
+ple".
+Special Atten-
+tion
+In the "assistant" response, provide detailed thought processes without code,
+using NetworkX methods. Mark called APIs with <API>...</API>, e.g.,
+<API>nx.dfs_edges(graph, source=10)</API>. Format outputs as:
+Thought: ... Action: <API>...</API>
+When <API>...</API> is encountered, provide "function" with fabri-
+cated API results:
+{"error": "", "response": ""}
+Continue this process until final result. Final "assistant" format should
+be:
+Thought: ... Action: <API>Finish->answer</API>
+Answer: ...
+Or:
+Thought: ...
+Action: <API>Finish->give_up_and_restart</API>
+Design Re-
+quirement
+Design Q&A around the {API_NUM} APIs {API_NAME}. Focus on collaboration
+between APIs, where later APIs utilize results from previous ones for further
+reasoning.
+•API Correctness: Whether the tool invocation in the current step is valid
+•Thought and API Effectiveness: The relevance of the tool selection to solving the query
+•Graph Distillation: Whether the tool reduces the information content of the graph data
+Table 12 shows the prompt template used for RL data construction.
+Table 13 shows two examples from our RL dataset with corresponding evaluation scores.
+F.2 Graph Dataset
+We extracted subgraphs from existing real-world datasets to construct graph datasets for five scenarios,
+each corresponding to different graph types:
+•Financial Networks: From the Elliptic dataset, containing Bitcoin transaction graphs
+• Chemical Molecules: From the QM9 dataset, including molecular structure graphs where atoms
+are nodes and chemical bonds are edges
+27
+
+===== Page 28 =====
+Table 11:Example of SFT data with step-by-step reasoning and API calls.
+From Value
+User How to identify the neighbor nodes of node 15 and analyze the fund flow
+between these neighbor nodes? Begin!
+Assistant Thought:To identify the neighbor nodes of node 15 and analyze fund
+flow between them, we need to proceed step by step. First, obtain all
+direct neighbor nodes of node 15 and transaction information. Then
+analyze fund flow between these neighbors.
+Let’s obtain neighbor nodes and transaction information using
+<API>graph.out_edges(15, data=True)</API>and
+<API>graph.in_edges(15, data=True)</API>to get all outgoing
+and incoming edge information.
+Action:<API>graph.out_edges(15, data=True)</API>
+Function {"error": "", "response": "Direct outgoing
+transaction information of node 15:
+- (15, 16, {’weight’: 400.0, ’date’: ’2022-06-10’})
+- (15, 17, {’weight’: 200.0, ’date’: ’2022-07-01’})"}
+Assistant Thought:Continue by obtaining incoming transaction information.
+Action:<API>graph.in_edges(15, data=True)</API>
+Function {"error": "", "response": "Direct incoming
+information for node 15:
+- (10, 15, {’weight’: 880.0, ’date’: ’2022-05-20’})"}
+Assistant Thought:Now we’ve identified neighbor nodes of 15 are 10, 16, and 17.
+Next, analyze fund flow between these neighbors using
+<API>graph.subgraph([10, 16,
+17]).edges(data=True)</API>.
+Action:<API>graph.subgraph([10, 16,
+17]).edges(data=True)</API>
+Function {"error": "", "response": "(10, 16, {’weight’:
+300.0, ’date’: ’2022-06-05’})
+- (10, 17, {’weight’: 100.0, ’date’: ’2022-06-15’})
+- (16, 17, {’weight’: 50.0, ’date’: ’2022-07-10’})"}
+Assistant Thought:Based on this information, we can draw conclusions: Node 10
+transferred 880 yuan to node 15, 300 yuan to node 16, and 100 yuan to
+node 17. There is also fund flow between nodes 16 and 17, with node 16
+transferring 50 yuan to node 17.
+Action:<API>Finish->answer</API>
+Answer:Node 10 not only transferred 880 yuan to node 15, but also
+transferred 300 yuan to node 16 and 100 yuan to node 17. There is also
+fund flow between nodes 16 and 17, specifically, node 16 transferred 50
+yuan to node 17.
+•Social Networks: From the Facebook and Twitter datasets
+•Citation Graphs: From the Cora, CiteSeer, and PubMed datasets
+•Traffic Networks: From the METR-LA dataset
+For simplicity, we simplified the graph data as shown in Figure 7. Following Wang et al. [2024b], we
+prepared two versions of each graph to accommodate different baselines:
+• For text-instruction baselines, we restricted inputs to no more than 30 nodes and 300 edges due to
+context length limitations
+• For tool-instruction baselines, we limited inputs to no more than 100 nodes and 1000 edges
+28
+
+===== Page 29 =====
+Table 12:The prompt template for constructing the RL dataset.
+Category Description
+Dataset Name cash_flow_graph.gexf
+Dataset Type MultiDirected graph with weights and dates
+Dataset Con-
+tent
+The fund transfer data of a specific group. Directed edge A →B means A
+transferred funds to B. Graph construction:
+G = nx.MultiDiGraph(), G.add_edge(sender, receiver,
+weight=amount, date=transfer_date),
+where "sender" and "receiver" are the transfer participants, "amount" is
+the money amount, and "transfer_date" is the date. Integer type is used
+for nodes.
+Task Judge the reasonableness of thought and API names based on three dimensions:
+(1)API Correctness: Whether the method exists in networkX, accepts
+the specified parameters, and matches the dataset type.
+(2)Thought and API Effectiveness: How directly and effectively this
+step contributes to solving the user question.
+(3)Graph Distillation: Whether the current thought and API can reduce
+information content or narrow search scope.
+Output Type json
+Output Rules (1)Output must be json data containing "apiResult" as shown in the example.
+(2)Output can have only this json data with no additional information.
+Special Atten-
+tion
+Output in "apiResult" should follow:
+{"api_Correctness": "", "thoughtAndApi_Effectiveness":
+"", "Graph_Distillation": ""}
+This approach ensures fair comparison across all methods while allowing us to evaluateGraphChain’s
+scalability advantages with full-sized graphs in our main experiments.
+G Complexity Analysis of Structure-aware Test-Time Adaptation
+This section analyzes the computational complexity of our Structure-aware Test-Time Adaptation
+(STTA) mechanism.
+G.1 Graph Structural Fingerprinting
+For a graphG with N nodes and E edges, computing the M smallest singular values of the normalized
+Laplacian has:
+• Time complexity: O(E·M·T iter), where Titer is the number of iterations in the iterative
+SVD algorithm
+• Space complexity:O(N+E+N M)
+We employ iterative methods (Lanczos algorithm or power iterations) instead of full SVD to efficiently
+compute only the needed singular values. Since M≪N (typically M= 10 to 50), this computation
+remains efficient even for large graphs.
+G.2 Structure-Conditioned Prompt Generation
+The adapter networkA ψ that maps the structural fingerprint to soft prompts has:
+• Time complexity:O(M·H+H·L p ·d emb)
+• Space complexity:O(M·H+H·L p ·d emb)
+29
+
+===== Page 30 =====
+Table 13:Examples from the RL dataset with evaluation scores.
+Category User Question Thought and API
+Input Please analyze whether there is a
+fund circulation flow in the graph,
+and identify all nodes involved in
+the circulation flow. Additionally,
+please calculate the maximum
+amount of funds involved in these
+circulation paths. Begin!
+We obtained the minimum cut of the maximum
+fund flow from node 1 to node 3 and its
+corresponding maximum flow value X. This
+means that, after considering all possible flow
+paths, the maximum fund transfer amount on
+the path from node 1 to node 3 is X.
+Additionally, we obtained the two sets that
+constitute the minimum cut, which helps us
+understand which nodes are involved in this
+maximum fund transfer process. The next step
+is to list the names of all nodes involved in the
+circulation flow to display directly to the user.
+API: G.nodes()
+Output API Correctness: 0.8, Thought
+and API Effectiveness: 0.9,
+Graph Distillation: 0.0
+Input Please analyze whether there is a
+fund circulation flow in the graph,
+and identify all nodes involved in
+the circulation flow. Additionally,
+please calculate the maximum
+amount of funds involved in these
+circulation paths. Begin!
+To complete this task, we need to proceed step
+by step. First, we need to determine whether
+there is a fund circulation flow in the graph,
+which can be achieved by calling
+<API>nx.find_cycle(G)</API>to return a
+list of cycle edges if a cycle exists. Next, we
+need to identify all nodes involved in the
+circulation flow.
+<API>nx.simple_cycles(G)</API>can be
+used to find all simple cycles (i.e., cycles that do
+not repeat any node) in the graph. Finally, for
+each identified circulation path, we need to
+calculate its maximum fund amount, which can
+be done by traversing each edge in the cycle and
+accumulating their weights.
+API: nx.find_cycle(G)
+Output API Correctness: 0.9, Thought
+and API Effectiveness: 0.95,
+Graph Distillation: 1.0
+Where H is the hidden dimension, Lp is the prompt length, and demb is the embedding dimension.
+This adapter is extremely lightweight (0.01%-0.1% of LLM parameters).
+G.3 Self-Supervised Adaptation
+The REINFORCE-based adaptation usingKauxiliary queries withRrollouts per query has:
+• Time complexity:O(K·R· ¯N·C LLM +K·R· ¯N·C KL)
+• Space complexity:O(K·R· ¯N+|ψ|)
+Where ¯N is the average chain length, CLLM is the cost of an LLM forward pass, CKL is the cost of
+computing KL divergence, and|ψ|is the parameter count of the adapter.
+G.4 Overall Efficiency
+The total computational cost can be summarized as:
+Ctotal =O(E·M·T iter) +O(K·R· ¯N·C LLM) +O(T query · ¯Nquery ·C LLM)(13)
+30
+
+===== Page 31 =====
+ 
+descriptio
+Financial Network
+n
+Type:MultiDirected graph with weights and dates
+Content:The fund transfer data of a specific group of people. Directed edge A->B means that A has transferred funds to B.
+The graph construction operation is:
+G = nx.MultiDiGraph(
+Name:Financial_Network.txt
+)
+G.add_edge(sender, receiver, weight=amount, date=transfer_date)
+where "sender" and "receiver" are the sender and receiver of the transfer, "amount" is the amount of money, and "transfer_date" is the date of the transfer.The integer
+type is used to store nodes when constructing the graph.
+Social Network
+description
+Traffic Network
+description
+Citation Graph
+description
+Chemical Molecule
+description
+Name:Social-Network.txt
+Type:Undirected graph with weights
+Content:The friendship data of a social network. Undirected edge A-B means that A and B are friends.
+The graph construction operation is:
+G = nx.Graph()
+G.add_edge(user1, user2, weight=interaction_score)
+where "user1" and "user2" are users, and "interaction_score" is the interaction score between them. The string type is used to store nodes when constructing the graph.
+Name:Traffic_Network.txt
+Type:Directed graph with weights
+Content:The transportation data between cities. Directed edge A->B means that there is a direct route from city A to city B.
+The graph construction operation is:
+G ==nx.DiGraph()
+G.add_edge(city1, city2, weight=distance)
+where "city1" and "city2" are cities, and "distance" is the distance between them. The string type is used to store nodes when constructing the graph.
+Name:Citation_Graph.txt
+Type:MultiDirected graph
+Content:The citation data between research papers. Directed edge A->B means that paper A cites paper B.
+The graph construction operation is:
+G = nx.MultiDiGraph()
+G.add_edge(paper1, paper2)
+where "paper1" and "paper2" are research papers. The string type is used to store nodes when constructing the graph.
+Name:Chemical_Molecule.txt
+Type:MultiUndirected graph with weights
+Content:The chemical compound data. Undirected edge A-B means that there is a bond between atom A and atom B.
+The graph construction operation is:
+G = nx.MultiGraph()
+G.add_edge(atom1, atom2, weight=bond_strength)
+where "atom1" and "atom2" are atoms, and "bond_strength" is the strength of the bond between them. The string type is used to store nodes when constructing the
+graph.
+Figure 7:Detailed Description of the Graph Datasets for the Five Scenarios.
+Our approach is efficient because: (1) graph fingerprinting is performed only once per graph; (2)
+adaptation requires few rollouts (typically K= 5 , R= 3 ); and (3) only the small adapter network
+needs updating.
+31
+
+===== Page 32 =====
+H Broader Impact
+GraphChain’s ability to process large-scale graphs efficiently could significantly enhance data analysis
+capabilities in critical domains such as financial fraud detection, healthcare networks, and social net-
+work analysis. By enabling more effective reasoning over complex interconnected data, GraphChain
+could help identify suspicious transaction patterns, improve epidemiological network analysis, and
+better understand information propagation in social networks. The framework’s adaptability across
+diverse graph structures makes it particularly valuable for interdisciplinary research and applications
+where domain experts need to analyze graph data without specialized technical knowledge. Moreover,
+the reduced computational requirements of our approach compared to retraining models for each
+new graph domain could lead to more environmentally sustainable AI deployments by decreasing
+the energy consumption associated with large-scale model training. These advancements contribute
+to more accessible, efficient, and effective graph analytics tools that can address various societal
+challenges.
+32

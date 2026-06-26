@@ -1,0 +1,1234 @@
+
+
+===== Page 1 =====
+ARTICLE
+Identifying key players in complex networks via
+network entanglement
+Yiming Huang 1,2, Hao Wang 3, Xiao-Long Ren 2 ✉ & Linyuan Lü 1,2 ✉
+Empirical networks exhibit signi ﬁcant heterogeneity in node connections, resulting in a few
+vertices playing critical roles in various scenarios, including decision-making, viral marketing,
+and population immunization. Thus, identifying key vertices is a fundamental research pro-
+blem in Network Science. In this paper, we introduce vertex entanglement (VE), an
+entanglement-based metric capable of quantifying the perturbations caused by individual
+vertices on spectral entropy, residing at the intersection of quantum information and network
+science. Our analytical analysis reveals that VE is closely related to network robustness and
+information transmission ability. As an application, VE offers an approach to the challenging
+problem of optimal network dismantling, and empirical experiments demonstrate its super-
+iority over state-of-the-art algorithms. Furthermore, VE also contributes to the diagnosis of
+autism spectrum disorder (ASD), with signi ﬁcant distinctions in hub disruption indices based
+on VE between ASD and typical controls, promising a diagnostic role for VE in ASD
+assessment.
+https://doi.org/10.1038/s42005-023-01483-8 OPEN
+1 Institute of Fundamental and Frontier Sciences, University of Electronic Science and Technology of China, 611731 Chengdu, P. R. China. 2 Yangtze Delta
+Region Institute (Huzhou), University of Electronic Science and Technology of China, 313001 Huzhou, P. R. China. 3 School of Physics and Optoelectronic
+Engineering, Hainan University, 570228 Haikou, P. R. China. ✉email: renxiaolong@csj.uestc.edu.cn; linyuan.lv@gmail.com
+COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys 1
+1234567890():,;
+
+===== Page 2 =====
+C
+omplex systems, such as ecological 1, social 2, neuronal 3,
+and economic 4 systems, are ubiquitous and can be
+abstracted and studied as networks 5. Key players in a
+complex network refer to a small part of vertices that play a vital
+role in the structure and function of the network
+6. The study of
+identifying a set of key players helps answer a range of critical
+questions from biology to marketing to immunization: Which set
+of in ﬂuential individuals should we choose as seeds to trigger a
+cascade in viral marketing 2? Which kind of species could trigger
+dramatic changes to the entire ecosystem if they were to demise 7?
+Which groups should be prioritized for vaccination given the
+limited number of vaccines available 8,9?
+In practice, ﬁnding the optimal set of players in a given net-
+worked system has far-reaching effects in various disciplines. In
+previous studies, a great deal of work has been devoted to
+exploring how to ﬁnd key players in speci ﬁc networks6,10,11. Most
+research ranks players using neighborhood-based centralities,
+path-based centralities, iterative re ﬁnement centralities, or
+dynamics-based methods 12–14. See Supplementary Note 1 for a
+detailed introduction. With the recent fast development of
+quantum-based processes on networks 15–17, identifying key
+players in complex networks via network entanglement presents a
+promising solution to these issues.
+Quantum entanglement is a precious quantum resource for
+computation and communication 18. The distance between
+quantum entangled states and the set of separable states is one of
+the quantum entanglement metrics 19–21. Inspired by quantum
+statistical mechanics and collective network entanglement 16, this
+paper proposes an entanglement-based approach described by a
+Gibbsian-like density matrix. Spectral entropy captures the global
+topological feature of the network rather than a subset of the
+network’s descriptors22. Vertex entanglement re ﬂects the spectral
+entropy variance between the v-control network and the original
+network, indicating changes caused by a single vertex to spectral
+entropy. The theoretical analysis and empirical experiments show
+that vertex entanglement is closely related to the dynamic
+diversity of information and network robustness. Speci ﬁcally, the
+vertex entanglement tends to vanish in a transient diffusion time,
+while it coincides with the number of connected components at
+extremely large time scales. The proposed approach is partially
+based on the original framework of collective network entangle-
+ment (CNE)16, which essentially measures the difference between
+the original graph and the sum of two subgraphs, i.e., a star graph
+formed by a detached node with its edges and the remainder of
+the original graph. Therefore, CNE measures how subadditive the
+entropy of these networks is. However, in our approach, VE
+directly calculates the difference in terms of spectral entropy
+between the original network and the perturbed network, which is
+closer to the mathematical nature of quantum resource theory 18
+and is computationally more ef ﬁcient.
+The issue of optimal network dismantling or percolation is a
+non-deterministic polynomial-time hard (NP-hard) problem 9.
+One critical application of vertex entanglement is network dis-
+mantling, where VE addresses two previously neglected but cri-
+tical issues. The ﬁrst concern pertains to network integrity, which
+refers to the network ’s ability to maintain its normal inter-node
+communication and other functions in the face of an attack 16.
+Comprehending the information propagation mechanism in a
+network goes beyond simply identifying the shortest path 23.
+Therefore, to thoroughly analyze how information propagates in
+networks and is affected by perturbations, we necessitate a mul-
+tiscale framework that can distinguish network response from
+micro, meso, and macroscales. Secondly, most centrality metrics
+predominantly focus on partial aspects of a network ’s structure or
+local topological features, such as degree and betweenness 24,
+rather than considering the global structure of the system as a
+whole. As a result, these measures may not accurately capture the
+full complexity of the network and are prone to miss important
+information. Vertex entanglement, which is based on the global
+properties of the network, provides a promising approach to
+address the network dismantling problem as it is closely corre-
+lated with network robustness and connectivity. By conducting
+targeted attack experiments on various empirical systems, we ﬁnd
+that VE outperforms other state-of-the-art algorithms in network
+dismantling, and networks will collapse rapidly once highly
+entangled vertices fail or are attacked. Another essential appli-
+cation of vertex entanglement is to assist in the diagnosis of
+autism spectrum disorder (ASD)
+25, a disorder caused by a
+developmental brain impairment 26,27. To be speci ﬁc, signi ﬁcant
+differences are detected between ASD and typical controls on the
+hub disruption indices based on vertex entanglement. Moreover,
+the hub disruption indices display a signi ﬁcant positive correla-
+tion with the intelligence quotient (IQ) of ASD participants,
+suggesting that VE may contribute to the prediction of behavioral
+characteristics of ASD participants.
+Results
+In this section, we ﬁrst introduce the required theoretical grounds
+for the new metric vertex entanglement and clarify its de ﬁnition.
+Then we analyze the correlations between VE and four node
+centralities, and explore VE ’s application in network dismantling
+and ASD diagnosis.
+Network information theory . The possibility of extending the-
+oretical measures of quantum information to complex systems
+has been investigated in terms of the statistical ﬁeld theory of
+information dynamics 15,28. Take into account a network GðV; EÞ
+with a set of nodes V and a set of links E. Its adjacency matrix A
+can fully encode the connectivity of the network, with entry Aij
+being the link ’s weight from node i to j. If a vector ψ(τ) encodes
+the amount of information about all nodes at a given time τ, then
+its evolution process can be described as ψ(τ) = e−τLψ(0). Here,
+ψ(0) denotes the initial state, e−τL is the diffusion propagator,
+L = D − A is the combinatorial graph Laplacian matrix, and D is
+the diagonal matrix with the degree sequence along the diagonal.
+Dij is de ﬁned as δijki, where δij is Kronecker function and
+ki = ∑jAij.
+Inspired by quantum information theory, the density matrix of
+network G, denoted as ρ, was proposed in terms of the
+normalized diffusion propagator 22 as
+ρ ¼ e/C0 τL
+Z ; ð1Þ
+where Z ¼ tr e /C0 τL/C0/C1
+is the partition function of the system, and
+the positive parameter τ encodes the diffusion propagation time.
+It can be easily con ﬁrmed that ρ is a semi-positive matrix with a
+trace equal to one, satisfying the same mathematical conditions as
+a density matrix 29, that is, ρ can be regarded as the density matrix
+for networks. Recently, a generalized network density representa-
+tion has also been proposed, expanding the range of applicability
+of the framework to nonlinear dynamics 30.
+One cardinal concept of classical information theory is
+Shannon entropy 31, which is related to the amount of disorder
+and information in systems 32. This concept can be extended to
+the quantum realm by replacing probability distributions with
+density operators and Shannon entropy with the von Neumann
+entropy32. Naturally, we are also interested in studying complex
+networks from the perspective of information processing.
+When it comes to complex systems, several entropies have
+been introduced, such as the remaining degree 33 and shortest
+path distribution 34,35. However, these entropies merely take into
+ARTICLE COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8
+2 COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys
+
+===== Page 3 =====
+account the network ’s local properties. A cutting-edge research
+direction in complex networks is the integration of quantum
+information theory 15,16. Spectral entropy 22 serves as a network
+counterpart of von Neumann entropy based on the network
+density matrix, and it follows that
+Sτ ρ
+/C0/C1
+¼/C0 tr ρ log2ρ
+/C0/C1
+: ð2Þ
+Spectral entropy captures the global topological feature of the
+network, rather than a subset of the network ’s descriptors,
+making it a more appropriate entropy metric for complex
+systems. It has also been discovered that the functional diversity
+among the vertices can be quanti ﬁed by spectral entropy 28. For
+simplicity, the notion Sτ GðÞ ¼ Sτ ρ
+/C0/C1
+is also adopted in this paper
+to denote the spectral entropy of the network G.
+We analytically demonstrate that spectral entropy is a
+monotonic function and Sτ 2½ log2C; log2N/C138, where C denotes
+the number of disconnected components (see “Methods” for
+proof and explanation). Consequently, for connected networks, Sτ
+falls within the interval ½0; log2N/C138.
+Deﬁnition of vertex entanglement . Quantum entanglement is a
+kind of precious resource 18, and the distance between quantum
+entangled states and a collection of separable states can be de ﬁned
+as entanglement. When it comes to complex systems, the in ﬂu-
+ence of node removal on the largest eigenvalue of the adjacency
+matrix is de ﬁned as dynamic importance 36. Similarly, we can
+deﬁne entanglement as the effect of changes in the local structure
+of the network on spectral entropy. The network resulting from
+the local perturbation is referred to as the v-control network,
+denoted as Gv. The difference between the entropy of Gv and G
+captures the confusion due to the function of vertex v, and in
+mathematics, vertex entanglement (VE) can thus be de ﬁned as:
+Eτ vðÞ ¼ Sτ Gv
+/C0/C1
+/C0 Sτ GðÞ : ð3Þ
+Here, diffusion time τ is a tunable parameter, enabling us to study
+the network entanglement from a time-varying perspective. In
+contrast to dynamical importance 36, which only considers the
+variation of maximum eigenvalues, our entanglement measure
+can quantitatively portray the importance of vertices to the
+overall network topology.
+Vertex entanglement captures the effect of the perturbations
+caused by a single vertex on the spectral entropy of the network.
+It has been discovered that spectral entropy re ﬂects the functional
+diversity in complex systems 28. Thereby, a vertex is supposed to
+be more important in our framework if it can affect the system ’s
+functional diversity more severely. Vertex entanglement is thus a
+fundamental metric for the dynamic diversity of information and
+measures the importance of vertices in complex systems. In
+addition, diffusion time τ serves as a tunable parameter in the
+computation of VE, enabling us to study network response at
+micro, meso, and macroscales. We conducted an analytical study
+on the impact of τ on vertex entanglement with a mean- ﬁeld
+approximation, and the results show that
+● τ → 0: E0 ≈ 0,
+● τ !1 : E1 /C25 log2Cv.
+Here, Cv denotes the number of connected components of Gv.
+In the mesoscale, where 0 < τ < ∞, vertex entanglement also
+captures the impact of topological perturbations (see “Methods”).
+The variations in the vertex entanglement with respect to
+diffusion time are depicted in Fig. 1.
+As the name indicates, Gv is under the control of vertex v. One
+of the possible methods to construct Gv is to detach vertex v
+crudely and without any other adjustments 16. Nevertheless, this
+method will result in changes to many fundamental properties of
+the network, including the number of links M and the average
+degree 〈k〉. A nature principle associated with probabilistic
+dismantling is that Gv should preserve as much as possible the
+statistical properties of the original network G, such as M and 〈k〉.
+To achieve this, instead of detaching vertex v, we transform the
+subgraph formed by v and its neighboring vertices into a
+probabilistic complete graph, i.e., a graph where all possible edges
+between vertices are present with a certain probability, with the
+link relationships between other vertices remaining unchanged.
+The above process is analogous to shrinking v and its neighbors
+into one super vertex and evenly distributing the original weights
+within the super vertex. This strategy is visualized in Fig. 2.
+Intuitively, if a node ’s neighbors are densely connected, this
+perturbation method tends to assign less importance to such a
+node because there are many alternative ways to interact and
+communicate with its neighbors. A thorough comparative
+analysis between this perturbation strategy and directly detaching
+nodes is deferred to Supplementary Note 2. Experiments
+conducted on several empirical networks have also indicated that
+better network dismantling results can be obtained with this
+strategy, also see Supplementary Note 2.
+Degree
+max
+min
+Vertex Entanglement
+Fig. 1 The variations of vertex entanglement Eτ vðÞ with the diffusion
+propagation time τ. The curves are colored based on the degree of the
+detached vertex when constructing the v-control network Gv, with darker
+orange indicating a larger degree. It can be observed that E0 vðÞ ! 0 when
+diffusion is transient and E1 vðÞ ! log2Cv on an extremely large time scale,
+where Cv denotes the number of connected components of Gv.
+( ) ( )
+Fig. 2 Construction diagram of the v-control network Gv. The process of
+constructing Gv is somewhat analogous to shrinking v and its neighbors
+into one super vertex and redistributing the original weights evenly within
+the super vertex. Speci ﬁcally, the transition from G to Gv occurs merely in
+v and its neighbors, being restructured into a probabilistic complete
+graph. The weight of each link in the probabilistic complete graph is
+ω v ¼ sum of link weights among v and its neighbors
+possible links number ¼
+kv þ0:5kv kv /C0 1ðÞ cv
+kv kv þ1ðÞ ¼ cv
+2 /C0 cv þ1
+kv þ1,w i t h cv
+presenting the clustering coef ﬁcient of Gv. For example, in the above
+network, ω v ¼ 4
+6 ¼ 2
+3
+.
+COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8 ARTICLE
+COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys 3
+
+===== Page 4 =====
+In order for vertex entanglement to capture the structural
+signiﬁcance of individual players without relying on diffusion
+time, a logical assumption is that the connectivity of the v-control
+network is independent of diffusion time. Nevertheless, the
+impact of local perturbations on the global network topology is
+limited at smaller time scales. Conversely, longer diffusion time
+tends to cause a signi ﬁcant overlap between the ﬂow vectors
+initiated from different nodes, resulting in a decrease in the ability
+to identify important nodes. Therefore, we seek to ﬁnd τ that
+ampliﬁes the potential impact of local control on information
+dynamics across various time scales. From Fig. 1, we can draw
+that the minimum value of vertex entanglement is negative, and
+this property is proved in “Methods”. Therefore, the preferred
+value of τ should be such that the vertex entanglement is
+minimized, and a new de ﬁnition of vertex entanglement with
+independent diffusion time τ can be given as:
+EvðÞ ¼ Eτ/C3 vðÞ ¼ min
+τ
+Eτ vðÞ : ð4Þ
+An issue of central importance is whether such τ* exists. It
+would be inappropriate to dismantle networks based on vertex
+entanglement if τ* is nonexistent. The proof of the existence of τ*
+will be presented in the Methods Section. In addition, we
+introduce an ef ﬁcient method for approximating vertex entangle-
+ment that signi ﬁcantly decreases the computational complexity
+by one order of magnitude in “Methods”, while maintaining a
+high degree of accuracy.
+Correlation analysis . It is worth noting that the vertex entan-
+glement contains rich information in addition to network cen-
+trality measures, such as degree and betweenness. In Fig. 3a–e, we
+illustrate the physicist collaboration network 37 corresponding to
+different node centralities, namely degree, Coreness 38, Collective
+Network Entanglement (CNE) 16, Betweenness 24, and vertex
+entanglement (VE). The Pearson correlation matrix among all
+index pairs is depicted in Fig. 3f. Here, we adopt the opposite
+values to VE since VE is negative, ensuring that each metric has
+positive values, with larger values indicating greater importance.
+As evidenced by the comparatively low correlations between
+vertex entanglement and the other four indicators, it is apparent
+that vertex entanglement encapsulates a plethora of information
+and is poised to provide fresh insights beyond those of established
+metrics. This serves as a noteworthy, albeit frequently overlooked,
+indicator of the potential metric of the VE metric. Additional
+correlation analyses will be presented in Supplementary Note 3.
+Entanglement-based network dismantling . Discovering the
+minimum set of units that can drive a complex system to its
+collapse, also termed network dismantling, is a famous NP-hard
+problem. According to our discussion (see “Methods”), vertex
+entanglement is closely related to network connectivity, robust-
+ness, and information transfer ef ﬁciency. Therefore, the proposed
+vertex entanglement in this paper provides an effective frame-
+work for network dismantling.
+To validate the applicability of the proposed metric, we
+conduct targeted attack experiments on four empirical systems,
+Fig. 3 Visualization and correlation analysis of the ranking of ﬁve centrality indicators. The physicist collaboration network is taken as an example.
+a–e The colors of vertices are proportional to the normalized values of the indicators. Here, min-max normalization is adopted. Since the values of VE are
+negative and smaller values of VE correspond to more important nodes, we perform an additional operation of taking the opposite of VE before normalizi ng
+it. This transformation is solely intended to ensure consistent interpretation across all metrics, where higher values indicate greater importanc e of nodes.
+f visualizes the pairwise Pearson correlation, with letters a –e in the abscissa and ordinate representing Degree, Coreness, CNE, Betweenness, and the
+opposite value of vertex entanglement, respectively. a–c illustrate that the vital nodes are tightly interconnected with each other, forming clusters in
+speciﬁc regions of the network. In contrast, d, e show a different pattern, where signi ﬁcant nodes are dispersed throughout the network, and in ( e), the vital
+nodes are more evenly distributed than in ( d).
+ARTICLE COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8
+4 COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys
+
+===== Page 5 =====
+that is, the power-grid network (Grid) 39, crime network
+(Crime)39, physicist collaboration network (Collaboration) 37,
+and Petster –Hamster online social network (PH) 39. We compare
+the proposed method with several state-of-the-art dismantling
+schemes, namely collective in ﬂuence (CI) 40, Belief Propagation
+guided Decimation (BPD) 41, Collective Network Entanglement
+(CNE)16, Generalized Network Dismantling with Reinsertion
+(GNDR)9, FINDER 42, CoreHD 43, MinSum 44, and Betweenness
+centrality24. In addition, as some strongly entangled vertices may
+aggregate and their contributions may overlap, there may be
+some difference between the dismantling result of attacking a
+small number of vertices and that of attacking a larger one.
+Therefore, we adopt the reinsertion algorithm 44, which is often
+used to improve an existing solution, to enhance the network
+dismantling performance of VE.
+The size of giant connected components (GCC) is commonly
+used to indicate the robustness of the network against random or
+targeted attack 45, as giant clusters are generally necessary to
+ensure the proper functioning of the system. So, we utilize
+normalized GCC size to compare networks of various scales.
+Figure 4 exhibits the network dismantling processes of the nine
+dismantling schemes on the four empirical systems, enabling a
+visual and thorough comparison. We also list the proportion of
+attacked vertices when the dismantling target size is 1% in
+Table 1. It can be drawn that VE leads to a much faster collapse
+than other strategies.
+The robustness measure R46 is another index that quantita-
+tively describes the performance of different network dismantling
+algorithms by measuring the area under the dismantling curve.
+Mathematically, R is de ﬁned as
+R ¼ 1
+N ∑
+n
+gðnÞ; ð5Þ
+where g(n) is the normalized GCC size after removing n vertices.
+The normalization factor 1
+N allows R to be compared between
+networks of different sizes. Obviously, a smaller R corresponds to
+(a) (b)
+(c) (d)
+Fig. 4 Dismantling process of different methods. Targeted attack towards a power-grid network, b crime network, c physicist collaboration network, and
+d Petster–Hamster online social network with the dismantling target size of 1%. The x axis values represent the removed fraction of vertices, and the y axis
+values represent the size of giant connected components (GCC) after normalization. Compared with the other eight methods (see legend of panel a for the
+color code), the number of vertices attacked and the area beneath the curve for vertex entanglement (VE, red line) are comparably small in all cases,
+indicating superior dismantling performance. b Red nodes suggest that they are under direct attack, gray nodes indicate that they belong to various small
+connected components, and the colors of the remaining nodes signify how they are distributed among various large connected components.
+Table 1 The ef ﬁciency performance of various network
+dismantling strategies.
+Network Grid Crime Collaboration PH
+CI 0.107 0.545 0.351 0.513
+BPD 0.063 0.134 0.100 0.236
+CNE 0.186 0.336 0.231 0.504
+GNDR 0.066 0.135 0.098 0.234
+FINDER 0.122 0.383 0.226 0.438
+CoreHD 0.110 0.408 0.209 0.478
+MinSum 0.074 0.138 0.103 0.255
+Betweenness 0.351 0.569 0.246 0.450
+VE 0.062 0.130 0.097 0.229
+The proportion of vertices attacked to achieve the dismantling target measures the dismantling
+efﬁciency, with lower values indicating better performance. The dismantling target for each
+method is 1% of the network size, and the best results are highlighted in bold.
+COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8 ARTICLE
+COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys 5
+
+===== Page 6 =====
+a more effective network dismantling strategy. Figure 5 shows the
+robustness value R of various attack strategies on four real-world
+networks. We conduct additional experiments in Supplementary
+Note 4 on more empirical networks, demonstrating the
+effectiveness and broad applicability of the proposed algorithm.
+In general, the proposed method is comparable to and even
+outperforms the others in terms of both dismantling ef ﬁciency
+and robustness.
+Entanglement-based ancillary diagnosis of ASD . Autism spec-
+trum disorder (ASD) is considered a lifelong neurological and
+genetic disorder
+25, whose manifestations include impairments in
+social communication and interaction, sensory abnormalities,
+repetitive behaviors, and varying levels of intellectual disability.
+Early diagnosis of ASD is crucial because early intervention can
+make a difference and lead to superior treatment outcomes.
+To enhance our comprehension of how information is
+transmitted within the brain of ASD patients, imaging techniques
+are extensively utilized to deduce the structural and functional
+interconnections between distinct brain regions, as demarcated by
+parcellation into regions of interest (ROI)
+47. This enables brains
+to be effectively simpli ﬁed into complex networks with much
+smaller sizes, which are subsequently scrutinized through the lens
+of network science 48. Speciﬁcally, the data about ASD and typical
+control (TC) participants used in this study comes from the
+second iteration of Autism Brain Imaging Data Exchange (ABIDE
+II)49, which was openly released to the scienti ﬁc community in
+June 2016. This study enrolls 40 participants, from ABIDE II-
+Indiana University site, 20 with ASD and 20 with TC. A 600 × 600
+brain functional network is obtained for each participant. More
+details about data processing and network construction are
+delayed to Supplementary Note 5.
+To detect differences in brain networks between ASD
+participants and TC participants, we utilize vertex entanglement
+and ﬁnd a signi ﬁcant disparity in the hub disruption indices
+based on vertex entanglement between the two groups.
+Speciﬁcally, we compute each subject ’s hub disruption index
+(HDI)50, a metric capturing the topological reorganization of the
+brain network. First, entanglement EvðÞ is calculated for all ROIs
+in the functional brain network among all participants, consisting
+of Ea vðÞ for ASD participants and Et vðÞ for TC participants. The
+average vertex entanglement of TC participants is denoted as
+〈Et(v)〉. Subsequently, each subject ’s hub disruption index κ
+corresponds to the slope of the linear regression on the set of
+ðhEt ðvÞi; EðvÞ/C0h Et ðvÞiÞ
+/C8/C9
+. This means that for each participant,
+their HDI is calculated based on how their vertex entanglement
+compares to the average vertex entanglement of TC participants.
+Therefore, HDI captures the topological abnormalities in the
+functional brain network. Because different thresholds have
+different effects on the results, we calculated the average hub
+disruption index of ﬁve thresholds (ranging from 1 to 5% with a
+1% interval) to obtain robust and comprehensive results. In
+addition, we compute the hub disruption indices based on other
+centrality metrics with the same approach.
+As the statistical results shown in Fig. 6, the VE-based hub
+disruption index can clearly differentiate between ASD and TC
+participants. In this analysis, we focus on four metrics: VE,
+Betweenness
+24, CNE 16, and CoreHD 43, as the other methods
+employed in the previous experiments are primarily tailored for
+network dismantling tasks. Evidently, the hub disruption indices
+for individuals with ASD are signi ﬁcantly lower than those for TC
+subjects across various metrics, indicating that the brain networks
+of ASD patients may be more stable and adaptable, which could
+compensate for impairments of certain brain regions. This special
+feature of ASD patients ’ brain network can be used to help
+diagnose ASD.
+Moreover, a signi ﬁcant positive correlation ( r = 0.681, P =
+0.001857) has been observed between ASD participants ’
+performance intelligence quotient (IQ) and the VE-based hub
+disruption index, while no signi ﬁcant correlations are detected
+between Performance IQ and the other three metrics, as shown in
+Fig. 7. In our study, we employ the Performance IQ, as
+ascertained by the Wechsler Abbreviated Scale of Intelligence
+(WASI), as a measure of cognitive ability, which has been widely
+used and recognized as a reliable tool in assessing cognitive
+abilities across various settings 51. The relationship between the
+Performance IQ and the brain hub disruption index in Fig. 7
+provides valuable insights into potential associations between
+cognitive abilities and disruptions in brain networks. Speci ﬁcally,
+if the disruption of brain topology is more severe, then the
+individual’s Performance IQ tends to be lower. To perform these
+analyses, Shepherd’s pi correlation is employed here as it provides
+adequate statistical power and is less affected by outliers. This
+method is an extension of Spearman ’s correlation and addition-
+ally incorporates a bootstrap-based estimation of the Mahalano-
+bis distance, thereby enabling an unbiased detection and
+Grid Crime Collaboration PH
+Fig. 5 The robustness performance of various network dismantling
+strategies. Per-method cumulative robustness measure R, which measures
+the area under the curve of network dismantling, with lower values
+indicating better performance. The dismantling target for each method is
+1% of the network size, and all values are scaled to the one of VE for the
+same network. VE CNE
+Betweenness
+CoreHD
+ 
+
+
+
+Hub disruption index
+600 ROIs
+ASD
+TC
+Fig. 6 Average hub disruption indices based on different centrality
+metrics. The vertical coordinate of each dot is the average hub disruption
+index for ﬁve brain networks with a sparsity of 1% to 5% (1% interval).
+ARTICLE COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8
+6 COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys
+
+===== Page 7 =====
+exclusion of outliers. Furthermore, Shepherd ’s pi correlation 52
+analysis is particularly suited for small sample sizes 53. Detailed
+statistical analysis and the Spearman correlation analysis without
+moving outliers are deferred to Supplementary Note 5.
+Our ﬁndings align with the theory that ASD patients may have a
+different network organization compared to typically developing
+individuals54.S p e c iﬁcally, individuals with ASD may experience
+functional activity suppression in some key brain areas, indicating
+the diminished importance of those key areas. In order to maintain
+essential brain activity, the functional connectivity of some limbic
+brain areas, i.e., vertices of lower importance, is likely to be
+enhanced to compensate for the suppression, thus increasing the
+signiﬁcance of these limbic brain vertices. The combined effect of
+suppression and compensation mechanisms results in a smaller
+hub disruption index κ, and individuals with more severe ASD
+symptoms tend to have smaller κ.
+Conclusion. In this study, we employ networks ’ density matrices
+to measure the entanglement between vertices and their respec-
+tive networks. Speci ﬁcally, we propose an approach to key vertex
+identiﬁcation by analyzing the effect of perturbations generated
+by a single vertex on the overall functionality of the network. In
+addition, entropy is found to be a functional diversity indicator of
+a node as a sender of information 28, and VE measures the change
+in the spectral entropy of the network resulting from the per-
+turbations. Thereby, VE is an ideal metric for assessing the sig-
+niﬁcance of vertices in terms of the functional diversity of the
+whole system.
+The diffusion time τ is tunable when calculating VE, allowing
+the network response to be studied from micro, meso, and
+macroscales. As theoretical and experimental analysis reveals,
+vertex entanglement can effectively capture the transport proper-
+ties and dynamic diversity of complex systems. To be speci ﬁc, VE
+tends to zero when diffusion is transient and will converge to
+log2Cv (Cv denotes the number of connected components of Gv)
+on an extremely large time scale. This advantageous property
+highlights the potential of our metric to address real-world issues
+and promises a wide range of practical applications. The
+multiscale property of VE renders it versatile in analysis, and
+we further introduce a reliable method for selecting τ in practical
+scenarios. Moreover, we propose an approximate calculation for
+vertex entanglement that effectively reduces the complexity by an
+order of magnitude without compromising its accuracy. This is
+particularly useful in applications where excessive overhead is a
+concern.
+We perform correlation analysis before delving into VE ’s ability
+to identify key vertices, and our ﬁndings indicate that VE offers
+valuable insights beyond traditional network centrality metrics by
+providing rich information. As an application, vertex entanglement
+can be applied to network dismantling tasks. We ﬁne-tune the v-
+control network for the sake of an improved dismantling result,
+and ﬁnd that targeted attacks on a few strongly entangled vertices
+in the network can lead to the collapse of the entire network.
+Empirical results demonstrate that VE outperforms other cutting-
+edge algorithms in dismantling tasks, highlighting its superior
+performance gains. Early diagnosis of ASD patients is quite
+daunting. As another signi ﬁcant application, entanglement offers
+signiﬁcant contributions to its diagnosis. The hub disruption index
+based on vertex entanglement for ASD patients is signi ﬁcantly
+lower than that of typical controls. Moreover, the hub disruption
+indices exhibit a signi ﬁcant positive correlation with the intelli-
+gence quotient (IQ) of ASD participants, suggesting that VE
+promises to serve as a diagnostic tool for ASD.
+     
+HDI-VE
+
+
+
+
+QIecnamrofreP
+r = 0.681 P = 0.001857
+     
+HDI-Betweenness
+
+
+
+
+Performance IQ
+r = -0.402 P = 0.109254
+      
+HDI-CNE
+
+
+
+
+QIecnamrofreP
+r = 0.314 P = 0.219209
+       
+HDI-CoreHD
+
+
+
+
+Performance IQ
+r = 0.162 P = 0.534313
+(a) (b)
+(c) (d)
+Fig. 7 The Shepherd ’s pi correlations between average hub disruption indices (HDI) and intelligence quotient (IQ) of autism spectrum disorder
+participants. The horizontal axes are the average hub disruption indices based on a Vertex Entanglement (VE), b Betweenness, c CNE, and d CoreHD, over
+brain networks with sparsity ranging from 1 to 5% (1% interval). The dashed line is obtained by least squares ﬁtting.
+COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8 ARTICLE
+COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys 7
+
+===== Page 8 =====
+This study explores the intersection of quantum information and
+complex systems at the research frontier, providing fresh insights
+into the intrinsic topological properties of complex systems.
+Speciﬁcally, key players are those that are robust against local
+perturbations. The proposed entanglement frame can be employed
+to identify key players in complex networks, including but not
+limited to identifying critical vertices. A less explored but promising
+research direction is to identify in ﬂuential mesoscale structures,
+such as measuring the signi ﬁcance of simplices in simplicial
+complexes11,55. Simplices are a natural extension in our framework
+as nodes can be seen as 0-simplices. Similarly, we can perturb
+simplices and their associated neighborhood structures in simpli-
+cial complexes to assess their impact on the structure and
+functional diversity. However, we note that perturbing larger
+subgraph structures will signi ﬁcantly affect entropy, resulting in
+greater inaccuracies in approximate analysis and computation.
+Therefore, more efﬁcient analytical and computational methods are
+required. The extension of our framework to simplicial complexes
+introduces further potential applications, such as higher-order link
+prediction56 and simplex information imputation 57.
+Methods
+Multiresolution analysis of entanglement . Time τ serves as a
+tunable parameter in the computation of VE, which enables the
+study of the network response at micro, meso, and macroscales.
+In this section, we conduct an analytical study of the properties of
+vertex entanglement across various diffusion time scales.
+According to the de ﬁnition22, spectral entropy can be ﬁgured
+out using the spectral decomposition theory that
+Sτ GðÞ ¼ /C0 tr ρ log2ρ
+/C0/C1
+¼/C0 ∑
+N
+i¼1
+λi ρ
+/C0/C1
+log2λi ρ
+/C0/C1
+: ð6Þ
+By applying λi ρ
+/C0/C1
+¼ e/C0 τλi LðÞ =Z, it can be derived that
+SτðGÞ¼ 1
+Z ln 2 ∑
+N
+i¼1
+e/C0 τλi LðÞ τλi LðÞ þ ln Z
+/C0/C1 ð7Þ
+¼ τ
+ln 2 ∑
+N
+i¼1
+λi LðÞ λi ρ
+/C0/C1
+þ log2Z ð8Þ
+¼ τ
+ln 2 tr L ρ
+/C0/C1
+þ log2Z; ð9Þ
+where Z ¼ trðe/C0 τLÞ¼ ∑N
+i¼1 e/C0 τλi ðLÞ is the partition function. The
+last equation holds as L and ρ can be spectrally decomposed
+simultaneously. Mean- ﬁeld approximations for network entropy
+have recently been suggested for the random walk-based 58 and
+continuous diffusion-based 16 density matrices, together with
+analytical and numerical investigations demonstrating that this
+approximation is quite effective in approximating the dynamics
+of systems at the meso- and macroscales 58. Hence, the sum term
+in Eq. ( 8) can also be simpli ﬁed with mean- ﬁeld
+approximation16,58 as follows:
+hλiðLÞλiðρÞi ¼ h λiðLÞihλiðρÞi þ hðλiðLÞ/C0h λiðLÞiÞðλiðρÞ/C0h λiðρÞiÞi
+/C25h λiðLÞihλiðρÞi:
+ð10Þ
+Since the number of λi satisfying λi LðÞ ¼ 0 is equal to the
+connected components C59, one can further obtain
+hλiðLÞi ¼ 1
+N ∑
+N
+i¼1
+λi LðÞ ¼ 1
+N /C0 C ∑
+N
+i¼Cþ1
+λi LðÞ ¼ 2m
+N /C0 C ; ð11Þ
+and the mean value for λi(ρ) follows that
+hλiðρÞi ¼ 1
+N ∑
+N
+i¼1
+e/C0 τλi LðÞ
+Z ¼ 1
+N /C0 C ∑
+N
+i¼Cþ1
+e/C0 τλi LðÞ
+Z ¼ 1
+N /C0 C 1 /C0 C
+Z
+/C18/C19
+:
+ð12Þ
+A simpliﬁed form can thus be obtained through the mean- ﬁeld
+approximation that
+Sτ GðÞ /C25 2mτ
+ln 2ðN /C0 CÞ 1 /C0 C
+Z
+/C18/C19
+þ log2Z: ð13Þ
+Thereby, the vertex entanglement can be formulated as
+Eτ vðÞ ¼ Sτ Gv
+/C0/C1
+/C0 Sτ GðÞ
+/C25 2mτ
+ln 2ðN /C0 CÞ
+Cv
+Zv
+/C0 C
+Z
+/C18/C19
+þ log2
+Zv
+Z ;
+ð14Þ
+where Cv is the number of connected components of Gv.
+Assuming that the v-control network maintains the number of
+connected components, i.e., Cv = C, and by performing the
+Taylor expanding, we can obtain
+Eτ vðÞ ¼ 2mτC
+ln 2 N /C0 CðÞ
+Z /C0 Zv
+ZvZ þ log2
+Zv
+Z
+/C25 2mτC
+ln 2 N /C0 CðÞ
+ΔZ
+ZvZ þ ΔZ
+Z ln 2 ;
+ð15Þ
+where ΔZ = Z − Zv.
+Moreover, for large-scale networks, the vertex entanglement
+can be further approximated as
+Eτ vðÞ ¼ ΔZ
+Z ln 2 1 þ τChki
+Zv
+/C18/C19
+; ð16Þ
+where 〈k〉 stands for the average vertex degree, and
+hki¼ 1
+N ∑N
+i¼1 ki ¼ 2m
+N /C25 2m
+N/C0 C. The partition function Z captures
+the topological property of the system, indicating the average
+return probability of a random walker 58.
+In the following, we will discuss the properties of vertex
+entanglement in the various diffusion time limits. As a
+preparation, we will demonstrate that the spectral entropy is
+monotonically decreasing with respect to diffusion time τ and
+Sτ 2 log2C; log2N
+/C2/C3
+.
+Since
+∂log2Z
+∂τ ¼ 1
+Z ln 2
+∂Z
+∂τ ¼ 1
+Z ln 2 ∑
+N
+i¼1
+/C0 λi LðÞ e/C0 τλi LðÞ
+/C18/C19
+¼/C0 tr L ρ
+/C0/C1
+ln 2 ;
+ð17Þ
+according to Eq. ( 9), we can conclude that
+∂Sτ
+∂τ ¼ tr L ρ
+/C0/C1
+ln 2 þ τ
+ln 2
+∂tr L ρ
+/C0/C1
+∂τ /C0 tr L ρ
+/C0/C1
+ln 2
+¼ τ
+ln 2
+∂tr L ρ
+/C0/C1
+∂τ
+¼ τ
+Z2 ln 2 /C0 ∑
+N
+i¼1
+λ2
+i LðÞ e/C0 τλi LðÞ /C1∑
+N
+i¼1
+e/C0 τλi LðÞ þ ∑
+N
+i¼1
+λi LðÞ e/C0 τλi LðÞ
+/C18/C19 2"#
+< 0:
+ð18Þ
+The last inequality holds exploiting the Cauchy –Schwarz inequal-
+ity. The process of entropy reduction is somewhat intriguing, but
+we ﬁnd it explainable. As the diffusion time τ increases, there is a
+notable overlap between the ﬂow vectors initiated from nodes,
+which results in lower spectral entropy 28.
+ARTICLE COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8
+8 COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys
+
+===== Page 9 =====
+When τ → ∞, it can be directedly obtained that Z → C and
+τ
+ln 2 tr L ρ
+/C0/C1
+¼ τ ∑N
+i¼1 λi LðÞ e/C0 τλi LðÞ
+ln 2C ! 0. Hence,
+S1 ¼ τ
+ln 2 tr L ρ
+/C0/C1
+þ log2Z ¼ log2C: ð19Þ
+At this stage, the information has spread throughout the network.
+Additionally, when τ → 0, spectral entropy follows that
+S0 ¼ τ
+ln 2 tr L ρ
+/C0/C1
+þ log2Z ¼ log2N: ð20Þ
+This result is consistent with the fact that when τ = 0, no signal
+propagation happens and thus the spectral entropy reaches its
+maximum value, as no information regarding the network
+structure is available.
+Since we have proved that spectral entropy is monotonically
+decreasing concerning τ, it can be concluded that
+Sτ 2½ log2C; log2N/C138. In particular, Sτ 2½ 0; log2N/C138 for those
+connected networks.
+The diffusion time τ is a tunable parameter in the de ﬁnition of
+vertex entanglement, and we will discuss asymptotic expressions
+for vertex entanglement.
+When τ → 0,
+E0 vðÞ ¼ S0 Gv
+/C0/C1
+/C0 S0 GðÞ ¼ 0: ð21Þ
+When τ → ∞,
+E1 vðÞ ¼ S1 Gv
+/C0/C1
+/C0 S1 GðÞ ¼ log2
+Cv
+C : ð22Þ
+In particular, for a connected network G, it further reduces to
+E1 vðÞ ¼ log2Cv.
+From the above discussion, we can conclude that vertex
+entanglement is closely related to network connectivity and
+information transfer ef ﬁciency. Therefore, VE is an ideal metric
+for assessing the importance of vertices in terms of these properties.
+Choosing a suitable diffusion time . Given our objective of
+assessing the signi ﬁcance of network players from a structural
+perspective, it makes sense to require that the connectivity of the
+v-control network be independent of τ. However, it is crucial to
+meticulously consider the impact of local perturbations on the
+global network topology, as this impact is limited at smaller time
+scales. Conversely, longer diffusion times tend to cause signi ﬁcant
+overlap between the ﬂow vectors initiated from different nodes,
+thereby diminishing our ability to identify vital players. There-
+fore, we seek to amplify the possible impact of local control on the
+information dynamics at different time scales, and thus a suitable
+diffusion time τ* should satisfy
+τ
+/C3 ¼ arg min
+τ
+Eτ xðÞ : ð23Þ
+If there exists no such parameter τ* that satisﬁes Eq. ( 23), then
+it is infeasible to perform network dismantling and address other
+issues using vertex entanglement. In the following, we will prove
+the existence of τ* and that the vertex entanglement with τ* is
+less than 0.
+Let
+f τðÞ ¼ Z0
+Z ¼ ∑N
+i¼1 e/C0 τλ0
+i ðLÞ
+∑N
+i¼1 e/C0 τλi ðLÞ : ð24Þ
+Since f is a continuous function and f 0þðÞ ¼ 1, let
+γ ¼ max
+i
+e/C0 τðλ0
+i LðÞ /C0 λi LðÞ Þ ≥ 1, then there exists τ > 0 such that
+(c) BA(b) WS(a) ER
+(f) BA, r = 0.98(e) WS, r = 0.97(d) ER, r = 0.96
+Approximate VE
+Approximate VE
+Approximate VE
+    
+
+
+
+
+          
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+Exact VEExact VEExact VE
+Fig. 8 Approximation calculation. Average spectral entropies of v-controlled networks Gv are compared between the exact and approximate values for
+three types of synthetic networks: a Erdős-Rényi network with P = 0.1, b Watts–Strogatz network with parameter K = 3 and P = 0.3, and c Barabási–Albert
+network with m = 3. In all cases, networks with N = 64 are considered. For ( d–f), the horizontal and vertical coordinates of each dot are the exact and
+approximate values of vertex entanglement, and the Pearson correlations r between the exact and approximate VE values are reported at the top of each
+panel. Panels in ( d–f) take the negative logarithm for negative values of VE (both exact and approximate values).
+COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8 ARTICLE
+COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys 9
+
+===== Page 10 =====
+f τðÞ ≤ γ. We can directly obtain that e/C0 τλ0
+i LðÞ
+Z0 ≥ e/C0 τλi LðÞ
+Z . Hence,
+Eτ vðÞ ¼ Sτ Gv
+/C0/C1
+/C0 Sτ GðÞ ≤ 0: ð25Þ
+Since Eτ vðÞ ¼ log2Cv ≥ 0 for very large τ, EvðÞ is doomed to
+exist and be non-positive. Moreover, a smaller value of EvðÞ
+reﬂects the greater impact of v on the network connectivity and
+stronger entanglement. Intuitively, VE is negative can be
+explained by the fact that we perturb the subgraph consisting
+of node v and its direct neighbors into a probabilistic complete
+graph when constructing the v-control network, which obviously
+promotes the propagation of information within the network,
+thus leading to a decrease in entropy, i.e., S
+τ Gv
+/C0/C1
+<S τ GðÞ .I n
+addition, the diffusion time τ* should belong to ð0; 1
+λ2
+Þ as the time
+for the system to stabilize is inversely proportional to the smallest
+nonvanishing eigenvalue λ2 of L60.
+Approximate calculation and complexity analysis . The most
+computationally intensive step to calculate entanglement is solving
+the spectrum problem, with complexity varying between OðN2Þ
+and OðN3Þ depending on the sparsity of the network. Worse still is
+the necessity to repeat spectral decomposition N + 1 times, since
+the entanglement of each vertex needs to be calculated.
+The spectrum of the graph Laplacian matrix of Gv can be
+presented as λi L0ðÞ ¼ v0
+i
+T L0v0
+i,w h e r ev0
+i is the eigenvector corre-
+sponding toλi L0ðÞ . Notice that the graph Laplacian matrix of eachv-
+control networkGv is only slightly changed by several terms fromG
+for large-scale sparse networks, and denote the change as
+ΔLðΔL ¼ L0 /C0 LÞ. This property enables an approximation algo-
+rithm for computing entanglement to avoid resolving the spectrum
+each time, thus resulting in a complexity reduction. Using the
+eigenvectorvi of L as an approximation instead of v0
+i we can obtain
+λi L0ðÞ ¼ vT
+i L þ ΔLðÞ vi ¼ λi LðÞ þ vT
+i ΔLvi: ð26Þ
+Since ΔL has only a few nonvanishing terms that need to be
+calculated, the complexity of calculating entanglement can be
+reduced to O k2/C10/C11
+N
+/C0/C1
+per vertex, where k indicates degree. As a
+result, a single eigenvalue decomposition for the original network
+is sufﬁcient, eliminating the need for additional N decompositions
+and thus reducing the complexity of the algorithm by an order of
+magnitude. Moreover, empirical experiments suggest that this
+approximation also achieves impressive performance in both
+network dismantling and ASD diagnosis. Nevertheless, we admit
+that the ef ﬁciency of this approximation algorithm still lags
+behind other ef ﬁcient centrality metrics. One potential avenue for
+breakthrough rests in leveraging partial eigenvalues, as opposed
+to the full spectrum, to approximate VE.
+After that, the spectral entropy and vertex entanglement could
+be solved within OðNÞ. When seeking the τ that minimizes EvðÞ ,
+each trial can as well be completed in OðNÞ according to Eq. ( 7).
+Figure 8 presents a comparison between the approximate and
+exact results in Barabási –Albert (BA) 61, Erd ős–Rényi (ER) 62 and
+Watts–Strogatz (WS) 63 networks. It can be drawn that the
+proposed strategy signi ﬁcantly reduces the complexity of the
+method by roughly one order of magnitude while maintaining a
+high level of accuracy.
+Reporting summary . Further information on research design is
+available in the Nature Portfolio Reporting Summary linked to
+this article.
+Data availability
+The raw neuroimaging datasets are available from ABIDE II (https://
+fcon_1000.projects.nitrc.org/indi/abide/abide_II.html). All datasets supporting the
+ﬁndings of this study are available at the following GitHub repository: https://github.
+com/Yiminghh/VertexEntanglement.
+Code availability
+The custom code that supports the ﬁndings of this study is available at the following
+GitHub repository: https://github.com/Yiminghh/VertexEntanglement.
+Received: 19 March 2023; Accepted: 28 November 2023;
+References
+1. Grilli, J., Barabás, G., Michalska-Smith, M. J. & Allesina, S. Higher-order
+interactions stabilize dynamics in competitive network models. Nature 548,
+210–213 (2017).
+2. Kempe, D., Kleinberg, J. & Tardos, E. Maximizing the spread of in ﬂuence
+through a social network. Theory Comput. 11, 105 –147 (2015).
+3. Ganmor, E., Segev, R. & Schneidman, E. Sparse low-order interaction network
+underlies a highly correlated and learnable neural population code. Proc. Natl.
+Acad. Sci. USA 108, 9679 –9684 (2011).
+4. Ye, Y., Xu, S., Mariani, M. S. & Lü, L. Forecasting countries ’ gross domestic
+product from patent data. Chaos Solitons Fractals 160, 112234 (2022).
+5. Newman, M. E. J. Networks (Oxford University Press, 2018).
+6. Lü, L. et al. Vital nodes identi ﬁcation in complex networks. Phys. Rep. 650,
+1–63 (2016).
+7. Gao, J., Barzel, B. & Barabási, A.-L. Universal resilience patterns in complex
+networks. Nature 530, 307 –312 (2016).
+8. Chen, Y., Paul, G., Havlin, S., Liljeros, F. & Stanley, H. E. Finding a better
+immunization strategy. Phys. Rev. Lett. 101, 58701 (2008).
+9. Ren, X.-L., Gleinig, N., Helbing, D. & Antulov-Fantulin, N. Generalized
+network dismantling. Proc. Natl. Acad. Sci. USA 116, 6554 –6559 (2019).
+10. Das, K., Samanta, S. & Pal, M. Study on centrality measures in social networks:
+a survey. Soc. Netw. Anal. Min. 8,1 –11 (2018).
+11. Zeng, Y., Huang, Y., Wu, Q. & Lü, L. In ﬂuential simplices mining via
+simplicial convolutional network. Preprint at http://arxiv.org/abs/2307.05841
+(2023).
+12. Fan, T., Lü, L., Shi, D. & Zhou, T. Characterizing cycle structure in complex
+networks. Commun. Phys. 4, 272 (2021).
+13. Pei, S., Wang, J., Morone, F. & Makse, H. A. In ﬂuencer identi ﬁcation in
+dynamical complex systems. J. Complex Netw . 8, cnz029 (2019).
+14. Coutinho, B. C., Munro, W. J., Nemoto, K. & Omar, Y. Robustness of noisy
+quantum networks. Commun. Phys. 5, 105 (2022).
+15. Biamonte, J. D., Faccin, M. & Domenico, M. D. Complex networks from
+classical to quantum. Commun. Phys. 2,1 –10 (2019).
+16. Ghavasieh, A., Stella, M., Biamonte, J. D. & Domenico, M. D. Unraveling the
+effects of multiscale network entanglement on empirical systems. Commun.
+Phys. 4, 129 (2021).
+17. Malik, O. et al. Concurrence percolation threshold of large-scale quantum
+networks. Commun. Phys. 5, 193 (2022).
+18. Weedbrook, C. et al. Gaussian quantum information. Rev. Mod. Phys. 84, 621
+(2012).
+19. Vedral, V., Plenio, M. B., Rippin, M. A. & Knight, P. L. Quantifying
+entanglement. Phys. Rev. Lett. 78, 2275 –2279 (1997).
+20. Wei, T.-C. & Goldbart, P. M. Geometric measure of entanglement and
+applications to bipartite and multipartite quantum states. Phys. Rev. A 68,
+042307 (2003).
+21. Qu, Z., Huang, Y. & Zheng, M. A novel coherence-based quantum steganalysis
+protocol. Quantum Inf. Process. 19, 362 (2020).
+22. De Domenico, M. & Biamonte, J. Spectral entropies as information-theoretic
+tools for complex network comparison. Phys. Rev. X 6, 041062 (2016).
+23. Ghavasieh, A., Bertagnolli, G. & De Domenico, M. Dismantling the
+information ﬂow in complex interconnected systems. Phys. Rev. Res. 5, 013084
+(2023).
+24. Freeman, L. C. A set of measures of centrality based on betweenness.
+Sociometry 40,3 5 –41 (1977).
+25. Hernandez, L. M., Rudie, J. D., Green, S. A., Bookheimer, S. & Dapretto, M.
+Neural signatures of autism spectrum disorders: insights into brain network
+dynamics. Neuropsychopharmacology 40, 171 –189 (2015).
+26. Schaefer, A. et al. Local-global parcellation of the human cerebral cortex from
+intrinsic functional connectivity MRI. Cereb. Cortex 28, 3095 –3114
+(2018).
+27. Termenon, M., Jaillard, A., Delon-Martin, C. & Achard, S. Reliability of graph
+analysis of resting state fMRI using test-retest dataset from the human
+connectome project. NeuroImage 142, 172 –187 (2016).
+ARTICLE COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8
+10 COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys
+
+===== Page 11 =====
+28. Ghavasieh, A., Nicolini, C. & De Domenico, M. Statistical physics of complex
+information dynamics. Phys. Rev. E 102, 052304 (2020).
+29. Nielsen, M. A. & Chuang, I. L. Quantum Computation and Quantum
+Information (Cambridge University Press, 2000).
+30. Ghavasieh, A. & De Domenico, M. Generalized network density matrices for
+analysis of multiscale functional diversity. Phys. Rev. E 107, 044304 (2023).
+31. Shannon, C. E. A mathematical theory of communication. Bell Syst. Tech. J.
+27, 379 –423 (1948).
+32. Reichl, L. E. & Luscombe, J. H. A modern course in statistical physics. Am. J.
+Phys. 67, 1285 –1287 (1998).
+33. Solé, R. V. & Valverde, S. Information theory of complex networks: on
+evolution and architectural constraints. Lect. Notes Phys. 650, 189–207 (2004).
+34. Rosvall, M., Trusina, A., Minnhagen, P. & Sneppen, K. Networks and cities: an
+information perspective. Phys. Rev. Lett. 94, 028701 (2005).
+35. Sneppen, K. et al. Hide-and-seek on complex networks. EPL 69, 853 –859
+(2005).
+36. Restrepo, J. G., Ott, E. & Hunt, B. R. Characterizing the dynamical importance
+of network nodes and links. Phys. Rev. Lett. 97, 094102 (2006).
+37. Leskovec, J., Kleinberg, J. & Faloutsos, C. Graph evolution: densi ﬁcation and
+shrinking diameters. ACM Trans. Knowl. Discov. Data 1,2 –es (2007).
+38. Kitsak, M. et al. Identi ﬁcation of in ﬂuential spreaders in complex networks.
+Nat. Phys. 6, 888 –893 (2010).
+39. Kunegis, J. KONECT: the Koblenz network collection. In Proceedings of the 22nd
+International Conference on World Wide Web (WWW' 13 Companion)
+1343–1350 (Association for Computing Machinery, New York, NY, USA, 2013).
+40. Morone, F. & Makse, H. A. In ﬂuence maximization in complex networks
+through optimal percolation. Nature 524,6 5 –68 (2015).
+41. Salomon, M. & Zhou, H.-J. Identifying optimal targets of network attack by
+belief propagation. Phys. Rev. E 94, 012305 (2016).
+42. Fan, C., Zeng, L., Sun, Y. & Liu, Y.-Y. Finding key players in complex
+networks through deep reinforcement learning. Nat. Mach. Intell. 2, 317 –324
+(2020).
+43. Zdeborová, L., Zhang, P. & Zhou, H.-J. Fast and simple decycling and
+dismantling of networks. Sci. Rep. 6
+, 37954 (2016).
+44. Braunstein, A., Dall ’Asta, L., Semerjian, G. & Zdeborová, L. Network
+dismantling. Proc. Natl. Acad. Sci. USA 113, 12368 – 12373 (2016).
+45. Albert, R., Jeong, H. & Barabasi, A. L. Error and attack tolerance of complex
+networks. Nature 406, 378 –382 (2000).
+46. Schneider, C. M., Moreira, A. A., Andrade, J. S., Havlin, S. & Herrmann, H. J.
+Mitigation of malicious attacks on networks. Proc. Natl. Acad. Sci. USA 108,
+3838–3841 (2011).
+47. Van Den Heuvel, M. P. & Pol, H. E. H. Exploring the brain network: a review
+on resting-state fMRI functional connectivity. Eur. Neuropsychopharmacol.
+20, 519 –534 (2010).
+48. Bassett, D. S. & Sporns, O. Network neuroscience. Nat. Neurosci. 20, 353–364
+(2017).
+49. Di Martino, A. et al. Enhancing studies of the connectome in autism using the
+autism brain imaging data exchange ii. Sci. Data 4,1 –15 (2017).
+50. Achard, S. et al. Hubs of brain functional networks are radically reorganized in
+comatose patients. Proc. Natl. Acad. Sci. USA 109, 20608 –20613 (2012).
+51. Wechsler, D. Wechsler Abbreviated Scale of Intelligence (The Psychological
+Corporation, 1999).
+52. Schwarzkopf, D. S., De Haas, B. & Rees, G. Better ways to improve standards
+in brain-behavior correlation analysis. Front. Hum. Neurosci. 6, 200 (2012).
+53. Gao, Q. et al. Language lateralization during the Chinese semantic task relates
+to the contralateral cerebra-cerebellar interactions at rest. Sci. Rep. 7,1 –12
+(2017).
+54. Rudie, J. D. et al. Altered functional and structural brain network organization
+in autism. NeuroImage Clin. 2,7 9 –94 (2013).
+55. Battiston, F. et al. Networks beyond pairwise interactions: structure and
+dynamics. Phys. Rep. 874,1 –92 (2020).
+56. Benson, A. R., Abebe, R., Schaub, M. T., Jadbabaie, A. & Kleinberg, J.
+Simplicial closure and higher-order link prediction. Proc. Natl. Acad. Sci. USA
+115, E11221 –E11230 (2018).
+57. Huang, Y., Zeng, Y., Wu, Q. & Lü, L. Higher-order graph convolutional
+network with ﬂower-petals laplacians on simplicial complexes. Preprint at
+http://arxiv.org/abs/2309.12971 (2023).
+58. Ghavasieh, A. & De Domenico, M. Enhancing transport properties in
+interconnected systems without altering their structure. Phys. Rev. Res. 2,
+013155 (2020).
+59. West, D. B. Introduction to Graph Theory (Prentice Hall, 2001).
+60. Almendral, J. A. & Díaz-Guilera, A. Dynamical and spectral properties of
+complex networks. New J. Phys. 9, 187 (2007).
+61. Barabási, A.-L. & Albert, R. Emergence of scaling in random networks. Science
+286, 509 –512 (1999).
+62. Erd ős, P. & Rényi, A. et al. On the evolution of random graphs. Publ. Math.
+Inst. Hung. Acad. Sci 5,1 7 –60 (1960).
+63. Watts, D. J. & Strogatz, S. H. Collective dynamics of ‘small-world’ networks.
+Nature 393, 440 –442 (1998).
+Acknowledgements
+We thank the investigators and staff members of The Autism Brain Imaging Data
+Exchange (ABIDE) for their invaluable contributions to data acquisition and sharing.
+The authors are grateful for the support from the STI 2030 –Major Projects
+(2022ZD0211400), the National Natural Science Foundation of China (Grant No.
+T2293771), the China Postdoctoral Science Foundation (2022M710620), Sichuan Science
+and Technology Program (2023NSFSC1919, 2023NSFSC1353), the Project of Huzhou
+Science and Technology Bureau (2021YZ12), the UESTCYDRI research start-up
+(U032200117), Young Leading Talents of Nantaihu Talent Program in Huzhou (2023)
+and the New Cornerstone Science Foundation through the XPLORER PRIZE.
+Author contributions
+Y.H., X.-L.R., and L.L. conceived the idea and designed the experiments. Y.H., X.-L.R.,
+and H.W. performed the research. Y.H. and H.W. visualized the results. All authors
+discussed the results, wrote and proofread the paper.
+Competing interests
+The authors declare no competing interests.
+Additional information
+Supplementary information The online version contains supplementary material
+available at https://doi.org/10.1038/s42005-023-01483-8.
+Correspondence and requests for materials should be addressed to Xiao-Long Ren or
+Linyuan Lü.
+Peer review information Communications Physics thanks Jianxi Gao, Sen Pei and the
+other, anonymous, reviewer(s) for their contribution to the peer review of this work.
+Reprints and permission information is available at http://www.nature.com/reprints
+Publisher’s note Springer Nature remains neutral with regard to jurisdictional claims in
+published maps and institutional af ﬁliations.
+Open Access This article is licensed under a Creative Commons
+Attribution 4.0 International License, which permits use, sharing,
+adaptation, distribution and reproduction in any medium or format, as long as you give
+appropriate credit to the original author(s) and the source, provide a link to the Creative
+Commons licence, and indicate if changes were made. The images or other third party
+material in this article are included in the article ’s Creative Commons licence, unless
+indicated otherwise in a credit line to the material. If material is not included in the
+article’s Creative Commons licence and your intended use is not permitted by statutory
+regulation or exceeds the permitted use, you will need to obtain permission directly from
+the copyright holder. To view a copy of this licence, visit http://creativecommons.org/
+licenses/by/4.0/.
+© The Author(s) 2024
+COMMUNICATIONS PHYSICS | https://doi.org/10.1038/s42005-023-01483-8 ARTICLE
+COMMUNICATIONS PHYSICS |            (2024) 7:19 | https://doi.org/10.1038/s42005-023-01483-8 | www.nature.com/commsphys 11
