@@ -6,7 +6,7 @@
 
 - `src/model/`：当前网络瓦解实例的 CHD 三阶段搜索、候选验证、阶段2边界归纳、排序和 Pareto 选择。
 - `src/baselines/`：按任务划分的 baseline。`ND_native_baseline/` 放网络瓦解原生基线，`IM_native_baseline/` 放影响力最大化原生基线，`AHD/` 放 9 个跨任务 LLM AHD 搜索策略。
-- `src/metrics/`：GCC/R、NCC、cNBI、AUC-cNBI、最终指标和运行时间汇总。
+- `src/metrics/`：按任务前缀组织的指标和评估器。`ND_fragmentation.py` 放网络瓦解 GCC/R、NCC、cNBI、AUC-cNBI 等指标；`IM_LT_evaluator.py` 放 LT common-worlds 评估；`IM_IC_evaluator.py` 放 IM 在线 IC live-edge/RR proxy 评估。
 - `src/scripts/`：命令入口，只保留 smoke test、主搜索、完整验证、scaling、审计和论文产物导出等 wrapper。
 - `src/configs/`：固定实验参数，当前主配置为 `chd.yaml`。
 - `src/experiments/`：当前论文实验和表格入口；过期日期脚本不放这里。
@@ -23,7 +23,7 @@ CHD2026/
 ├── src/
 │   ├── model/                # CHD 三阶段主实现
 │   ├── baselines/            # ND/IM 原生基线与 AHD 搜索策略
-│   ├── metrics/              # 瓦解曲线和指标汇总
+│   ├── metrics/              # ND_* 和 IM_* 指标/评估器
 │   ├── configs/              # 固定种子、图集、LLM 设置和预算
 │   ├── experiments/          # 当前实验入口和表格协议
 │   ├── plotting/             # 当前论文图重画
@@ -49,14 +49,25 @@ CHD2026/
 
 ## 本地数据策略
 
+本目录本身已经是 Git 工作副本，远端为：
+
+```powershell
+origin  https://github.com/MirrorNew/CHD2026.git
+```
+
+后续直接在 `CHD2026` 目录执行 `git status`、`git commit` 和 `git push`。不再使用旧的临时镜像目录。
+
 以下内容只作为本地文件保留，不应提交到 GitHub：
 
 - 大型图输入；
 - `artifacts/`；
 - `src/runs/`；
+- `.venv/`；
+- `.pytest_cache/`、`.idea/` 和其他本地缓存；
+- `CHD2026_PACKAGE_MANIFEST.md`、`PAPER_RESULT_CLASSIFICATION_20260616.md` 等本地说明文件；
 - 原始 LLM 日志和大型 CSV。
 
-GitHub 只应包含源代码、配置、文档和轻量 fixture，以及我的所有图。
+GitHub 只应包含源代码、配置、文档和轻量 fixture。当前本机通过 `.git/info/exclude` 保护上述本地目录和文件不进入提交；提交前仍应检查 `git status --short --ignored`，确认 `network/`、`artifacts/` 和 `src/runs/` 没有变成 tracked。
 
 ## 快速检查
 
