@@ -29,7 +29,7 @@ from baselines.ND_native_baseline.native_strong_baseline import (
 )
 from model.candidate import make_program
 from model.search_stage_1_and_3 import run_three_stage_smoke
-from metrics.fragmentation import compute_metrics, summarize_metrics
+from metrics.ND_fragmentation import compute_metrics, summarize_metrics
 
 import networkx as nx
 

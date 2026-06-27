@@ -11,7 +11,7 @@ import networkx as nx
 import pandas as pd
 
 from baselines.ND_native_baseline.native_baseline.hda import hda_original_order
-from metrics.fragmentation import compute_metrics, summarize_metrics
+from metrics.ND_fragmentation import compute_metrics, summarize_metrics
 
 from .candidate import CandidateProgram, compile_candidate
 from .config import STAGE1_WEIGHTS, STAGE3_WEIGHTS, SearchWeights

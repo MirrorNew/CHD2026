@@ -42,7 +42,7 @@ from baselines.IM_native_baseline import (
     mia_seed_order,
     rr_greedy_seed_order,
 )
-from model.im_lt_evaluator import evaluate_lt_spread
+from metrics.IM_LT_evaluator import evaluate_lt_spread
 from model.im_task import im_seed_budget
 
 

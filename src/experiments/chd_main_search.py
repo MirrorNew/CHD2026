@@ -88,6 +88,22 @@ def write_input_parameters(config, args: argparse.Namespace, run_date: str) -> P
             "api_key_saved": False,
         },
     }
+    if config.task == "im":
+        payload["im_config"] = {
+            "task": "im",
+            "root": "DegreeDiscountIC",
+            "candidate_interface": "def seed_order(G, k)",
+            "online_graph": config.online_graph,
+            "online_live_edge_worlds": config.online_live_edge_worlds,
+            "online_rr_sets": config.online_rr_sets,
+            "p": 0.1,
+            "base_seed": 20260626,
+            "stage1": config.stage1_budget,
+            "stage2": config.stage2_budget,
+            "stage3": config.stage3_budget,
+            "full_run_budget": {"stage1": 300, "stage2": 10, "stage3": 200},
+            "ranking_formula": "0.7 spread_ic + 0.1 relative_spread_ic + 0.1 rr_coverage + 0.1 time_s",
+        }
     path = config.run_dir / "input_parameters.json"
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
@@ -118,9 +134,9 @@ def main() -> None:
         help="Use root-relative credit for the main run; parent-relative is reserved for ablation runs.",
     )
     parser.add_argument("--llm-workers", type=int, default=None, help="Concurrent LLM requests.")
-    parser.add_argument("--online-graph", default="", help="IM online proxy graph path, relative to project root or absolute.")
-    parser.add_argument("--online-live-edge-worlds", type=int, default=128, help="Fixed IC live-edge worlds for IM online scoring.")
-    parser.add_argument("--online-rr-sets", type=int, default=2048, help="Fixed RR sets for IM online scoring.")
+    parser.add_argument("--online-graph", default="network/12main_network/Powerlaw_500.edgelist", help="IM online proxy graph path, relative to project root or absolute.")
+    parser.add_argument("--online-live-edge-worlds", type=int, default=1024, help="Fixed IC live-edge worlds for IM online scoring.")
+    parser.add_argument("--online-rr-sets", type=int, default=1024, help="Fixed RR sets for IM online scoring.")
     parser.add_argument(
         "--stage1-rank-weights",
         default="",

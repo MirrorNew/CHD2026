@@ -21,7 +21,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from metrics.fragmentation import compute_metrics, summarize_metrics
+from metrics.ND_fragmentation import compute_metrics, summarize_metrics
 
 from model.candidate import CandidateProgram, compile_candidate, make_program
 from model.config import DATASET_RATES, PROJECT_ROOT, RUNS_ROOT, make_run_dir

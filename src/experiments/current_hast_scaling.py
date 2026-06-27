@@ -26,7 +26,7 @@ import pandas as pd
 from model.candidate import CandidateProgram, compile_candidate
 from model.config import RUNS_ROOT
 from model.data import generate_powerlaw_network
-from metrics.fragmentation import compute_metrics, summarize_metrics
+from metrics.ND_fragmentation import compute_metrics, summarize_metrics
 
 SCALING_DIR = ROOT / "artifacts" / "source_tables" / "scaling"
 DEFAULT_RUN_DIR = RUNS_ROOT / "runs_HAST_root_target_family_full_ritelt_20260525"

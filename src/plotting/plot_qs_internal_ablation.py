@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from model.config import DATASET_RATES, DATASETS
 from model.data import read_graph
-from metrics.fragmentation import compute_metrics, summarize_metrics
+from metrics.ND_fragmentation import compute_metrics, summarize_metrics
 
 OUT_DIR = (
     ROOT

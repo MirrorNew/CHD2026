@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import math
-import random
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -13,6 +12,8 @@ from typing import Any
 
 import networkx as nx
 import pandas as pd
+
+from metrics.IM_IC_evaluator import build_fixed_live_edge_worlds, build_fixed_rr_sets, fixed_live_edge_spread, rr_coverage
 
 from .candidate import CandidateProgram, compile_candidate, make_program
 from .config import PROJECT_ROOT
@@ -107,52 +108,6 @@ def load_im_online_graph(path_text: str | None = None) -> tuple[nx.Graph, str]:
     return graph, "generated_barabasi_albert_graph(500,3,seed=20260626)"
 
 
-def build_fixed_live_edge_worlds(graph: nx.Graph, worlds: int = 128, p: float = 0.1, seed: int = 20260626) -> list[dict[Any, list[Any]]]:
-    edges = list(graph.edges())
-    out: list[dict[Any, list[Any]]] = []
-    for idx in range(max(1, int(worlds))):
-        rng = random.Random(seed + idx)
-        adj: dict[Any, list[Any]] = {u: [] for u in graph.nodes()}
-        for u, v in edges:
-            if rng.random() <= p:
-                adj[u].append(v)
-                adj[v].append(u)
-        out.append(adj)
-    return out
-
-
-def _reverse_adjacency(graph: nx.Graph, p: float) -> dict[Any, list[tuple[Any, float]]]:
-    adj: dict[Any, list[tuple[Any, float]]] = {u: [] for u in graph.nodes()}
-    for u, v in graph.edges():
-        adj[u].append((v, p))
-        adj[v].append((u, p))
-    return adj
-
-
-def _sample_rr_set(reverse_adj: dict[Any, list[tuple[Any, float]]], nodes: list[Any], rng: random.Random) -> set[Any]:
-    root = rng.choice(nodes)
-    rr = {root}
-    frontier = [root]
-    while frontier:
-        nxt: list[Any] = []
-        for node in frontier:
-            for nbr, prob in reverse_adj.get(node, []):
-                if nbr not in rr and rng.random() <= prob:
-                    rr.add(nbr)
-                    nxt.append(nbr)
-        frontier = nxt
-    return rr
-
-
-def build_fixed_rr_sets(graph: nx.Graph, rr_sets: int = 2048, p: float = 0.1, seed: int = 20260626) -> list[set[Any]]:
-    nodes = list(graph.nodes())
-    if not nodes:
-        return []
-    rng = random.Random(seed)
-    reverse_adj = _reverse_adjacency(graph, p)
-    return [_sample_rr_set(reverse_adj, nodes, rng) for _ in range(max(1, int(rr_sets)))]
-
-
 def normalize_seed_order(graph: nx.Graph, raw: Any, k: int) -> tuple[list[Any], bool, int]:
     nodes = set(graph.nodes())
     out: list[Any] = []
@@ -173,38 +128,10 @@ def normalize_seed_order(graph: nx.Graph, raw: Any, k: int) -> tuple[list[Any], 
     return out, valid_raw, len(raw_list)
 
 
-def fixed_live_edge_spread(graph: nx.Graph, seeds: list[Any], worlds: list[dict[Any, list[Any]]]) -> float:
-    if graph.number_of_nodes() == 0:
-        return 0.0
-    seed_set = set(seeds)
-    total = 0
-    for adj in worlds:
-        active = set(seed_set)
-        frontier = list(seed_set)
-        while frontier:
-            nxt: list[Any] = []
-            for node in frontier:
-                for nbr in adj.get(node, []):
-                    if nbr not in active:
-                        active.add(nbr)
-                        nxt.append(nbr)
-            frontier = nxt
-        total += len(active)
-    return float(total / max(1, len(worlds)) / max(1, graph.number_of_nodes()))
-
-
-def rr_coverage(seeds: list[Any], rr_sets: list[set[Any]]) -> float:
-    if not rr_sets:
-        return 0.0
-    seed_set = set(seeds)
-    covered = sum(1 for rr in rr_sets if seed_set.intersection(rr))
-    return float(covered / len(rr_sets))
-
-
 def prepare_im_online_artifacts(
     online_graph: str | None = None,
-    live_edge_worlds: int = 128,
-    rr_sets: int = 2048,
+    live_edge_worlds: int = 1024,
+    rr_sets: int = 1024,
     p: float = 0.1,
     seed: int = 20260626,
 ) -> IMOnlineArtifacts:

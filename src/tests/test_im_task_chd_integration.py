@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import networkx as nx
 
+from metrics.IM_IC_evaluator import build_fixed_live_edge_worlds, build_fixed_rr_sets, fixed_live_edge_spread, rr_coverage
+from metrics.IM_LT_evaluator import evaluate_lt_spread_many
+from metrics.ND_fragmentation import compute_metrics
 from model.candidate import extract_code, make_program
 from model.im_task import (
     IM_FUNCTION_NAME,
     IM_ROOT_CODE,
-    build_fixed_live_edge_worlds,
-    build_fixed_rr_sets,
     im_seed_budget,
     rank_ahd_online_records,
     rank_im_records,
 )
+from model.im_lt_evaluator import evaluate_lt_spread as compat_evaluate_lt_spread
+from metrics.IM_LT_evaluator import evaluate_lt_spread
 from model.stage1_stage3_search import default_config, task_function_name, task_root_code
 
 
@@ -55,3 +58,15 @@ def test_im_rank_score_formula_and_ahd_spread_only() -> None:
     ahd = rank_ahd_online_records(rows)
     by_id = {row["candidate_id"]: row for row in ahd}
     assert by_id["b"]["rank_score"] == by_id["b"]["rank_spread_ic"]
+
+
+def test_canonical_metric_imports_and_compatibility_wrapper() -> None:
+    graph = nx.path_graph(6)
+    worlds = build_fixed_live_edge_worlds(graph, 3, seed=11)
+    rr_sets = build_fixed_rr_sets(graph, 5, seed=11)
+    assert fixed_live_edge_spread(graph, [0], worlds) >= 0.0
+    assert rr_coverage([0], rr_sets) >= 0.0
+    assert evaluate_lt_spread_many(graph, {"a": [0]}, simulations=4, base_seed=11)["a"].simulations == 4
+    assert compat_evaluate_lt_spread is evaluate_lt_spread
+    rows = compute_metrics(graph, [0, 1, 2], rate=0.5)
+    assert not rows.empty

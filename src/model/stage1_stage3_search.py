@@ -66,8 +66,8 @@ class StageSearchConfig:
     elite_candidate_paths: list[str] | None = None
     task: str = "nd"
     online_graph: str | None = None
-    online_live_edge_worlds: int = 128
-    online_rr_sets: int = 2048
+    online_live_edge_worlds: int = 1024
+    online_rr_sets: int = 1024
 
     def __post_init__(self) -> None:
         if self.task not in {"nd", "im"}:
@@ -91,9 +91,10 @@ def default_config(
     run_date: str | None = None,
     task: str = "nd",
     online_graph: str | None = None,
-    online_live_edge_worlds: int = 128,
-    online_rr_sets: int = 2048,
+    online_live_edge_worlds: int = 1024,
+    online_rr_sets: int = 1024,
 ) -> StageSearchConfig:
+    resolved_online_graph = online_graph or ("network/12main_network/Powerlaw_500.edgelist" if task == "im" else None)
     return StageSearchConfig(
         run_dir=dated_run_dir(run_name, delta_credit_mode, run_date, task),
         proxy_datasets=["Powerlaw_500"],
@@ -113,7 +114,7 @@ def default_config(
         ],
         delta_credit_mode=delta_credit_mode,
         task=task,
-        online_graph=online_graph,
+        online_graph=resolved_online_graph,
         online_live_edge_worlds=online_live_edge_worlds,
         online_rr_sets=online_rr_sets,
     )
@@ -1525,6 +1526,11 @@ def write_prepare_manifest(config: StageSearchConfig, context: dict[str, Any]) -
             "stage3": "Q/S/bridge/repair branch-constrained bounded expansion from Stage 1 seed-order candidates",
             "candidate_interface": im_task.IM_INTERFACE,
             "root": "DegreeDiscount-IC",
+            "online_graph": config.online_graph,
+            "online_live_edge_worlds": config.online_live_edge_worlds,
+            "online_rr_sets": config.online_rr_sets,
+            "p": 0.1,
+            "base_seed": 20260626,
             "online_score": "0.7*rank(spread_ic)+0.1*rank(relative_spread_ic)+0.1*rank(rr_coverage)+0.1*rank(time_s lower better)",
             "relative_spread_ic": "spread_ic(candidate) - spread_ic(DegreeDiscount-IC root)",
             "parent_priority_mode": config.parent_priority_mode,

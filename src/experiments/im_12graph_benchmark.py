@@ -31,10 +31,19 @@ from baselines.IM_native_baseline import (
 )
 from model.candidate import CandidateProgram, extract_code, make_program, compile_candidate
 from model.config import PROJECT_ROOT, make_run_dir
-from model.im_lt_evaluator import evaluate_lt_spread
+from metrics.IM_LT_evaluator import evaluate_lt_spread
 from model.im_task import IM_FUNCTION_NAME, evaluate_im_candidate, im_seed_budget, prepare_im_online_artifacts, rank_ahd_online_records
 from model.llm import LLMProvider, OpenAICompatibleLLMProvider
 from model.stage1_stage3_search import default_config, run_stage_search
+
+
+FORMAL_NATIVE_MODEL_TYPE = "LT_RandomThreshold"
+FORMAL_NATIVE_SIMULATIONS = 4096
+FORMAL_NATIVE_BASE_SEED = 20260626
+DEFAULT_NATIVE_SOURCE_RUN = "src/runs/20260626-020000-IM-IM-lt-common-worlds-4096"
+IM_ONLINE_BASE_SEED = 20260626
+IM_ONLINE_P = 0.1
+CHD_IM_RANKING_FORMULA = "0.7 spread_ic + 0.1 relative_spread_ic + 0.1 rr_coverage + 0.1 time_s"
 
 
 def _degree_order_seed(graph: nx.Graph, k: int) -> list[Any]:
@@ -88,6 +97,8 @@ class IMBenchmarkConfig:
     eval_simulations: int
     requested_eval_simulations: int
     run_name: str
+    native_eval_mode: str = "formal4096"
+    native_source_run_dir: Path = PROJECT_ROOT / DEFAULT_NATIVE_SOURCE_RUN
 
 
 class FallbackIMProvider:
@@ -128,6 +139,57 @@ def write_json(path: Path, payload: Any) -> None:
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(path, index=False, encoding="utf-8-sig")
+
+
+def bool_series(series: pd.Series) -> pd.Series:
+    return series.astype(str).str.strip().str.lower().isin(["true", "1", "yes"])
+
+
+def formal_native_paths(source_run_dir: Path) -> tuple[Path, Path]:
+    return source_run_dir / "native" / "per_graph_metrics.csv", source_run_dir / "run_manifest.json"
+
+
+def load_formal_native_rows(config: IMBenchmarkConfig) -> list[dict[str, Any]]:
+    per_graph_path, manifest_path = formal_native_paths(config.native_source_run_dir)
+    if not per_graph_path.exists():
+        raise FileNotFoundError(f"formal native source table not found: {per_graph_path}")
+    df = pd.read_csv(per_graph_path, encoding="utf-8-sig")
+    required = {"dataset", "method", "method_group", "model_type", "simulations", "valid", "spread"}
+    missing = sorted(required - set(df.columns))
+    if missing:
+        raise ValueError(f"formal native source table missing columns: {missing}")
+    df = df[df["model_type"].astype(str).eq(FORMAL_NATIVE_MODEL_TYPE)].copy()
+    df = df[pd.to_numeric(df["simulations"], errors="coerce").eq(FORMAL_NATIVE_SIMULATIONS)].copy()
+    if df.empty:
+        raise ValueError(
+            f"formal native source has no {FORMAL_NATIVE_MODEL_TYPE}/{FORMAL_NATIVE_SIMULATIONS} rows: {per_graph_path}"
+        )
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if int(manifest.get("simulations", FORMAL_NATIVE_SIMULATIONS)) != FORMAL_NATIVE_SIMULATIONS:
+            raise ValueError(f"formal native manifest simulations mismatch: {manifest_path}")
+        if int(manifest.get("base_seed", FORMAL_NATIVE_BASE_SEED)) != FORMAL_NATIVE_BASE_SEED:
+            raise ValueError(f"formal native manifest base_seed mismatch: {manifest_path}")
+    return df.where(pd.notna(df), "").to_dict("records")
+
+
+def chd_im_config_payload(config: IMBenchmarkConfig) -> dict[str, Any]:
+    return {
+        "task": "im",
+        "root": "DegreeDiscountIC",
+        "candidate_interface": "def seed_order(G, k)",
+        "online_graph": config.online_graph or "network/12main_network/Powerlaw_500.edgelist",
+        "online_live_edge_worlds": int(config.online_live_edge_worlds),
+        "online_rr_sets": int(config.online_rr_sets),
+        "p": IM_ONLINE_P,
+        "base_seed": IM_ONLINE_BASE_SEED,
+        "stage1": int(config.chd_stage1_budget),
+        "stage2": int(config.chd_stage2_budget),
+        "stage3": int(config.chd_stage3_budget),
+        "full_run_budget": {"stage1": 300, "stage2": 10, "stage3": 200},
+        "ranking_formula": CHD_IM_RANKING_FORMULA,
+        "relative_spread_ic": "spread_ic(candidate) - spread_ic(DegreeDiscountIC-root)",
+    }
 
 
 def load_graphs(graph_dir: Path) -> dict[str, nx.Graph]:
@@ -217,15 +279,16 @@ def summarize(per_graph: list[dict[str, Any]]) -> list[dict[str, Any]]:
     df = pd.DataFrame(per_graph)
     rows = []
     for (method, method_group, model_type), group in df.groupby(["method", "method_group", "model_type"], dropna=False):
+        valid = group[bool_series(group["valid"])]
         rows.append(
             {
                 "method": method,
                 "method_group": method_group,
                 "model_type": model_type,
-                "mean_spread": float(pd.to_numeric(group["spread"], errors="coerce").mean()),
-                "mean_normalized_spread": float(pd.to_numeric(group["normalized_spread"], errors="coerce").mean()),
+                "mean_spread": float(pd.to_numeric(valid["spread"], errors="coerce").mean()) if len(valid) else float("nan"),
+                "mean_normalized_spread": float(pd.to_numeric(valid["normalized_spread"], errors="coerce").mean()) if len(valid) else float("nan"),
                 "mean_time_s": float(pd.to_numeric(group["time_s"], errors="coerce").mean()),
-                "valid_rate": float(group["valid"].astype(bool).mean()),
+                "valid_rate": float(bool_series(group["valid"]).mean()),
                 "graph_count": int(len(group)),
             }
         )
@@ -372,10 +435,15 @@ def evaluate_all(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     per_graph: list[dict[str, Any]] = []
     if native_enabled:
-        for method, fn in NATIVE_METHODS:
-            for graph_name, graph in graphs.items():
-                for model_type in ["IC", "LT"]:
-                    per_graph.append(evaluate_method_on_graph(graph_name, graph, method, "native", fn, model_type, config.eval_simulations))
+        if config.native_eval_mode == "formal4096":
+            per_graph.extend(load_formal_native_rows(config))
+        elif config.native_eval_mode == "debug-simple":
+            for method, fn in NATIVE_METHODS:
+                for graph_name, graph in graphs.items():
+                    for model_type in ["IC", "LT"]:
+                        per_graph.append(evaluate_method_on_graph(graph_name, graph, method, "native", fn, model_type, config.eval_simulations))
+        else:
+            raise ValueError(f"unknown native_eval_mode: {config.native_eval_mode}")
     for method, fn in ahd_fns:
         for graph_name, graph in graphs.items():
             for model_type in ["IC", "LT"]:
@@ -417,8 +485,14 @@ def run_benchmark(config: IMBenchmarkConfig) -> dict[str, Any]:
             "api_key_saved": False,
         },
     )
-    write_json(config.run_dir / "online" / "live_edge_worlds_manifest.json", {"worlds": len(artifacts.live_edge_worlds), "api_key_saved": False})
-    write_json(config.run_dir / "online" / "rr_sets_manifest.json", {"rr_sets": len(artifacts.rr_sets), "api_key_saved": False})
+    write_json(
+        config.run_dir / "online" / "live_edge_worlds_manifest.json",
+        {"worlds": len(artifacts.live_edge_worlds), "p": artifacts.p, "seed": artifacts.seed, "api_key_saved": False},
+    )
+    write_json(
+        config.run_dir / "online" / "rr_sets_manifest.json",
+        {"rr_sets": len(artifacts.rr_sets), "p": artifacts.p, "seed": artifacts.seed, "api_key_saved": False},
+    )
 
     provider = _provider_from_env_or_fallback()
     ahd_rows: list[dict[str, Any]] = []
@@ -446,7 +520,13 @@ def run_benchmark(config: IMBenchmarkConfig) -> dict[str, Any]:
         "include": sorted(config.include),
         "graph_count": len(graphs),
         "native_methods": len(NATIVE_METHODS),
+        "native_eval_mode": config.native_eval_mode,
+        "native_source_run_dir": str(config.native_source_run_dir),
+        "native_model_type": FORMAL_NATIVE_MODEL_TYPE if config.native_eval_mode == "formal4096" else "IC/LT debug-simple",
+        "native_simulations": FORMAL_NATIVE_SIMULATIONS if config.native_eval_mode == "formal4096" else config.eval_simulations,
+        "native_base_seed": FORMAL_NATIVE_BASE_SEED if config.native_eval_mode == "formal4096" else IM_ONLINE_BASE_SEED,
         "ahd_budget": config.ahd_budget,
+        "chd_config": chd_im_config_payload(config),
         "requested_eval_simulations": config.requested_eval_simulations,
         "effective_eval_simulations": config.eval_simulations,
         "chd_result": chd_result,
@@ -463,6 +543,10 @@ def config_from_args(args: Any) -> IMBenchmarkConfig:
     run_dir = make_run_dir("IM", args.run_name, args.run_date or None)
     requested_eval_simulations = args.eval_simulations
     effective_eval_simulations = min(args.eval_simulations, 4) if args.mode == "smoke" else args.eval_simulations
+    native_eval_mode = getattr(args, "native_eval_mode", "formal4096")
+    if native_eval_mode not in {"formal4096", "debug-simple"}:
+        raise ValueError("native_eval_mode must be 'formal4096' or 'debug-simple'")
+    native_source_run_dir = resolve_path(getattr(args, "native_source_run_dir", DEFAULT_NATIVE_SOURCE_RUN))
     return IMBenchmarkConfig(
         run_dir=run_dir,
         mode=args.mode,
@@ -480,4 +564,6 @@ def config_from_args(args: Any) -> IMBenchmarkConfig:
         eval_simulations=effective_eval_simulations,
         requested_eval_simulations=requested_eval_simulations,
         run_name=args.run_name,
+        native_eval_mode=native_eval_mode,
+        native_source_run_dir=native_source_run_dir,
     )

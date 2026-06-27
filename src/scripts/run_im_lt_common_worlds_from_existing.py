@@ -21,7 +21,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from model.config import PROJECT_ROOT, make_run_dir  # noqa: E402
-from model.im_lt_evaluator import evaluate_lt_spread_many  # noqa: E402
+from metrics.IM_LT_evaluator import evaluate_lt_spread_many  # noqa: E402
 
 
 DATASETS_12 = [
